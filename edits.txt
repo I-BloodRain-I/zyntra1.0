@@ -1,1 +1,8 @@
-1. reorginize 
+1. reorginize
+2. The app now runs as one unified program, without extra windows or confusing starts.
+Helpful tips and warnings were added — the app tells you if something’s wrong.
+Number fields only accept numbers, so it’s harder to make mistakes.
+Navigation is simpler: Enter moves forward, Escape goes back or exits.
+The look and feel are cleaner and consistent everywhere.
+Settings can be saved and reloaded.
+A basic activity log was added to track what happens.

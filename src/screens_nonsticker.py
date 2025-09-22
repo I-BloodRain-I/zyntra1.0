@@ -3,7 +3,7 @@ from typing import Optional, Tuple
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-from core import Screen
+from core import Screen, vcmd_float, mm_to_px
 from state import state, MM_TO_PX
 
 # ---- tiny helper: write a minimal PDF so Download has content ----
@@ -109,13 +109,15 @@ class NScreen2(Screen):
         box = tk.Frame(parent, bg="#6f6f6f")
         box.pack(side="left", padx=6, pady=8)
         tk.Label(box, text=label, bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        tk.Entry(box, textvariable=var, width=8, bg="#d9d9d9").pack(side="left", padx=6)
+        tk.Entry(box, textvariable=var, width=8, bg="#d9d9d9",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left", padx=6)
 
     def _mini_chip(self, parent, label, var):
         box = tk.Frame(parent, bg="#c7c7c7")
         box.pack(side="left", padx=4)
         tk.Label(box, text=label, bg="#c7c7c7").pack(side="left", padx=(6, 2))
-        tk.Entry(box, textvariable=var, width=6).pack(side="left", padx=(2, 6))
+        tk.Entry(box, textvariable=var, width=6,
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left", padx=(2, 6))
 
     # Actions
     def _set_tool(self, name):
@@ -134,8 +136,8 @@ class NScreen2(Screen):
     def _create_placeholder(self, label, w_mm, h_mm):
         cx = max(1, self.canvas.winfo_width() // 2)
         cy = max(1, self.canvas.winfo_height() // 2)
-        w = int(w_mm * MM_TO_PX)
-        h = int(h_mm * MM_TO_PX)
+        w = mm_to_px(w_mm)
+        h = mm_to_px(h_mm)
         rect = self.canvas.create_rectangle(
             cx - w // 2, cy - h // 2, cx + w // 2, cy + h // 2,
             fill="#2b2b2b", outline="#d0d0d0", width=2

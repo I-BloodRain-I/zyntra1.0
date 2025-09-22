@@ -1,5 +1,7 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import List, Tuple, Optional
+import json
+from pathlib import Path
 
 ALL_PRODUCTS = [
     "Lighteruv1", "Lighteruv2", "LighterMax", "LighterMini",
@@ -35,3 +37,23 @@ class AppState:
     ai_arrange: bool = False
 
 state = AppState()
+
+
+def save_state(path: str | Path) -> None:
+    p = Path(path)
+    with p.open("w", encoding="utf-8") as f:
+        json.dump(asdict(state), f, ensure_ascii=False, indent=2)
+
+
+def load_state(path: str | Path) -> bool:
+    p = Path(path)
+    if not p.exists():
+        return False
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    for k, v in data.items():
+        if hasattr(state, k):
+            setattr(state, k, v)
+    return True

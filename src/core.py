@@ -1,6 +1,53 @@
 # App (Tk), стили ttk, базовый Screen
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
+from state import MM_TO_PX
+
+# Helpers: dialogs
+def info(message: str, title: str = "Info"):
+    messagebox.showinfo(title, message)
+
+def warn(message: str, title: str = "Warning"):
+    messagebox.showwarning(title, message)
+
+def error(message: str, title: str = "Error"):
+    messagebox.showerror(title, message)
+
+# Helpers: numeric validation and units
+def vcmd_int(root):
+    def _is_int(new_value: str) -> bool:
+        return new_value.isdigit() or new_value == ""
+    return root.register(_is_int)
+
+def vcmd_float(root):
+    def _is_float(new_value: str) -> bool:
+        if new_value == "":
+            return True
+        try:
+            float(new_value)
+            return True
+        except ValueError:
+            return False
+    return root.register(_is_float)
+
+# Helpers: conversions
+def to_int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+def to_float(value, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+def mm_to_px(mm_value) -> int:
+    try:
+        return int(float(mm_value) * MM_TO_PX)
+    except Exception:
+        return 0
 
 
 def apply_styles(root):
@@ -30,6 +77,12 @@ class App(tk.Tk):
     def show_screen(self, screen_cls):
         if self.current is not None:
             self.current.destroy()
+        # clear global hotkeys between screens
+        try:
+            self.unbind("<Return>")
+            self.unbind("<Escape>")
+        except Exception:
+            pass
         self.current = screen_cls(self, self)
         self.current.pack(expand=True, fill="both")
 
@@ -54,3 +107,8 @@ class Screen(ttk.Frame):
         row.pack(fill="x", side="bottom", pady=12)
         ttk.Button(row, text="Go Back", command=on_back).pack(side="left", padx=12)
         ttk.Button(row, text=next_text, command=on_next).pack(side="right", padx=12)
+        # Default hotkeys: Enter → next, Escape → back/quit
+        if on_next:
+            self.app.bind("<Return>", lambda _e: on_next())
+        if on_back:
+            self.app.bind("<Escape>", lambda _e: on_back())

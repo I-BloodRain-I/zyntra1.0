@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-from core import Screen
+from core import Screen, vcmd_int, vcmd_float, warn
 from state import state
 
 
@@ -93,16 +93,20 @@ class Screen2(Screen):
         self.pkgx = tk.StringVar(value=state.pkg_x or "80")
         self.pkgy = tk.StringVar(value=state.pkg_y or "80")
         ttk.Label(pack_card, text="X (mm):").grid(row=1, column=0, sticky="e", padx=4)
-        ttk.Entry(pack_card, textvariable=self.pkgx, width=8).grid(row=1, column=1, sticky="w", padx=4)
+        ttk.Entry(pack_card, textvariable=self.pkgx, width=8,
+                  validate="key", validatecommand=(vcmd_float(self), "%P")).grid(row=1, column=1, sticky="w", padx=4)
         ttk.Label(pack_card, text="Y (mm):").grid(row=1, column=2, sticky="e", padx=4)
-        ttk.Entry(pack_card, textvariable=self.pkgy, width=8).grid(row=1, column=3, sticky="w", padx=4)
+        ttk.Entry(pack_card, textvariable=self.pkgy, width=8,
+                  validate="key", validatecommand=(vcmd_float(self), "%P")).grid(row=1, column=3, sticky="w", padx=4)
 
         # Major variations
         var_card = ttk.Frame(form, style="Card.TFrame", padding=14)
         var_card.pack(pady=10, fill="x")
         ttk.Label(var_card, text="Number of size (major) variations:", style="H2.TLabel").grid(row=0, column=0, sticky="w")
         self.major_count = tk.IntVar(value=state.major_variations or 3)
-        spin = ttk.Spinbox(var_card, from_=1, to=50, width=5, textvariable=self.major_count, command=self._rebuild_variation_rows)
+        spin = ttk.Spinbox(var_card, from_=1, to=50, width=5, textvariable=self.major_count,
+                            validate="key", validatecommand=(vcmd_int(self), "%P"),
+                            command=self._rebuild_variation_rows)
         spin.grid(row=0, column=1, padx=8)
 
         # Per-variation design counts
@@ -116,7 +120,8 @@ class Screen2(Screen):
         fonts_card.pack(pady=10, fill="x")
         ttk.Label(fonts_card, text="Total fonts Variations:", style="H2.TLabel").pack(side="left")
         self.font_total = tk.IntVar(value=state.font_variations_total or 7)
-        ttk.Spinbox(fonts_card, from_=1, to=200, textvariable=self.font_total, width=6).pack(side="left", padx=10)
+        ttk.Spinbox(fonts_card, from_=1, to=200, textvariable=self.font_total, width=6,
+                    validate="key", validatecommand=(vcmd_int(self), "%P")).pack(side="left", padx=10)
 
         self.bottom_nav(self, on_back=lambda: self.app.show_screen(Screen1), on_next=self.next)
 
@@ -131,14 +136,15 @@ class Screen2(Screen):
             row.pack(anchor="w", pady=4)
             ttk.Label(row, text=f"Variation {i+1} Designs total:", style="Label.TLabel").pack(side="left")
             var = tk.IntVar(value=preset[i] if i < len(preset) else 4)
-            ttk.Spinbox(row, from_=0, to=999, textvariable=var, width=6).pack(side="left", padx=8)
+            ttk.Spinbox(row, from_=0, to=999, textvariable=var, width=6,
+                        validate="key", validatecommand=(vcmd_int(self), "%P")).pack(side="left", padx=8)
             self.design_vars.append(var)
 
     def next(self):
         try:
             int(self.pkgx.get()); int(self.pkgy.get())
         except ValueError:
-            messagebox.showerror("Numbers only", "Package size X/Y must be numbers (mm).")
+            warn("Package size X/Y must be numbers (mm).", title="Numbers only")
             return
 
         state.sku = self.sku_var.get().strip()
@@ -247,9 +253,11 @@ class Screen4(Screen):
             xv = tk.StringVar(value=x0 or "5")
             yv = tk.StringVar(value=y0 or "5")
             ttk.Label(card, text="X (mm):").grid(row=0, column=1, sticky="e")
-            ttk.Entry(card, textvariable=xv, width=8).grid(row=0, column=2, padx=6)
+            ttk.Entry(card, textvariable=xv, width=8, validate="key",
+                      validatecommand=(vcmd_float(self), "%P")).grid(row=0, column=2, padx=6)
             ttk.Label(card, text="Y (mm):").grid(row=0, column=3, sticky="e")
-            ttk.Entry(card, textvariable=yv, width=8).grid(row=0, column=4, padx=6)
+            ttk.Entry(card, textvariable=yv, width=8, validate="key",
+                      validatecommand=(vcmd_float(self), "%P")).grid(row=0, column=4, padx=6)
             ttk.Button(card, text="Import vector", command=lambda k=i: self._import_vec(k)).grid(row=0, column=5, padx=10)
             lab = ttk.Label(card, text="• Pending", style="Muted.TLabel")
             lab.grid(row=0, column=6, padx=6)
