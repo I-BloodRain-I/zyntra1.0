@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
 from core import Screen, vcmd_int, vcmd_float, warn
-from state import state
+from state import state, APP_TITLE
 
 
 def _write_minimal_pdf(path: str):
@@ -52,7 +52,7 @@ class Screen1(Screen):
         ttk.Radiobutton(btns, text="Yes", value="yes", variable=self.choice, style="Choice.TRadiobutton").grid(row=0, column=0, padx=8, pady=8)
         ttk.Radiobutton(btns, text="No",  value="no",  variable=self.choice, style="Choice.TRadiobutton").grid(row=0, column=1, padx=8, pady=8)
 
-        self.bottom_nav(self, on_back=self.app.quit_app, on_next=self.next)
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.next)
 
     def next(self):
         val = self.choice.get()
@@ -123,7 +123,7 @@ class Screen2(Screen):
         ttk.Spinbox(fonts_card, from_=1, to=200, textvariable=self.font_total, width=6,
                     validate="key", validatecommand=(vcmd_int(self), "%P")).pack(side="left", padx=10)
 
-        self.bottom_nav(self, on_back=lambda: self.app.show_screen(Screen1), on_next=self.next)
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.next)
 
     def _rebuild_variation_rows(self):
         for w in self.variations_frame.winfo_children():
@@ -186,7 +186,7 @@ class Screen3(Screen):
         self.upload_labels: list[ttk.Label] = []
 
         self._build_rows()
-        self.bottom_nav(self, on_back=lambda: self.app.show_screen(Screen2), on_next=self.next)
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.next)
 
     def _upload(self, idx):
         state.font_uploaded[idx] = True
@@ -241,7 +241,7 @@ class Screen4(Screen):
         self.vector_labels: list[ttk.Label] = []
 
         self._build_rows()
-        self.bottom_nav(self, on_back=lambda: self.app.show_screen(Screen3), on_next=self.next)
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.next)
 
     def _import_vec(self, idx):
         # здесь могла бы быть логика открытия файла
@@ -327,7 +327,7 @@ class Screen5(Screen):
         ttk.Label(canvas_card, text="(Artwork preview)\nDefine text space →", style="Muted.TLabel").pack(expand=True)
 
         self.bottom_nav(self,
-                        on_back=lambda: self.app.show_screen(Screen4),
+                        on_back=self.app.go_back,
                         on_next=lambda: self.app.show_screen(Screen6),
                         next_text="Proceed!")
 
@@ -376,7 +376,7 @@ class Screen6(Screen):
         self.ai_arrange = tk.BooleanVar(value=True)
         ttk.Checkbutton(ai_card, text="AiArrange", variable=self.ai_arrange).pack()
 
-        self.bottom_nav(self, on_back=lambda: self.app.show_screen(Screen5), on_next=self._finish, next_text="Proceed!")
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=self._finish, next_text="Proceed!")
 
     def _finish(self):
         total = self.total_var.get()
@@ -399,6 +399,8 @@ class Screen7(Screen):
 
         bar = tk.Frame(self, bg="#111111", height=50)
         bar.pack(fill="x")
+        # App title on the left
+        tk.Label(bar, text=APP_TITLE, bg="#111111", fg="white", font=("Arial", 16, "bold")).pack(side="left", padx=12)
 
         total = state.sheet_total or 0
         done = total
@@ -423,7 +425,7 @@ class Screen7(Screen):
         self.canvas.pack(expand=True, fill="both", padx=18, pady=18)
         self._draw_mock_layout()
 
-        self.bottom_nav(self, on_back=lambda: self.app.show_screen(Screen6), on_next=lambda: self.app.show_screen(Screen8), next_text="Save")
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=lambda: self.app.show_screen(Screen8), next_text="Save")
 
     def _draw_mock_layout(self):
         c = self.canvas
@@ -450,6 +452,9 @@ class Screen8(Screen):
     def __init__(self, master, app):
         super().__init__(master, app)
 
+        # App title + screen title
+        self.header(self, "Product Added Successfully")
+
         wrap = ttk.Frame(self, style="Screen.TFrame")
         wrap.pack(expand=True, fill="both", padx=20, pady=20)
 
@@ -475,7 +480,7 @@ class Screen8(Screen):
         ttk.Label(file_chip, text="Test File .pdf", style="H2.TLabel").pack()
         ttk.Button(file_row, text="Download", command=self._download).pack(side="left", padx=14)
 
-        self.bottom_nav(self, on_back=lambda: self.app.show_screen(Screen7), on_next=self.app.quit_app, next_text="Done")
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.app.quit_app, next_text="Done")
 
     def _download(self):
         fname = filedialog.asksaveasfilename(

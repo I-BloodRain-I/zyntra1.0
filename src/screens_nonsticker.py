@@ -39,11 +39,12 @@ class NScreen2(Screen):
     def __init__(self, master, app):
         super().__init__(master, app)
 
-        header = ttk.Frame(self, style="Screen.TFrame")
-        header.pack(fill="x", pady=(10, 6))
-        ttk.Label(header, text="Write Name for sku", style="H1.TLabel").pack(side="left", padx=(10, 8))
+        # App title + screen title
+        self.header(self, "Write Name for sku")
+        top_row = ttk.Frame(self, style="Screen.TFrame")
+        top_row.pack(fill="x", pady=(6, 6))
         self.sku_var = tk.StringVar(value=state.sku or "Carmirror134")
-        ttk.Entry(header, textvariable=self.sku_var, width=28).pack(side="left")
+        ttk.Entry(top_row, textvariable=self.sku_var, width=28).pack(side="left", padx=(10, 0))
 
         bar = tk.Frame(self, bg="black")
         bar.pack(fill="x", padx=10, pady=(6, 10))
@@ -96,13 +97,11 @@ class NScreen2(Screen):
         self._items: dict[int, dict] = {}   # canvas_id -> meta
         self._selected: Optional[int] = None
         self._drag_off: Tuple[int, int] = (0, 0)
+        self._drag_kind: Optional[str] = None  # 'rect' or 'text'
+        self._drag_size: Tuple[int, int] = (0, 0)
 
-        # Навигация: назад — к первому экрану с выбором типа (Screen1) в sticker-пакете.
-        def _back():
-            from screens_sticker import Screen1  # локальный импорт, чтобы избежать циклических зависимостей
-            self.app.show_screen(Screen1)
-
-        self.bottom_nav(self, on_back=_back, on_next=self._proceed, next_text="Proceed!")
+        # Навигация: назад — к предыдущему экрану по истории.
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=self._proceed, next_text="Proceed!")
 
     # UI helpers
     def _chip(self, parent, label, var):
@@ -176,38 +175,63 @@ class NScreen2(Screen):
     # Selection/drag
     def _on_click(self, e):
         hit = self.canvas.find_withtag("current")
+        target = None
         if hit:
-            self._select(hit[0])
-            x1, y1, x2, y2 = self.canvas.bbox(self._selected)
-            self._drag_off = (e.x - x1, e.y - y1)
+            cid = hit[0]
+            if cid in self._items:
+                target = cid
+            else:
+                # If user clicked on a label inside a rect, select its owning rect
+                for rid, meta in self._items.items():
+                    if meta.get("label_id") == cid:
+                        target = rid
+                        break
+        self._select(target)
+        if target:
+            meta = self._items.get(target, {})
+            if meta.get("type") == "rect":
+                x1, y1, x2, y2 = self.canvas.bbox(target)
+                self._drag_off = (e.x - x1, e.y - y1)
+                rx1, ry1, rx2, ry2 = self.canvas.coords(target)
+                self._drag_size = (rx2 - rx1, ry2 - ry1)
+                self._drag_kind = "rect"
+            else:
+                cx, cy = self.canvas.coords(target)
+                self._drag_off = (e.x - cx, e.y - cy)
+                self._drag_kind = "text"
         else:
-            self._select(None)
+            self._drag_kind = None
 
     def _on_drag(self, e):
         if not self._selected:
             return
         meta = self._items.get(self._selected, {})
-        x1 = e.x - self._drag_off[0]
-        y1 = e.y - self._drag_off[1]
-        bx = self.canvas.bbox(self._selected)
-        w = bx[2] - bx[0]
-        h = bx[3] - bx[1]
-        self.canvas.coords(self._selected, x1, y1, x1 + w, y1 + h)
-        if meta.get("label_id"):
-            self.canvas.coords(meta["label_id"], x1 + w / 2, y1 + h / 2)
+        if self._drag_kind == "rect":
+            x1 = e.x - self._drag_off[0]
+            y1 = e.y - self._drag_off[1]
+            w, h = self._drag_size
+            self.canvas.coords(self._selected, x1, y1, x1 + w, y1 + h)
+            if meta.get("label_id"):
+                self.canvas.coords(meta["label_id"], x1 + w / 2, y1 + h / 2)
+        elif self._drag_kind == "text":
+            cx = e.x - self._drag_off[0]
+            cy = e.y - self._drag_off[1]
+            self.canvas.coords(self._selected, cx, cy)
 
     def _on_release(self, _):
-        pass
+        self._drag_kind = None
 
     def _select(self, cid: Optional[int]):
         if getattr(self, "_selected", None) and self._selected in self._items:
-            self.canvas.itemconfig(self._selected, outline="#d0d0d0", width=2)
+            prev_meta = self._items.get(self._selected, {})
+            if prev_meta.get("type") == "rect":
+                self.canvas.itemconfig(self._selected, outline="#d0d0d0", width=2)
         self._selected = cid
         if not cid:
             return
-        self.canvas.itemconfig(cid, outline="#6ec8ff", width=3)
         meta = self._items.get(cid, {})
         if meta.get("type") == "rect":
+            self.canvas.itemconfig(cid, outline="#6ec8ff", width=3)
             self.sel_w.set(str(meta["w_mm"]))
             self.sel_h.set(str(meta["h_mm"]))
 
@@ -281,9 +305,13 @@ class NScreen4(Screen):
     def __init__(self, master, app):
         super().__init__(master, app)
 
+        # App title + screen title
+        self.header(self, "Product Added Successfully")
+
         wrap = ttk.Frame(self, style="Screen.TFrame")
         wrap.pack(expand=True, fill="both", padx=20, pady=20)
 
+        # keep main success header within wrap for spacing consistency
         ttk.Label(wrap, text="Product Added Successfully", style="H1.TLabel").pack(pady=(10, 16))
 
         chk = tk.Canvas(wrap, width=180, height=180, bg="#4d4d4d", highlightthickness=0)
@@ -305,10 +333,7 @@ class NScreen4(Screen):
         ttk.Label(chip, text="Test File .pdf", style="H2.TLabel").pack()
         ttk.Button(row, text="Download", command=self._download).pack(side="left", padx=14)
 
-        def _back():
-            self.app.show_screen(NScreen2)
-
-        self.bottom_nav(self, on_back=_back, on_next=self.app.quit_app, next_text="Done")
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.app.quit_app, next_text="Done")
 
     def _download(self):
         fname = filedialog.asksaveasfilename(

@@ -1,7 +1,7 @@
 # App (Tk), стили ttk, базовый Screen
 import tkinter as tk
 from tkinter import ttk, messagebox
-from state import MM_TO_PX
+from state import MM_TO_PX, APP_TITLE
 
 # Helpers: dialogs
 def info(message: str, title: str = "Info"):
@@ -66,16 +66,22 @@ def apply_styles(root):
 
 
 class App(tk.Tk):
-    def __init__(self, title: str = "Zyntra 1.0", size: str = "980x640"):
+    def __init__(self, title: str = APP_TITLE, size: str = "980x640"):
         super().__init__()
         self.title(title)
         self.geometry(size)
         self.configure(bg="#4d4d4d")
         apply_styles(self)
         self.current = None
+        self._history: list[type] = []
 
-    def show_screen(self, screen_cls):
+    def show_screen(self, screen_cls, push_history: bool = True):
         if self.current is not None:
+            if push_history:
+                try:
+                    self._history.append(self.current.__class__)
+                except Exception:
+                    pass
             self.current.destroy()
         # clear global hotkeys between screens
         try:
@@ -89,6 +95,13 @@ class App(tk.Tk):
     def quit_app(self):
         self.destroy()
 
+    def go_back(self):
+        if self._history:
+            prev = self._history.pop()
+            self.show_screen(prev, push_history=False)
+        else:
+            self.quit_app()
+
 
 class Screen(ttk.Frame):
     def __init__(self, master, app):
@@ -99,12 +112,14 @@ class Screen(ttk.Frame):
     def header(self, parent, title_text="Add a new product"):
         bar = ttk.Frame(parent, style="Title.TFrame")
         bar.pack(fill="x")
-        ttk.Label(bar, text="Zyntra 1.0", style="Brand.TLabel").pack(side="left", padx=10, pady=6)
+        ttk.Label(bar, text=APP_TITLE, style="Brand.TLabel").pack(side="left", padx=10, pady=6)
         ttk.Label(parent, text=title_text, style="H1.TLabel").pack(pady=(18, 8))
 
     def bottom_nav(self, parent, on_back=None, on_next=None, next_text="Proceed"):
         row = ttk.Frame(parent, style="Screen.TFrame")
         row.pack(fill="x", side="bottom", pady=12)
+        if on_back is None:
+            on_back = self.app.go_back
         ttk.Button(row, text="Go Back", command=on_back).pack(side="left", padx=12)
         ttk.Button(row, text=next_text, command=on_next).pack(side="right", padx=12)
         # Default hotkeys: Enter → next, Escape → back/quit

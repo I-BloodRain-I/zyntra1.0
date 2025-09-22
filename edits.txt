@@ -7,3 +7,7 @@ The look and feel are cleaner and consistent everywhere.
 Settings can be saved and reloaded.
 A basic activity log was added to track what happens.
 3. Added handle errors
+4.1 Added tracking current screen to work "Go Back" properly
+4. Fixed bug with "Go back" where it close the program if you get screen3 from screen2
+5. Now the title on each screen and nscreen
+6. Fix bug when the image in screen3 moving it also resing but don't

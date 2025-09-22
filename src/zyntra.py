@@ -82,7 +82,7 @@ class LauncherOrderRange(Screen):
         self.to_var = tk.StringVar(value=state.order_to)
         ttk.Entry(card, textvariable=self.to_var, width=12, justify="center").grid(row=1, column=3)
 
-        self.bottom_nav(self, on_back=lambda: self.app.show_screen(LauncherSelectProduct), on_next=self._start, next_text="Start")
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=self._start, next_text="Start")
 
     def _start(self):
         from_s = self.from_var.get().strip()
