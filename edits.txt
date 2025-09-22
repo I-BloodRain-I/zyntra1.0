@@ -6,3 +6,4 @@ Navigation is simpler: Enter moves forward, Escape goes back or exits.
 The look and feel are cleaner and consistent everywhere.
 Settings can be saved and reloaded.
 A basic activity log was added to track what happens.
+3. Added handle errors

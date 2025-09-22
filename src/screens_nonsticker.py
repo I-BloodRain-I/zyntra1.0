@@ -262,7 +262,15 @@ class NScreen2(Screen):
 
     def _proceed(self):
         # Сохраняем актуальные значения перед переходом
-        state.sku = self.sku_var.get().strip()
+        # 2/3 mirrored for non-sticker flow
+        sku_val = self.sku_var.get().strip()
+        if not sku_val:
+            messagebox.showwarning("Missing SKU", "Please select an SKU before proceeding.")
+            return
+        if len(sku_val) < 3:
+            messagebox.showwarning("Invalid SKU", "SKU doesn't exist.")
+            return
+        state.sku = sku_val
         state.pkg_x = self.jig_x.get().strip()
         state.pkg_y = self.jig_y.get().strip()
         self.app.show_screen(NScreen4)

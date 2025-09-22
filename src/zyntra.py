@@ -1,6 +1,6 @@
 import logging
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from state import state, ALL_PRODUCTS, APP_TITLE
 from core import App, Screen
 from screens_sticker import Screen1
@@ -85,9 +85,29 @@ class LauncherOrderRange(Screen):
         self.bottom_nav(self, on_back=lambda: self.app.show_screen(LauncherSelectProduct), on_next=self._start, next_text="Start")
 
     def _start(self):
-        state.order_from = self.from_var.get()
-        state.order_to = self.to_var.get()
-        # дальше визард сам решит ветку
+        from_s = self.from_var.get().strip()
+        to_s = self.to_var.get().strip()
+
+        # 1) Order number does not exist / invalid
+        if not from_s or not to_s:
+            messagebox.showerror("Error", "Order number does not exist.")
+            return
+
+        # Both must be integers
+        try:
+            from_n = int(from_s)
+            to_n = int(to_s)
+        except ValueError:
+            messagebox.showerror("Error", "Order number does not exist.")
+            return
+
+        # Range sanity
+        if from_n > to_n:
+            messagebox.showwarning("Warning", "'From' must be less than or equal to 'To'.")
+            return
+
+        state.order_from = from_s
+        state.order_to = to_s
         self.app.show_screen(Screen1)
 
 

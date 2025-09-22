@@ -141,13 +141,24 @@ class Screen2(Screen):
             self.design_vars.append(var)
 
     def next(self):
+        # 2) Please select an SKU before proceeding
+        sku_val = self.sku_var.get().strip()
+        if not sku_val:
+            warn("Please select an SKU before proceeding.", title="Missing SKU")
+            return
+
+        # 3) SKU does not exist (simple format check placeholder)
+        if len(sku_val) < 3:
+            warn("SKU doesn't exist.", title="Invalid SKU")
+            return
+
         try:
             int(self.pkgx.get()); int(self.pkgy.get())
         except ValueError:
             warn("Package size X/Y must be numbers (mm).", title="Numbers only")
             return
 
-        state.sku = self.sku_var.get().strip()
+        state.sku = sku_val
         state.pkg_x = self.pkgx.get().strip()
         state.pkg_y = self.pkgy.get().strip()
         state.major_variations = int(self.major_count.get())
