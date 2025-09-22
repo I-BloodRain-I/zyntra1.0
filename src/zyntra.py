@@ -1,7 +1,10 @@
 import logging
+import os
+import io
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import ttk, messagebox
-from state import state, ALL_PRODUCTS, APP_TITLE
+from state import state, ALL_PRODUCTS, APP_TITLE, IMAGES_PATH
 from core import App, Screen
 from screens_sticker import Screen1
 
@@ -11,46 +14,272 @@ class LauncherSelectProduct(Screen):
         super().__init__(master, app)
 
         # Fall back to previous UI layout/styles for main screen
-        title = tk.Frame(self, bg="gray20", height=44); title.pack(fill="x")
-        tk.Label(title, text=APP_TITLE, bg="gray20", fg="black",
-                 font=("Arial", 18, "bold")).pack(side="left", padx=10, pady=6)
+        title = tk.Frame(self, bg="#474747", height="31p"); title.pack(fill="x")
+        title.pack_propagate(False)
+        tk.Label(title, text=APP_TITLE, bg="#474747", fg="#000000",
+                 font=("Myriad Pro", 24)).pack(side="left", padx=8, pady=0)
 
-        mid = tk.Frame(self, bg="gray30"); mid.pack(expand=True, fill="both")
-        tk.Label(mid, text="Select product:", bg="gray30", fg="black",
-                 font=("Arial", 16)).pack(pady=(24, 8))
+        mid = tk.Frame(self, bg="#878787"); mid.pack(expand=True, fill="both")
+        label_select = tk.Label(mid, text="Select product:", bg="#878787", fg="#000000",
+                 font=("Myriad Pro", 24))
 
-        search_row = tk.Frame(mid, bg="gray30"); search_row.pack(pady=(0, 6))
-        tk.Label(search_row, text="Search:", bg="gray30", fg="black",
-                 font=("Arial", 12)).pack(side="left", padx=(0, 8))
+        # DPI-aware font helper (must be defined before first use)
+        dpi_px_per_inch = float(self.winfo_fpixels("1i"))
+        def font_from_pt(pt_value: float) -> tkfont.Font:
+            px = int(round(pt_value * dpi_px_per_inch / 72.0))
+            return tkfont.Font(family="Myriad Pro", size=-px)
 
-        self.search_var = tk.StringVar(value=state.saved_search)
-        search_entry = tk.Entry(search_row, textvariable=self.search_var, font=("Arial", 12), width=30)
-        search_entry.pack(side="left")
-        tk.Button(search_row, text="Clear", bg="gray25", fg="black",
-                  command=lambda: (self.search_var.set(""), self._filter_products())).pack(side="left", padx=6)
-
+        # Custom combobox (text + arrow) replacing ttk visuals
         self.product_var = tk.StringVar(value=state.saved_product)
-        self.product_dropdown = ttk.Combobox(mid, textvariable=self.product_var, values=ALL_PRODUCTS, state="readonly", width=32)
-        self.product_dropdown.pack(pady=(0, 18))
+        cb_font = font_from_pt(21.8)
+        cb_font_metrics = tkfont.Font(font=cb_font)
+        cb_height_px = int(cb_font_metrics.metrics("linespace") + 20)  # 10px top/bottom
 
-        bottom_left = tk.Frame(self, bg="gray30"); bottom_left.pack(side="left", anchor="sw", padx=12, pady=18)
-        tk.Button(bottom_left, text="UPDATE EXISTING PRODUCT", bg="gray25", fg="black", width=28, height=2).pack(pady=6)
-        tk.Button(bottom_left, text="Add a new product", bg="gray25", fg="black", width=28, height=2, command=self._add_new).pack(pady=6)
+        self.combo_frame = tk.Frame(mid, bg="#3d3d3d", bd=0, highlightthickness=0)
+        self.combo_text = tk.Canvas(self.combo_frame, height=cb_height_px, bg="#3d3d3d", highlightthickness=0, bd=0)
+        self.combo_arrow = tk.Canvas(self.combo_frame, width=cb_height_px, height=cb_height_px, bg="#000000", highlightthickness=0, bd=0, cursor="hand2")
+        self.combo_text.pack(side="left")
+        self.combo_arrow.pack(side="left")
 
-        tk.Button(self, text="Proceed", bg="gray25", fg="black", width=12, height=2, command=self._proceed).place(relx=0.93, rely=0.92, anchor="center")
+        def _render_combo_text():
+            self.combo_text.delete("all")
+            s = self.product_var.get()
+            padding_lr = 8
+            w_text = cb_font_metrics.measure(s)
+            self.combo_text.configure(width=w_text + padding_lr * 2)
+            self.combo_text.create_text(padding_lr, cb_height_px // 2, text=s, font=cb_font, fill="#000000", anchor="w")
+            # redraw arrow strictly from SVG (no procedural drawing)
+            c = self.combo_arrow
+            c.delete("all")
+            c.configure(width=cb_height_px, height=cb_height_px, bg="#000000")
+            # Load prerendered PNG and scale to an exact fraction of box height
+            png_path = os.path.join(IMAGES_PATH, "arrow_down.png")
+            arrow_scale = 0.4  # supports 0.4, 0.45, 0.5, etc.
+            target_h = max(1, int(cb_height_px * arrow_scale))
+            try:
+                from PIL import Image, ImageTk  # type: ignore
+                img = Image.open(png_path).convert("RGBA")
+                target_w = max(1, int(round(img.width * (target_h / img.height))))
+                img = img.resize((target_w, target_h), Image.LANCZOS)
+                self._arrow_img = ImageTk.PhotoImage(img)
+            except Exception:
+                base_img = tk.PhotoImage(file=png_path)
+                factor = max(1, int(round(base_img.height() / target_h)))
+                self._arrow_img = base_img.subsample(factor, factor) if factor > 1 else base_img
+            # Move arrow down by ~4.5pt
+            try:
+                y_offset = int(round(float(self.winfo_fpixels("1p")) * 2))
+            except Exception:
+                y_offset = 4
+            c.create_image(cb_height_px // 2, (cb_height_px // 2) + y_offset, image=self._arrow_img)
 
-        search_entry.bind("<KeyRelease>", lambda *_: self._filter_products())
-        self._filter_products()
-        search_entry.focus_set()
 
-    def _filter_products(self):
-        q_raw = self.search_var.get().strip()
-        state.saved_search = q_raw
-        q = q_raw.lower()
-        values = ALL_PRODUCTS if not q else [p for p in ALL_PRODUCTS if q in p.lower()]
-        self.product_dropdown["values"] = values
-        if self.product_var.get() not in values:
-            self.product_var.set(values[0] if values else "")
+
+        _render_combo_text()
+
+        # Native dropdown popup via Listbox in a borderless Toplevel
+        self._combo_popup = None
+        def _open_popup(_e=None):
+            try:
+                if self._combo_popup and self._combo_popup.winfo_exists():
+                    self._combo_popup.destroy()
+                self._combo_popup = tk.Toplevel(self)
+                self._combo_popup.overrideredirect(True)
+                self._combo_popup.configure(bg="#000000")
+                # position
+                rx = self.combo_frame.winfo_rootx()
+                ry = self.combo_frame.winfo_rooty() + self.combo_frame.winfo_height()
+                pw = self.combo_frame.winfo_width()
+                self._combo_popup.geometry(f"{pw}x{min(240, 28*len(ALL_PRODUCTS))}+{rx}+{ry}")
+                lb = tk.Listbox(self._combo_popup, font=cb_font, bg="#555555", fg="#ffffff",
+                                selectbackground="#3f3f3f", activestyle="none", highlightthickness=0, bd=0)
+                for item in ALL_PRODUCTS:
+                    lb.insert("end", item)
+                try:
+                    idx = ALL_PRODUCTS.index(self.product_var.get())
+                    lb.selection_set(idx)
+                    lb.see(idx)
+                except Exception:
+                    pass
+                lb.pack(fill="both", expand=True)
+                def _choose(_evt=None):
+                    try:
+                        sel = lb.get(lb.curselection())
+                    except Exception:
+                        sel = None
+                    if sel:
+                        self.product_var.set(sel)
+                        _render_combo_text()
+                    self._combo_popup.destroy()
+                lb.bind("<Double-Button-1>", _choose)
+                lb.bind("<Return>", _choose)
+                # close on focus out or click outside
+                self._combo_popup.bind("<FocusOut>", lambda _e: self._combo_popup.destroy())
+                self._combo_popup.focus_force()
+            except Exception:
+                pass
+
+        self.combo_text.bind("<Button-1>", _open_popup)
+        self.combo_arrow.bind("<Button-1>", _open_popup)
+        # Place label and combobox precisely (label at 54pt from top of mid, dropdown 20pt under it)
+        def _position_select():
+            try:
+                y_label = int(mid.winfo_fpixels("54p"))
+                label_select.place(relx=0.5, x=0, y=y_label, anchor="n")
+                mid.update_idletasks()
+                gap_px = int(mid.winfo_fpixels("20p"))
+                y_top = label_select.winfo_y() + label_select.winfo_height() + gap_px
+                self.combo_frame.place(relx=0.5, x=0, y=y_top, anchor="n")
+                _render_combo_text()
+            except Exception:
+                pass
+        self.after_idle(_position_select)
+
+        # Resize custom combobox when selection changes programmatically
+        def _on_change(*_a):
+            try:
+                _render_combo_text()
+            except Exception:
+                pass
+        self.product_var.trace_add("write", lambda *_a: _on_change())
+
+        # Bottom-left buttons (fixed pixel size and placement)
+        add_text = "Add a new product"
+        add_font_obj = font_from_pt(23.5)
+        add_font = tkfont.Font(font=add_font_obj)
+        add_tracking_px = 1.2  # increase spacing per request
+        add_char_widths = [add_font.measure(ch) for ch in add_text]
+        add_text_width_px = sum(add_char_widths) + add_tracking_px * max(0, len(add_text) - 1)
+        add_height_px = int(add_font.metrics("linespace") + 10)
+        add_padding_lr = 8
+        add_width_px = int(add_text_width_px + add_padding_lr * 2)
+        btn_add_canvas = tk.Canvas(
+            self,
+            width=add_width_px,
+            height=add_height_px,
+            bg="#474747",
+            highlightthickness=0,
+            bd=0,
+            cursor="hand2"
+        )
+        x_cursor_add = add_padding_lr
+        y_center_add = add_height_px // 2
+        add_text_ids = []
+        for ch, cw in zip(add_text, add_char_widths):
+            tid = btn_add_canvas.create_text(x_cursor_add, y_center_add, text=ch, font=add_font_obj, fill="#000000", anchor="w")
+            add_text_ids.append(tid)
+            x_cursor_add += cw + add_tracking_px
+        def _add_press(_e, canvas=btn_add_canvas, ids=add_text_ids):
+            canvas.configure(bg="#3f3f3f")
+            for tid in ids:
+                canvas.move(tid, 1, 1)
+            canvas._pressed = True
+        def _add_release(e, canvas=btn_add_canvas, ids=add_text_ids):
+            canvas.configure(bg="#474747")
+            for tid in ids:
+                canvas.move(tid, -1, -1)
+            # Trigger click only if released inside the canvas
+            try:
+                w = canvas.winfo_width(); h = canvas.winfo_height()
+                inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(canvas, "_pressed", False) and inside:
+                canvas.after(10, self._add_new)
+            canvas._pressed = False
+        btn_add_canvas.bind("<ButtonPress-1>", _add_press)
+        btn_add_canvas.bind("<ButtonRelease-1>", _add_release)
+        btn_add_canvas.place(relx=0.0, rely=1.0, x=12, y=-12, anchor="sw")
+
+        # UPDATE EXISTING PRODUCT using Canvas to reduce letter spacing
+        update_text = "UPDATE EXISTING PRODUCT"
+        update_font = font_from_pt(15.74)
+        upd_font = tkfont.Font(font=update_font)
+        tracking_px = -0.64  # reduce letter spacing by 1px between glyphs
+        char_widths = [upd_font.measure(ch) for ch in update_text]
+        text_width_px = sum(char_widths) + tracking_px * max(0, len(update_text) - 1)
+        upd_height_px = int(upd_font.metrics("linespace") + 20)
+        padding_lr = 8
+        upd_width_px = int(text_width_px + padding_lr * 2)
+        gap_px = 12
+        btn_update_canvas = tk.Canvas(
+            self,
+            width=upd_width_px,
+            height=upd_height_px,
+            bg="#474747",
+            highlightthickness=0,
+            bd=0,
+            cursor="hand2"
+        )
+        # draw text with custom tracking
+        x_cursor = padding_lr
+        y_center = upd_height_px // 2
+        upd_text_ids = []
+        for ch, cw in zip(update_text, char_widths):
+            tid = btn_update_canvas.create_text(x_cursor, y_center, text=ch, font=update_font, fill="#000000", anchor="w")
+            upd_text_ids.append(tid)
+            x_cursor += cw + tracking_px
+        def _upd_press(_e, canvas=btn_update_canvas, ids=upd_text_ids):
+            canvas.configure(bg="#3f3f3f")
+            for tid in ids:
+                canvas.move(tid, 1, 1)
+            canvas._pressed = True
+        def _upd_release(e, canvas=btn_update_canvas, ids=upd_text_ids):
+            canvas.configure(bg="#474747")
+            for tid in ids:
+                canvas.move(tid, -1, -1)
+            try:
+                w = canvas.winfo_width(); h = canvas.winfo_height()
+                inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(canvas, "_pressed", False) and inside:
+                canvas.after(10, lambda: None)  # no action bound for update yet
+            canvas._pressed = False
+        btn_update_canvas.bind("<ButtonPress-1>", _upd_press)
+        btn_update_canvas.bind("<ButtonRelease-1>", _upd_release)
+        btn_update_canvas.place(relx=0.0, rely=1.0, x=12, y=-(12 + add_height_px + gap_px), anchor="sw")
+
+        # Proceed button on Canvas with press animation
+        proceed_text = "Proceed"
+        proceed_font_obj = font_from_pt(14.4)
+        proceed_font = tkfont.Font(font=proceed_font_obj)
+        proceed_width_px = int(proceed_font.measure(proceed_text) + 16)
+        proceed_height_px = int(proceed_font.metrics("linespace") + 20)
+        btn_proceed_canvas = tk.Canvas(
+            self,
+            width=proceed_width_px,
+            height=proceed_height_px,
+            bg="#474747",
+            highlightthickness=0,
+            bd=0,
+            cursor="hand2"
+        )
+        px_left = 8
+        py_center = proceed_height_px // 2
+        proc_text_id = btn_proceed_canvas.create_text(px_left, py_center, text=proceed_text, font=proceed_font_obj, fill="#000000", anchor="w")
+        def _proc_press(_e, canvas=btn_proceed_canvas, tid=proc_text_id):
+            canvas.configure(bg="#3f3f3f")
+            canvas.move(tid, 1, 1)
+            canvas._pressed = True
+        def _proc_release(e, canvas=btn_proceed_canvas, tid=proc_text_id):
+            canvas.configure(bg="#474747")
+            canvas.move(tid, -1, -1)
+            try:
+                w = canvas.winfo_width(); h = canvas.winfo_height()
+                inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(canvas, "_pressed", False) and inside:
+                canvas.after(10, self._proceed)
+            canvas._pressed = False
+        btn_proceed_canvas.bind("<ButtonPress-1>", _proc_press)
+        btn_proceed_canvas.bind("<ButtonRelease-1>", _proc_release)
+        btn_proceed_canvas.place(relx=1.0, rely=1.0, x=-12, y=-12, anchor="se")
+        try:
+            self.combo_text.focus_set()
+        except Exception:
+            pass
 
     def _proceed(self):
         state.saved_product = self.product_var.get()

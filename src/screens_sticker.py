@@ -141,13 +141,11 @@ class Screen2(Screen):
             self.design_vars.append(var)
 
     def next(self):
-        # 2) Please select an SKU before proceeding
         sku_val = self.sku_var.get().strip()
         if not sku_val:
             warn("Please select an SKU before proceeding.", title="Missing SKU")
             return
 
-        # 3) SKU does not exist (simple format check placeholder)
         if len(sku_val) < 3:
             warn("SKU doesn't exist.", title="Invalid SKU")
             return

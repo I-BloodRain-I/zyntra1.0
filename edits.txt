@@ -1,4 +1,4 @@
-1. reorginize
+1. reorginize. Split single file into 5: core, state, zyntra, screens_nonsticker, screens_sticker
 2. The app now runs as one unified program, without extra windows or confusing starts.
 Helpful tips and warnings were added — the app tells you if something’s wrong.
 Number fields only accept numbers, so it’s harder to make mistakes.
@@ -11,3 +11,4 @@ A basic activity log was added to track what happens.
 4. Fixed bug with "Go back" where it close the program if you get screen3 from screen2
 5. Now the title on each screen and nscreen
 6. Fix bug when the image in screen3 moving it also resing but don't
+7. Almost end start screen

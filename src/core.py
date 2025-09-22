@@ -53,24 +53,39 @@ def mm_to_px(mm_value) -> int:
 def apply_styles(root):
     style = ttk.Style(root)
     style.theme_use("clam")
-    style.configure("Screen.TFrame", background="#4d4d4d")
-    style.configure("Title.TFrame",  background="#3b3b3b")
+    # Global backgrounds per latest spec
+    style.configure("Screen.TFrame", background="#878787")
+    style.configure("Title.TFrame",  background="#474747")
     style.configure("Card.TFrame",   background="#a6a6a6")
-    style.configure("Brand.TLabel",  background="#3b3b3b", foreground="black", font=("Arial", 18, "bold"))
-    style.configure("H1.TLabel",     background="#4d4d4d", foreground="black", font=("Arial", 22, "bold"))
-    style.configure("H2.TLabel",     background="#a6a6a6", foreground="black", font=("Arial", 16))
-    style.configure("H3.TLabel",     background="#a6a6a6", foreground="black", font=("Arial", 12, "bold"))
-    style.configure("Label.TLabel",  background="#a6a6a6", foreground="black", font=("Arial", 12))
+    style.configure("Brand.TLabel",  background="#474747", foreground="#000000", font=("Myriad Pro", 24))
+    style.configure("H1.TLabel",     background="#4d4d4d", foreground="black", font=("Myriad Pro", 22))
+    style.configure("H2.TLabel",     background="#a6a6a6", foreground="black", font=("Myriad Pro", 16))
+    style.configure("H3.TLabel",     background="#a6a6a6", foreground="black", font=("Myriad Pro", 12))
+    style.configure("Label.TLabel",  background="#a6a6a6", foreground="black", font=("Myriad Pro", 12))
     style.configure("Muted.TLabel",  background="#a6a6a6", foreground="#333")
     style.configure("Choice.TRadiobutton", background="#a6a6a6")
+    # Combobox style for launcher
+    style.configure(
+        "Prod.TCombobox",
+        fieldbackground="#3d3d3d",
+        background="#3d3d3d",
+        foreground="#000000",
+        arrowsize=0,
+        arrowcolor="#000000",
+        selectforeground="#000000",
+        selectbackground="#3d3d3d"
+    )
+    style.configure("Prod.TCombobox", font=("Myriad Pro", 31))
 
 
 class App(tk.Tk):
-    def __init__(self, title: str = APP_TITLE, size: str = "980x640"):
+    def __init__(self, title: str = APP_TITLE, size: str = "960x720"):
         super().__init__()
         self.title(title)
         self.geometry(size)
-        self.configure(bg="#4d4d4d")
+        self.minsize(960, 720)
+        self.maxsize(960, 720)  # static layout, fixed 4:3 ratio
+        self.configure(bg="#878787")
         apply_styles(self)
         self.current = None
         self._history: list[type] = []

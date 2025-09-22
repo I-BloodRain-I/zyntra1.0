@@ -10,6 +10,7 @@ ALL_PRODUCTS = [
 ]
 MM_TO_PX = 3  # simple scale mm→px for drawing
 APP_TITLE = "Zyntra 1.0"
+IMAGES_PATH = Path(__file__).parent.parent / "images"
 
 
 @dataclass
