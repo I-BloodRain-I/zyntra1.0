@@ -3,8 +3,8 @@ from typing import Optional, Tuple
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-from core import Screen, vcmd_float, mm_to_px
-from state import state, MM_TO_PX
+from src.core import Screen, vcmd_float, mm_to_px
+from src.state import state, MM_TO_PX
 
 # ---- tiny helper: write a minimal PDF so Download has content ----
 def _write_minimal_pdf(path: str):

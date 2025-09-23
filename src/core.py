@@ -1,8 +1,10 @@
 # App (Tk), стили ttk, базовый Screen
-import tkinter as tk
 import os
+
+import tkinter as tk
 from tkinter import ttk, messagebox
-from state import MM_TO_PX, APP_TITLE
+
+from src.state import MM_TO_PX, APP_TITLE
 
 # Shared UI colors
 COLOR_BG_SCREEN = "#878787"

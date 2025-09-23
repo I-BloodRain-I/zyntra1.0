@@ -1,21 +1,22 @@
 import logging
-import os
+
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import ttk, messagebox
-from state import state, ALL_PRODUCTS, APP_TITLE, IMAGES_PATH
+
+from src.state import state, ALL_PRODUCTS, APP_TITLE, IMAGES_PATH
+from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_PILL, COLOR_TEXT
+from .sticker import Screen2
 
 # ---------- UI constants ----------
-UI_SCALE = float(os.environ.get("ZYNTRA_UI_SCALE", "1.0"))
+UI_SCALE = 1.0
 
 def scale_px(value: float) -> int:
     """Scale pixel values by UI_SCALE with rounding."""
     return int(round(value * UI_SCALE))
-from core import App, Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_PILL, COLOR_TEXT
-from screens_sticker import Screen1
 
 
-class LauncherSelectProduct(Screen):
+class SelectProductScreen(Screen):
     def __init__(self, master, app):
         super().__init__(master, app)
         self._popup_just_opened = False
@@ -25,7 +26,7 @@ class LauncherSelectProduct(Screen):
         title.pack_propagate(False)
         tk.Label(title, text=APP_TITLE, bg=COLOR_BG_DARK, fg=COLOR_TEXT,
                  font=("Myriad Pro", int(round(24 * UI_SCALE))))\
-            .pack(side="left", padx=scale_px(8), pady=0)
+                 .pack(side="left", padx=scale_px(8), pady=0)
 
         mid = tk.Frame(self, bg=COLOR_BG_SCREEN); mid.pack(expand=True, fill="both")
         label_select = tk.Label(mid, text="Select product:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT,
@@ -36,7 +37,6 @@ class LauncherSelectProduct(Screen):
             px = int(round((pt_value * UI_SCALE) * dpi_px_per_inch / 72.0))
             return tkfont.Font(family="Myriad Pro", size=-px)
 
-        # ---------- Комбобокс (визуал) ----------
         self.product_var = tk.StringVar(value=state.saved_product)
         cb_font = font_from_pt(21.8)
         cb_font_metrics = tkfont.Font(font=cb_font)
@@ -49,16 +49,13 @@ class LauncherSelectProduct(Screen):
         except Exception:
             self._combo_max_text_px = cb_font_metrics.measure(self.product_var.get())
         cb_height_px = int(cb_font_metrics.metrics("linespace") + scale_px(20))
-        # Полная фиксированная ширина «гугл»-поля (как будто expanded)
         text_canvas_w = self._combo_max_text_px + scale_px(8) * 2
         combo_w = text_canvas_w + cb_height_px
-        self._SEARCH_W = combo_w + cb_height_px + scale_px(12)  # лишние px как «запас» справа
+        self._SEARCH_W = combo_w + cb_height_px + scale_px(12)
         self._SEARCH_H = cb_height_px
 
         def _mark_popup_opened():
-            # Игнорируем «внешний» клик, который инициировал открытие попапа
             self._popup_just_opened = True
-            # сбрасываем на следующую итерацию mainloop
             self.after(0, lambda: setattr(self, "_popup_just_opened", False))
 
         def _is_descendant(widget, ancestor):
@@ -71,7 +68,6 @@ class LauncherSelectProduct(Screen):
             except Exception:
                 pass
             return False
-
         
         # State for expanded search field
         self._expanded = False
@@ -140,7 +136,6 @@ class LauncherSelectProduct(Screen):
                                     fill=COLOR_TEXT, outline="")
             return s_w, s_h
 
-        
         self._combo_popup = None
         self._popup_items = []
         self._popup_anchor = None  # 'search' | 'combo'
@@ -160,13 +155,11 @@ class LauncherSelectProduct(Screen):
                         del self._search_trace_id
                 except Exception:
                     pass
-                # вернуть компактный вид
                 self._expanded = False
                 try:
                     _draw_search_canvas(show_underline=False, expanded=False)
                 except Exception:
                     pass
-                # комбобокс остаётся на месте в новой версии
 
                 try:
                     self.unbind_all("<Button-1>")
@@ -183,7 +176,6 @@ class LauncherSelectProduct(Screen):
                 self._combo_popup.configure(bg=COLOR_BG_SCREEN)
                 self._popup_anchor = mode
 
-                # Геометрия — под anchor_widget
                 rx = anchor_widget.winfo_rootx()
                 ry = anchor_widget.winfo_rooty() + anchor_widget.winfo_height()
                 pw = anchor_widget.winfo_width()
@@ -192,7 +184,6 @@ class LauncherSelectProduct(Screen):
                 SCREEN_BG = COLOR_BG_SCREEN
                 ITEM_BG = COLOR_PILL
 
-                # Небольшой канвас-«листбокс» для полного контроля внешнего вида
                 outer_self = self
                 class CanvasList:
                     def __init__(self, parent):
@@ -201,15 +192,12 @@ class LauncherSelectProduct(Screen):
                         self.items = []
                         self.selected_index = -1
                         self.row_h = int(cb_font_metrics.metrics("linespace") + scale_px(8))
-                        # скрытая прокрутка
                         self.vsb = tk.Scrollbar(parent, orient="vertical", command=self.canvas.yview)
                         self.canvas.configure(yscrollcommand=self.vsb.set)
-                        # не размещаем scrollbar, чтобы он был невидимым
                         self.canvas.bind("<MouseWheel>", self._on_wheel)
                         self.canvas.bind("<Button-4>", lambda _e: self._scroll(-1))
                         self.canvas.bind("<Button-5>", lambda _e: self._scroll(+1))
 
-                    # API, совместимое с используемыми ниже вызовами
                     def set_items(self, items):
                         self.items = list(items)
                         if self.items:
@@ -219,7 +207,6 @@ class LauncherSelectProduct(Screen):
                         self._render()
 
                     def delete(self, *_a):
-                        # no-op, мы всегда перерисовываем целиком
                         pass
 
                     def insert(self, *_a):
@@ -253,11 +240,9 @@ class LauncherSelectProduct(Screen):
                         self._render()
 
                     def activate(self, *_a):
-                        # визуально это уже показано рамкой
                         pass
 
                     def see(self, *_a):
-                        # обеспечить видимость выбранного элемента
                         if self.selected_index < 0:
                             return
                         total_h = len(self.items) * self.row_h
@@ -309,32 +294,23 @@ class LauncherSelectProduct(Screen):
                             width = max(pw, int(c.winfo_width()))
                         except Exception:
                             width = pw
-                        # высота будет задана сверху через геометрию
                         for i, text in enumerate(self.items):
                             y0 = i * self.row_h
-                            # линия-разделитель цветом экрана
                             if i > 0:
                                 c.create_rectangle(0, y0 - scale_px(2), width, y0, fill=SCREEN_BG, outline=SCREEN_BG)
-                            # фон элемента — как у поля поиска
                             is_last = (i == len(self.items) - 1)
                             if not is_last:
                                 c.create_rectangle(0, y0, width, y0 + self.row_h, fill=ITEM_BG, outline="")
                             else:
-                                # Закругляем только нижние углы последнего элемента
                                 r = int(getattr(outer_self, "_SEARCH_H", self.row_h) // 2)
                                 r = max(2, min(r, self.row_h // 2))
                                 y1 = y0 + self.row_h
-                                # тело до зоны скругления
                                 c.create_rectangle(0, y0, width, y1 - r, fill=ITEM_BG, outline="")
-                                # нижняя центральная перемычка
                                 c.create_rectangle(r, y1 - r, width - r, y1, fill=ITEM_BG, outline="")
-                                # нижние полукруги
                                 c.create_oval(0, y1 - 2 * r, 0 + 2 * r, y1, fill=ITEM_BG, outline="")
                                 c.create_oval(width - 2 * r, y1 - 2 * r, width, y1, fill=ITEM_BG, outline="")
-                            # текст по центру элемента
                             c.create_text(width // 2, y0 + self.row_h // 2, text=text, font=cb_font,
                                           fill="#000000", anchor="center")
-                        # область прокрутки
                         total_h = max(0, len(self.items) * self.row_h)
                         c.configure(scrollregion=(0, 0, width, total_h))
 
@@ -473,7 +449,6 @@ class LauncherSelectProduct(Screen):
                 lb.bind("<Return>", lambda _e: _apply_selection(False))
                 lb.bind("<Escape>", lambda _e: _close_popup())
 
-                # Управление с клавиатуры из поля ввода
                 def _nav(delta):
                     if not (self._combo_popup and self._combo_popup.winfo_exists()):
                         return
@@ -529,7 +504,6 @@ class LauncherSelectProduct(Screen):
 
         self.after_idle(_position_select)
 
-        # изменился выбранный продукт -> синхронизировать поле ввода
         def _on_change(*_a):
             try:
                 self.search_var.set(self.product_var.get())
@@ -647,40 +621,147 @@ class LauncherSelectProduct(Screen):
         btn_proceed_canvas.bind("<ButtonRelease-1>", _proc_release)
         btn_proceed_canvas.place(relx=1.0, rely=1.0, x=-scale_px(12), y=-scale_px(12), anchor="se")
 
-        # По умолчанию не ставим фокус в поле поиска
-
     def _proceed(self):
-        state.saved_product = self.product_var.get()
-        self.app.show_screen(LauncherOrderRange)
+        product = self.product_var.get()
+        if not product:
+            messagebox.showerror("Error", "Please select a product")
+            return
+        if product not in ALL_PRODUCTS:
+            messagebox.showerror("Error", "Invalid product")
+            return
+        state.saved_product = product
+        self.app.show_screen(OrderRangeScreen)
 
     def _add_new(self):
         logging.info("Starting new product flow (sticker/non-sticker chooser)")
-        self.app.show_screen(Screen1)
+        self.app.show_screen(ProductTypeScreen)
 
 
-
-class LauncherOrderRange(Screen):
+class OrderRangeScreen(Screen):
     def __init__(self, master, app):
         super().__init__(master, app)
 
         # Top line identical to LauncherSelectProduct
         self.brand_bar(self)
 
-        ttk.Label(self, text=state.saved_product, style="H2.TLabel").pack(anchor="w", padx=10, pady=(8, 0))
+        # Product tag (dark pill) below the top line
+        tk.Label(self,
+                 text=state.saved_product,
+                 bg=COLOR_BG_DARK,
+                 fg=COLOR_TEXT,
+                 font=("Myriad Pro", int(round(24 * UI_SCALE))))\
+            .pack(anchor="w", padx=scale_px(12), pady=(scale_px(8), 0))
 
-        mid = ttk.Frame(self, style="Screen.TFrame"); mid.pack(expand=True)
-        card = ttk.Frame(mid, style="Card.TFrame", padding=16); card.pack(pady=(32, 18))
-        ttk.Label(card, text="Write order numbers to produce files:", style="H2.TLabel").grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 8))
+        # Center area with header and inputs (no background panel)
+        mid = ttk.Frame(self, style="Screen.TFrame"); mid.pack(expand=True, fill="both")
+        try:
+            mid.grid_columnconfigure(0, weight=1)
+            mid.grid_columnconfigure(1, weight=0)
+            mid.grid_columnconfigure(2, weight=1)
+            mid.grid_rowconfigure(0, weight=1)
+            mid.grid_rowconfigure(1, weight=0)
+            mid.grid_rowconfigure(2, weight=2)
+        except Exception:
+            pass
 
-        ttk.Label(card, text="From:", style="Label.TLabel").grid(row=1, column=0, padx=(0, 8))
+        # Centered content container
+        content = tk.Frame(mid, bg=COLOR_BG_SCREEN)
+        content.grid(row=1, column=1)
+
+        # Centered dark plaque title
+        plaque = tk.Frame(content, bg=COLOR_BG_DARK)
+        tk.Label(plaque,
+                 text="Write order numbers to produce files:",
+                 bg=COLOR_BG_DARK, fg=COLOR_TEXT,
+                 font=("Myriad Pro", int(round(20 * UI_SCALE))))\
+            .pack(padx=scale_px(12), pady=scale_px(6))
+        plaque.pack(pady=(0, scale_px(12)))
+
+        # Inputs row (compact, centered)
+        lbl_font = ("Myriad Pro", int(round(24 * UI_SCALE)))
+        ent_font = ("Myriad Pro", int(round(22 * UI_SCALE)))
+
+        row_inputs = tk.Frame(content, bg=COLOR_BG_SCREEN)
+        row_inputs.pack()
+
+        tk.Label(row_inputs, text="From:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=lbl_font).pack(side="left", padx=(0, 0))
         self.from_var = tk.StringVar(value=state.order_from)
-        ttk.Entry(card, textvariable=self.from_var, width=12, justify="center").grid(row=1, column=1, padx=(0, 28))
+        tk.Entry(row_inputs, textvariable=self.from_var, width=8, justify="center",
+                 font=ent_font, bg="#ffffff", relief="flat").pack(side="left")
 
-        ttk.Label(card, text="To:", style="Label.TLabel").grid(row=1, column=2, padx=(0, 8))
+        tk.Label(row_inputs, text="To:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=lbl_font).pack(side="left", padx=(scale_px(50), 0))
         self.to_var = tk.StringVar(value=state.order_to)
-        ttk.Entry(card, textvariable=self.to_var, width=12, justify="center").grid(row=1, column=3)
+        tk.Entry(row_inputs, textvariable=self.to_var, width=8, justify="center",
+                 font=ent_font, bg="#ffffff", relief="flat").pack(side="left")
 
-        self.bottom_nav(self, on_back=self.app.go_back, on_next=self._start, next_text="Start")
+        # Bottom-right Start button (single)
+        dpi_px_per_inch = float(self.winfo_fpixels("1i"))
+        def font_from_pt(pt_value: float) -> tkfont.Font:
+            px = int(round((pt_value * UI_SCALE) * dpi_px_per_inch / 72.0))
+            return tkfont.Font(family="Myriad Pro", size=-px)
+
+        start_text = "Start"
+        start_font_obj = font_from_pt(14.4)
+        start_font = tkfont.Font(font=start_font_obj)
+        start_width_px = int(start_font.measure(start_text) + scale_px(16))
+        start_height_px = int(start_font.metrics("linespace") + scale_px(20))
+        btn_start_canvas = tk.Canvas(self, width=start_width_px, height=start_height_px, bg=COLOR_BG_DARK,
+                                     highlightthickness=0, bd=0, cursor="hand2")
+        sx_left = 8
+        sy_center = start_height_px // 2
+        start_text_id = btn_start_canvas.create_text(sx_left, sy_center, text=start_text, font=start_font_obj, fill=COLOR_TEXT, anchor="w")
+        def _start_press(_e, canvas=btn_start_canvas, tid=start_text_id):
+            canvas.configure(bg="#3f3f3f")
+            canvas.move(tid, 1, 1)
+            canvas._pressed = True
+        def _start_release(e, canvas=btn_start_canvas, tid=start_text_id):
+            canvas.configure(bg=COLOR_BG_DARK)
+            canvas.move(tid, -1, -1)
+            try:
+                w = canvas.winfo_width(); h = canvas.winfo_height()
+                inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(canvas, "_pressed", False) and inside:
+                canvas.after(10, self._start)
+            canvas._pressed = False
+        btn_start_canvas.bind("<ButtonPress-1>", _start_press)
+        btn_start_canvas.bind("<ButtonRelease-1>", _start_release)
+        btn_start_canvas.place(relx=1.0, rely=1.0, x=-scale_px(12), y=-scale_px(12), anchor="se")
+
+        # Bottom-left Go Back button (styled like Start)
+        back_text = "Go Back"
+        back_font_obj = font_from_pt(14.4)
+        back_font = tkfont.Font(font=back_font_obj)
+        back_width_px = int(back_font.measure(back_text) + scale_px(16))
+        back_height_px = int(back_font.metrics("linespace") + scale_px(20))
+        btn_back_canvas = tk.Canvas(self, width=back_width_px, height=back_height_px, bg=COLOR_BG_DARK,
+                                    highlightthickness=0, bd=0, cursor="hand2")
+        bx_left = 8
+        by_center = back_height_px // 2
+        back_text_id = btn_back_canvas.create_text(bx_left, by_center, text=back_text, font=back_font_obj, fill=COLOR_TEXT, anchor="w")
+        def _back_press(_e, canvas=btn_back_canvas, tid=back_text_id):
+            canvas.configure(bg="#3f3f3f")
+            canvas.move(tid, 1, 1)
+            canvas._pressed = True
+        def _back_release(e, canvas=btn_back_canvas, tid=back_text_id):
+            canvas.configure(bg=COLOR_BG_DARK)
+            canvas.move(tid, -1, -1)
+            try:
+                w = canvas.winfo_width(); h = canvas.winfo_height()
+                inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(canvas, "_pressed", False) and inside:
+                canvas.after(10, self.app.go_back)
+            canvas._pressed = False
+        btn_back_canvas.bind("<ButtonPress-1>", _back_press)
+        btn_back_canvas.bind("<ButtonRelease-1>", _back_release)
+        btn_back_canvas.place(relx=0.0, rely=1.0, x=scale_px(12), y=-scale_px(12), anchor="sw")
+
+        # Hotkeys: Enter → Start, Escape → Back
+        self.app.bind("<Return>", lambda _e: self._start())
+        self.app.bind("<Escape>", lambda _e: self.app.go_back())
 
     def _start(self):
         from_s = self.from_var.get().strip()
@@ -706,11 +787,40 @@ class LauncherOrderRange(Screen):
 
         state.order_from = from_s
         state.order_to = to_s
-        self.app.show_screen(Screen1)
+        self.app.show_screen(ProductTypeScreen)
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    app = App(title=APP_TITLE)
-    app.show_screen(LauncherSelectProduct)
-    app.mainloop()
+# ================================================
+# Screen 1 — выбор типа продукта (стикер / нет)
+# ================================================
+class ProductTypeScreen(Screen):
+    def __init__(self, master, app):
+        super().__init__(master, app)
+        self.header(self, "Add a new product")
+
+        card = ttk.Frame(self, style="Card.TFrame", padding=20)
+        card.pack(pady=30)
+        ttk.Label(card, text="Is your product a sticker/Flex?", style="H2.TLabel").pack(pady=(0, 16))
+
+        default = "yes" if state.is_sticker else ("no" if state.is_sticker is False else "")
+        self.choice = tk.StringVar(value=default)
+
+        btns = ttk.Frame(card)
+        btns.pack()
+        ttk.Radiobutton(btns, text="Yes", value="yes", variable=self.choice, style="Choice.TRadiobutton").grid(row=0, column=0, padx=8, pady=8)
+        ttk.Radiobutton(btns, text="No",  value="no",  variable=self.choice, style="Choice.TRadiobutton").grid(row=0, column=1, padx=8, pady=8)
+
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.next)
+
+    def next(self):
+        val = self.choice.get()
+        if val not in ("yes", "no"):
+            messagebox.showwarning("Select an option", "Please choose Yes or No.")
+            return
+        state.is_sticker = (val == "yes")
+        if state.is_sticker:
+            self.app.show_screen(Screen2)     # Sticker flow
+        else:
+            # Локальный импорт, чтобы избежать циклов
+            from .nonsticker import NScreen2
+            self.app.show_screen(NScreen2)    # Non-sticker flow

@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-from core import Screen, vcmd_int, vcmd_float, warn, COLOR_BG_DARK, COLOR_TEXT
-from state import state
+from src.core import Screen, vcmd_int, vcmd_float, warn, COLOR_BG_DARK, COLOR_TEXT
+from src.state import state
 
 
 def _write_minimal_pdf(path: str):
@@ -30,43 +30,6 @@ startxref
 """
     with open(path, "wb") as f:
         f.write(pdf)
-
-
-# ================================================
-# Screen 1 — выбор типа продукта (стикер / нет)
-# ================================================
-class Screen1(Screen):
-    def __init__(self, master, app):
-        super().__init__(master, app)
-        self.header(self, "Add a new product")
-
-        card = ttk.Frame(self, style="Card.TFrame", padding=20)
-        card.pack(pady=30)
-        ttk.Label(card, text="Is your product a sticker/Flex?", style="H2.TLabel").pack(pady=(0, 16))
-
-        default = "yes" if state.is_sticker else ("no" if state.is_sticker is False else "")
-        self.choice = tk.StringVar(value=default)
-
-        btns = ttk.Frame(card)
-        btns.pack()
-        ttk.Radiobutton(btns, text="Yes", value="yes", variable=self.choice, style="Choice.TRadiobutton").grid(row=0, column=0, padx=8, pady=8)
-        ttk.Radiobutton(btns, text="No",  value="no",  variable=self.choice, style="Choice.TRadiobutton").grid(row=0, column=1, padx=8, pady=8)
-
-        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.next)
-
-    def next(self):
-        val = self.choice.get()
-        if val not in ("yes", "no"):
-            messagebox.showwarning("Select an option", "Please choose Yes or No.")
-            return
-        state.is_sticker = (val == "yes")
-        if state.is_sticker:
-            self.app.show_screen(Screen2)     # Sticker flow
-        else:
-            # Локальный импорт, чтобы избежать циклов
-            from screens_nonsticker import NScreen2
-            self.app.show_screen(NScreen2)    # Non-sticker flow
-
 
 # ================================================
 # Screen 2 — SKU, package size, major variations

@@ -15,8 +15,8 @@ IMAGES_PATH = Path(__file__).parent.parent / "images"
 
 @dataclass
 class AppState:
-    saved_search: str = ""
-    saved_product: str = "Lighteruv1"
+    saved_search: str = "Lighteruv1"
+    saved_product: str = ""
     order_from: str = "13111"
     order_to: str = "13112"
 
