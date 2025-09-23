@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-from core import Screen, vcmd_int, vcmd_float, warn
-from state import state, APP_TITLE
+from core import Screen, vcmd_int, vcmd_float, warn, COLOR_BG_DARK, COLOR_TEXT
+from state import state
 
 
 def _write_minimal_pdf(path: str):
@@ -395,19 +395,17 @@ class Screen7(Screen):
     def __init__(self, master, app):
         super().__init__(master, app)
 
-        bar = tk.Frame(self, bg="#111111", height=50)
-        bar.pack(fill="x")
-        # App title on the left
-        tk.Label(bar, text=APP_TITLE, bg="#111111", fg="white", font=("Arial", 16, "bold")).pack(side="left", padx=12)
+        # Top line identical to LauncherSelectProduct
+        bar = self.brand_bar(self)
 
         total = state.sheet_total or 0
         done = total
-        tk.Label(bar, text=f"{done}/{total}", bg="#111111", fg="white", font=("Arial", 26, "bold")).pack(side="left", padx=16, pady=8)
+        tk.Label(bar, text=f"{done}/{total}", bg=COLOR_BG_DARK, fg=COLOR_TEXT, font=("Myriad Pro", 18, "bold")).pack(side="left", padx=16, pady=6)
 
         major = state.major_variations or 0
-        tk.Label(bar, text=f"{major}/{major} Major variation", bg="#111111", fg="white", font=("Arial", 16)).pack(side="left", padx=16, pady=8)
+        tk.Label(bar, text=f"{major}/{major} Major variation", bg=COLOR_BG_DARK, fg=COLOR_TEXT, font=("Myriad Pro", 14)).pack(side="left", padx=16, pady=6)
 
-        right_btns = tk.Frame(bar, bg="#111111")
+        right_btns = tk.Frame(bar, bg=COLOR_BG_DARK)
         right_btns.pack(side="right", padx=12)
         ttk.Button(right_btns, text="ORDER NUMBER\nALLOCATION").pack(side="left", padx=8, pady=8)
         ttk.Button(right_btns, text="Select tool").pack(side="left", padx=8, pady=8)

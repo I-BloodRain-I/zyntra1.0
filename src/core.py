@@ -1,7 +1,15 @@
 # App (Tk), стили ttk, базовый Screen
 import tkinter as tk
+import os
 from tkinter import ttk, messagebox
 from state import MM_TO_PX, APP_TITLE
+
+# Shared UI colors
+COLOR_BG_SCREEN = "#878787"
+COLOR_BG_DARK = "#474747"
+COLOR_CARD = "#a6a6a6"
+COLOR_TEXT = "#000000"
+COLOR_PILL = "#e6e6e6"
 
 # Helpers: dialogs
 def info(message: str, title: str = "Info"):
@@ -54,15 +62,15 @@ def apply_styles(root):
     style = ttk.Style(root)
     style.theme_use("clam")
     # Global backgrounds per latest spec
-    style.configure("Screen.TFrame", background="#878787")
-    style.configure("Title.TFrame",  background="#474747")
-    style.configure("Card.TFrame",   background="#a6a6a6")
-    style.configure("Brand.TLabel",  background="#474747", foreground="#000000", font=("Myriad Pro", 24))
+    style.configure("Screen.TFrame", background=COLOR_BG_SCREEN)
+    style.configure("Title.TFrame",  background=COLOR_BG_DARK)
+    style.configure("Card.TFrame",   background=COLOR_CARD)
+    style.configure("Brand.TLabel",  background=COLOR_BG_DARK, foreground=COLOR_TEXT, font=("Myriad Pro", 24))
     style.configure("H1.TLabel",     background="#4d4d4d", foreground="black", font=("Myriad Pro", 22))
-    style.configure("H2.TLabel",     background="#a6a6a6", foreground="black", font=("Myriad Pro", 16))
-    style.configure("H3.TLabel",     background="#a6a6a6", foreground="black", font=("Myriad Pro", 12))
-    style.configure("Label.TLabel",  background="#a6a6a6", foreground="black", font=("Myriad Pro", 12))
-    style.configure("Muted.TLabel",  background="#a6a6a6", foreground="#333")
+    style.configure("H2.TLabel",     background=COLOR_CARD, foreground="black", font=("Myriad Pro", 16))
+    style.configure("H3.TLabel",     background=COLOR_CARD, foreground="black", font=("Myriad Pro", 12))
+    style.configure("Label.TLabel",  background=COLOR_CARD, foreground="black", font=("Myriad Pro", 12))
+    style.configure("Muted.TLabel",  background=COLOR_CARD, foreground="#333")
     style.configure("Choice.TRadiobutton", background="#a6a6a6")
     # Combobox style for launcher
     style.configure(
@@ -85,7 +93,7 @@ class App(tk.Tk):
         self.geometry(size)
         self.minsize(960, 720)
         self.maxsize(960, 720)  # static layout, fixed 4:3 ratio
-        self.configure(bg="#878787")
+        self.configure(bg=COLOR_BG_SCREEN)
         apply_styles(self)
         self.current = None
         self._history: list[type] = []
@@ -124,10 +132,30 @@ class Screen(ttk.Frame):
         self.app = app
         self.configure(style="Screen.TFrame")
 
-    def header(self, parent, title_text="Add a new product"):
-        bar = ttk.Frame(parent, style="Title.TFrame")
+    # UI scale (duplicated here for independence from zyntra module)
+    UI_SCALE = float(os.environ.get("ZYNTRA_UI_SCALE", "1.0"))
+
+    def scale_px(self, value: float) -> int:
+        try:
+            return int(round(value * self.UI_SCALE))
+        except Exception:
+            return int(round(value))
+
+    def brand_bar(self, parent):
+        bar = tk.Frame(parent, bg=COLOR_BG_DARK, height="31p")
         bar.pack(fill="x")
-        ttk.Label(bar, text=APP_TITLE, style="Brand.TLabel").pack(side="left", padx=10, pady=6)
+        bar.pack_propagate(False)
+        tk.Label(
+            bar,
+            text=APP_TITLE,
+            bg=COLOR_BG_DARK,
+            fg=COLOR_TEXT,
+            font=("Myriad Pro", int(round(24 * self.UI_SCALE))),
+        ).pack(side="left", padx=self.scale_px(8), pady=0)
+        return bar
+
+    def header(self, parent, title_text="Add a new product"):
+        self.brand_bar(parent)
         ttk.Label(parent, text=title_text, style="H1.TLabel").pack(pady=(18, 8))
 
     def bottom_nav(self, parent, on_back=None, on_next=None, next_text="Proceed"):
