@@ -636,7 +636,6 @@ class SelectProductScreen(Screen):
         self.app.show_screen(OrderRangeScreen)
 
     def _add_new(self):
-        logging.info("Starting new product flow (sticker/non-sticker chooser)")
         self.app.show_screen(ProductTypeScreen)
 
 
@@ -1058,5 +1057,5 @@ class ProductTypeScreen(Screen):
         self.app.show_screen(Screen2)
 
     def _show_non_sticker_screen(self):
-        from .nonsticker import NScreen2
-        self.app.show_screen(NScreen2)
+        from .nonsticker import NStickerPlanScreen
+        self.app.show_screen(NStickerPlanScreen)

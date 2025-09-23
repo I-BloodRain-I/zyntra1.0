@@ -8,7 +8,7 @@ ALL_PRODUCTS = [
     "TorchMini", "TorchPro", "CandlePro", "MatchStick",
     "SparkLite", "Product2", "Product3"
 ]
-MM_TO_PX = 3  # simple scale mm→px for drawing
+MM_TO_PX = 1  # simple scale mm→px for drawing
 APP_TITLE = "Zyntra 1.0"
 IMAGES_PATH = Path(__file__).parent.parent / "images"
 
