@@ -2,18 +2,24 @@ import logging
 
 import tkinter as tk
 import tkinter.font as tkfont
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 
 from src.state import state, ALL_PRODUCTS, APP_TITLE, IMAGES_PATH
-from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_PILL, COLOR_TEXT
-from .sticker import Screen2
+from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_PILL, COLOR_TEXT, COLOR_CARD
+from .sticker import Screen2, _write_minimal_pdf
 
 # ---------- UI constants ----------
 UI_SCALE = 1.0
+DPI_PX_PER_INCH = 96
 
 def scale_px(value: float) -> int:
     """Scale pixel values by UI_SCALE with rounding."""
     return int(round(value * UI_SCALE))
+
+
+def font_from_pt(pt_value: float) -> tkfont.Font:
+    px = int(round((pt_value * UI_SCALE) * DPI_PX_PER_INCH / 72.0))
+    return tkfont.Font(family="Myriad Pro", size=-px)
 
 
 class SelectProductScreen(Screen):
@@ -32,10 +38,7 @@ class SelectProductScreen(Screen):
         label_select = tk.Label(mid, text="Select product:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT,
                  font=("Myriad Pro", int(round(24 * UI_SCALE))))
 
-        dpi_px_per_inch = float(self.winfo_fpixels("1i"))
-        def font_from_pt(pt_value: float) -> tkfont.Font:
-            px = int(round((pt_value * UI_SCALE) * dpi_px_per_inch / 72.0))
-            return tkfont.Font(family="Myriad Pro", size=-px)
+        DPI_PX_PER_INCH = float(self.winfo_fpixels("1i"))
 
         self.product_var = tk.StringVar(value=state.saved_product)
         cb_font = font_from_pt(21.8)
@@ -695,11 +698,6 @@ class OrderRangeScreen(Screen):
                  font=ent_font, bg="#ffffff", relief="flat").pack(side="left")
 
         # Bottom-right Start button (single)
-        dpi_px_per_inch = float(self.winfo_fpixels("1i"))
-        def font_from_pt(pt_value: float) -> tkfont.Font:
-            px = int(round((pt_value * UI_SCALE) * dpi_px_per_inch / 72.0))
-            return tkfont.Font(family="Myriad Pro", size=-px)
-
         start_text = "Start"
         start_font_obj = font_from_pt(14.4)
         start_font = tkfont.Font(font=start_font_obj)
@@ -759,9 +757,9 @@ class OrderRangeScreen(Screen):
         btn_back_canvas.bind("<ButtonRelease-1>", _back_release)
         btn_back_canvas.place(relx=0.0, rely=1.0, x=scale_px(12), y=-scale_px(12), anchor="sw")
 
-        # Hotkeys: Enter → Start, Escape → Back
-        self.app.bind("<Return>", lambda _e: self._start())
-        self.app.bind("<Escape>", lambda _e: self.app.go_back())
+        # Hotkeys: Enter → Start, Escape → Back (accept optional event)
+        self.app.bind("<Return>", lambda _e=None: self._start())
+        self.app.bind("<Escape>", lambda _e=None: self.app.go_back())
 
     def _start(self):
         from_s = self.from_var.get().strip()
@@ -787,40 +785,278 @@ class OrderRangeScreen(Screen):
 
         state.order_from = from_s
         state.order_to = to_s
-        self.app.show_screen(ProductTypeScreen)
+        self.app.show_screen(ProcessOrdersScreen)
 
 
-# ================================================
-# Screen 1 — выбор типа продукта (стикер / нет)
-# ================================================
+class ProcessOrdersScreen(Screen):
+    def __init__(self, master, app):
+        super().__init__(master, app)
+        self.brand_bar(self)
+        
+        # Top-left selected product tag (dark pill)
+        tk.Label(self,
+                 text=state.saved_product,
+                 bg=COLOR_BG_DARK,
+                 fg=COLOR_TEXT,
+                 font=("Myriad Pro", int(round(24 * UI_SCALE))))\
+            .pack(anchor="w", padx=scale_px(12), pady=(scale_px(8), 0))
+
+        # Center area: place content exactly at center
+        mid = ttk.Frame(self, style="Screen.TFrame"); mid.pack(expand=True, fill="both")
+        try:
+            mid.grid_columnconfigure(0, weight=1)
+            mid.grid_columnconfigure(1, weight=0)
+            mid.grid_columnconfigure(2, weight=1)
+            mid.grid_rowconfigure(0, weight=1)
+            mid.grid_rowconfigure(1, weight=0)
+            mid.grid_rowconfigure(2, weight=2)  # slightly more bottom weight → raise content a bit
+        except Exception:
+            pass
+
+        content = tk.Frame(mid, bg=COLOR_BG_SCREEN)
+        content.grid(row=1, column=1)
+
+        # Centered text: "Processing......." and progress line
+        proc_font = ("Myriad Pro", int(round(22 * UI_SCALE)))
+        tk.Label(content, text="Processing...", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=proc_font).pack(anchor="center")
+
+        # Compute simple total orders (e.g., 2/2)
+        try:
+            f = int(state.order_from or 0)
+            t = int(state.order_to or 0)
+            total = (t - f + 1) if t >= f else 0
+        except Exception:
+            total = 0
+        tk.Label(content, text=f"{total}/{total}", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT,
+                 font=("Myriad Pro", int(round(22 * UI_SCALE)))).pack(pady=(scale_px(6), scale_px(16)))
+
+        # Centered rounded "Download" pill button (black bg, white text)
+        btn_text = "Download"
+        f_obj = font_from_pt(14.4)
+        f = tkfont.Font(font=f_obj)
+        pad_x = scale_px(16)
+        pad_y = scale_px(10)
+        w_px = int(f.measure(btn_text) + pad_x * 2)
+        h_px = int(f.metrics("linespace") + pad_y * 2)
+        btn = tk.Canvas(content, width=w_px, height=h_px, bg=COLOR_BG_SCREEN, highlightthickness=0, bd=0, cursor="hand2")
+        r = max(6, int(round(h_px * 0.5)))
+        x1, y1, x2, y2 = 0, 0, w_px, h_px
+        # Draw pill background (black)
+        shapes = []
+        shapes.append(btn.create_rectangle(x1 + r, y1, x2 - r, y2, fill="#000000", outline=""))
+        shapes.append(btn.create_oval(x1, y1, x1 + 2 * r, y1 + 2 * r, fill="#000000", outline=""))
+        shapes.append(btn.create_oval(x2 - 2 * r, y1, x2, y1 + 2 * r, fill="#000000", outline=""))
+        txt_id = btn.create_text(pad_x, h_px // 2, text=btn_text, font=f_obj, fill="#ffffff", anchor="w")
+
+        def _press(_e):
+            for sid in shapes:
+                btn.itemconfigure(sid, fill="#2a2a2a")
+            btn.move(txt_id, 1, 1)
+            btn._pressed = True
+
+        def _release(e):
+            for sid in shapes:
+                btn.itemconfigure(sid, fill="#000000")
+            btn.move(txt_id, -1, -1)
+            try:
+                w = btn.winfo_width(); h = btn.winfo_height()
+                inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(btn, "_pressed", False) and inside:
+                self._download()
+            btn._pressed = False
+
+        btn.bind("<ButtonPress-1>", _press)
+        btn.bind("<ButtonRelease-1>", _release)
+        btn.pack(pady=(scale_px(24), 0))
+
+        # Bottom-left Cancel button (style like "Go Back")
+        cancel_text = "Cancel"
+        cancel_font_obj = font_from_pt(14.4)
+        cancel_font = tkfont.Font(font=cancel_font_obj)
+        cancel_width_px = int(cancel_font.measure(cancel_text) + scale_px(16))
+        cancel_height_px = int(cancel_font.metrics("linespace") + scale_px(20))
+        btn_cancel_canvas = tk.Canvas(self, width=cancel_width_px, height=cancel_height_px, bg=COLOR_BG_DARK,
+                                      highlightthickness=0, bd=0, cursor="hand2")
+        cx_left = 8
+        cy_center = cancel_height_px // 2
+        cancel_text_id = btn_cancel_canvas.create_text(cx_left, cy_center, text=cancel_text, font=cancel_font_obj, fill=COLOR_TEXT, anchor="w")
+        def _cancel_press(_e, canvas=btn_cancel_canvas, tid=cancel_text_id):
+            canvas.configure(bg="#3f3f3f")
+            canvas.move(tid, 1, 1)
+            canvas._pressed = True
+        def _cancel_release(e, canvas=btn_cancel_canvas, tid=cancel_text_id):
+            canvas.configure(bg=COLOR_BG_DARK)
+            canvas.move(tid, -1, -1)
+            try:
+                w = canvas.winfo_width(); h = canvas.winfo_height()
+                inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(canvas, "_pressed", False) and inside:
+                canvas.after(10, self.app.go_back)
+            canvas._pressed = False
+        btn_cancel_canvas.bind("<ButtonPress-1>", _cancel_press)
+        btn_cancel_canvas.bind("<ButtonRelease-1>", _cancel_release)
+        btn_cancel_canvas.place(relx=0.0, rely=1.0, x=scale_px(12), y=-scale_px(12), anchor="sw")
+
+    def _download(self):
+        fname = filedialog.asksaveasfilename(
+            title="Save Test File",
+            defaultextension=".pdf",
+            filetypes=[("PDF files", "*.pdf")]
+        )
+        if not fname:
+            return
+        try:
+            _write_minimal_pdf(fname)
+            messagebox.showinfo("Saved", f"File saved to:\n{fname}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not save file:\n{e}")
+
+
 class ProductTypeScreen(Screen):
     def __init__(self, master, app):
         super().__init__(master, app)
-        self.header(self, "Add a new product")
+        # Top brand bar (don't touch top line)
+        self.brand_bar(self)
 
-        card = ttk.Frame(self, style="Card.TFrame", padding=20)
-        card.pack(pady=30)
-        ttk.Label(card, text="Is your product a sticker/Flex?", style="H2.TLabel").pack(pady=(0, 16))
+        # Center area similar to OrderRangeScreen
+        mid = ttk.Frame(self, style="Screen.TFrame"); mid.pack(expand=True, fill="both")
+        try:
+            mid.grid_columnconfigure(0, weight=1)
+            mid.grid_columnconfigure(1, weight=0)
+            mid.grid_columnconfigure(2, weight=1)
+            mid.grid_rowconfigure(0, weight=1)
+            mid.grid_rowconfigure(1, weight=0)
+            mid.grid_rowconfigure(2, weight=2)
+        except Exception:
+            pass
 
-        default = "yes" if state.is_sticker else ("no" if state.is_sticker is False else "")
-        self.choice = tk.StringVar(value=default)
+        # Centered content container
+        content = tk.Frame(mid, bg=COLOR_BG_SCREEN)
+        content.grid(row=1, column=1)
 
-        btns = ttk.Frame(card)
-        btns.pack()
-        ttk.Radiobutton(btns, text="Yes", value="yes", variable=self.choice, style="Choice.TRadiobutton").grid(row=0, column=0, padx=8, pady=8)
-        ttk.Radiobutton(btns, text="No",  value="no",  variable=self.choice, style="Choice.TRadiobutton").grid(row=0, column=1, padx=8, pady=8)
+        # Centered dark plaque title ("Add a new product")
+        plaque = tk.Frame(content, bg=COLOR_BG_DARK)
+        tk.Label(plaque,
+                 text="Add a new product",
+                 bg=COLOR_BG_DARK, fg=COLOR_TEXT,
+                 font=("Myriad Pro", int(round(22 * UI_SCALE))))\
+            .pack(padx=scale_px(12), pady=scale_px(6))
+        plaque.pack(pady=(0, scale_px(30)))
 
-        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.next)
+        # Question bubble (separate item with its own light background)
+        q_text = "Is your product a sticker/Flex?"
+        q_font_obj = font_from_pt(20)
+        q_font = tkfont.Font(font=q_font_obj)
+        q_pad_x = scale_px(20)
+        q_pad_y = scale_px(25)
+        q_w = int(q_font.measure(q_text) + q_pad_x * 2)
+        q_h = int(q_font.metrics("linespace") + q_pad_y * 2)
+        q_canvas = tk.Canvas(content, width=q_w, height=q_h, bg=COLOR_BG_SCREEN, highlightthickness=0, bd=0)
+        qr = max(6, int(round(q_h * 0.22)))
+        q_x1, q_y1, q_x2, q_y2 = 0, 0, q_w, q_h
+        # Rounded rectangle (same corner style as Yes/No buttons)
+        q_canvas.create_rectangle(q_x1 + qr, q_y1, q_x2 - qr, q_y2, fill=COLOR_PILL, outline="")
+        q_canvas.create_rectangle(q_x1, q_y1 + qr, q_x2, q_y2 - qr, fill=COLOR_PILL, outline="")
+        q_canvas.create_oval(q_x1, q_y1, q_x1 + 2 * qr, q_y1 + 2 * qr, fill=COLOR_PILL, outline="")
+        q_canvas.create_oval(q_x2 - 2 * qr, q_y1, q_x2, q_y1 + 2 * qr, fill=COLOR_PILL, outline="")
+        q_canvas.create_oval(q_x1, q_y2 - 2 * qr, q_x1 + 2 * qr, q_y2, fill=COLOR_PILL, outline="")
+        q_canvas.create_oval(q_x2 - 2 * qr, q_y2 - 2 * qr, q_x2, q_y2, fill=COLOR_PILL, outline="")
+        q_canvas.create_text(q_pad_x, q_h // 2, text=q_text, font=q_font_obj, fill=COLOR_TEXT, anchor="w")
+        q_canvas.pack(pady=(0, scale_px(30)))
 
-    def next(self):
-        val = self.choice.get()
-        if val not in ("yes", "no"):
-            messagebox.showwarning("Select an option", "Please choose Yes or No.")
-            return
-        state.is_sticker = (val == "yes")
-        if state.is_sticker:
-            self.app.show_screen(Screen2)     # Sticker flow
-        else:
-            # Локальный импорт, чтобы избежать циклов
-            from .nonsticker import NScreen2
-            self.app.show_screen(NScreen2)    # Non-sticker flow
+        # Yes/No pills (canvas-based for exact look)
+        row = tk.Frame(content, bg=COLOR_BG_SCREEN)
+        row.pack()
+
+        def make_pill(parent, text: str, fill_color: str, on_click):
+            f_obj = font_from_pt(21.8)
+            f = tkfont.Font(font=f_obj)
+            pad_x = scale_px(20)
+            pad_y = scale_px(20)
+            w_px = int(f.measure(text) + pad_x * 2)
+            h_px = int(f.metrics("linespace") + pad_y * 2)
+            cnv = tk.Canvas(parent, width=w_px, height=h_px, bg=COLOR_BG_SCREEN, highlightthickness=0, bd=0, cursor="hand2")
+            # Draw rounded rectangle corners to match screenshot
+            r = max(6, int(round(h_px * 0.22)))
+            x1, y1, x2, y2 = 0, 0, w_px, h_px
+            shape_ids = []
+            # Core rectangles
+            shape_ids.append(cnv.create_rectangle(x1 + r, y1, x2 - r, y2, fill=fill_color, outline=""))
+            shape_ids.append(cnv.create_rectangle(x1, y1 + r, x2, y2 - r, fill=fill_color, outline=""))
+            # Four corner arcs (quarter circles)
+            shape_ids.append(cnv.create_oval(x1, y1, x1 + 2 * r, y1 + 2 * r, fill=fill_color, outline=""))
+            shape_ids.append(cnv.create_oval(x2 - 2 * r, y1, x2, y1 + 2 * r, fill=fill_color, outline=""))
+            shape_ids.append(cnv.create_oval(x1, y2 - 2 * r, x1 + 2 * r, y2, fill=fill_color, outline=""))
+            shape_ids.append(cnv.create_oval(x2 - 2 * r, y2 - 2 * r, x2, y2, fill=fill_color, outline=""))
+            tx = pad_x
+            ty = h_px // 2
+            tid = cnv.create_text(tx, ty, text=text, font=f_obj, fill=COLOR_TEXT, anchor="w")
+            def _press(_e, c=cnv, t=tid):
+                for sid in shape_ids:
+                    c.itemconfigure(sid, fill="#3f3f3f")
+                c.move(t, 1, 1)
+                c._pressed = True
+            def _release(e, c=cnv, t=tid):
+                for sid in shape_ids:
+                    c.itemconfigure(sid, fill=fill_color)
+                c.move(t, -1, -1)
+                try:
+                    w = c.winfo_width(); h = c.winfo_height()
+                    inside = 0 <= e.x <= w and 0 <= e.y <= h
+                except Exception:
+                    inside = True
+                if getattr(c, "_pressed", False) and inside:
+                    on_click()
+                c._pressed = False
+            cnv.bind("<ButtonPress-1>", _press)
+            cnv.bind("<ButtonRelease-1>", _release)
+            return cnv
+
+        btn_yes = make_pill(row, "Yes", COLOR_PILL, lambda: self._show_sticker_screen())
+        btn_no  = make_pill(row, "No",  COLOR_BG_DARK, lambda: self._show_non_sticker_screen())
+        btn_yes.grid(row=0, column=0, padx=scale_px(25), pady=scale_px(4))
+        btn_no.grid(row=0, column=1, padx=scale_px(25), pady=scale_px(4))
+
+        # Bottom-left Go Back (style like OrderRangeScreen)
+        back_text = "Go Back"
+        back_font_obj = font_from_pt(14.4)
+        back_font = tkfont.Font(font=back_font_obj)
+        back_width_px = int(back_font.measure(back_text) + scale_px(16))
+        back_height_px = int(back_font.metrics("linespace") + scale_px(20))
+        btn_back_canvas = tk.Canvas(self, width=back_width_px, height=back_height_px, bg=COLOR_BG_DARK,
+                                    highlightthickness=0, bd=0, cursor="hand2")
+        bx_left = 8
+        by_center = back_height_px // 2
+        back_text_id = btn_back_canvas.create_text(bx_left, by_center, text=back_text, font=back_font_obj, fill=COLOR_TEXT, anchor="w")
+        def _back_press(_e, canvas=btn_back_canvas, tid=back_text_id):
+            canvas.configure(bg="#3f3f3f")
+            canvas.move(tid, 1, 1)
+            canvas._pressed = True
+        def _back_release(e, canvas=btn_back_canvas, tid=back_text_id):
+            canvas.configure(bg=COLOR_BG_DARK)
+            canvas.move(tid, -1, -1)
+            try:
+                w = canvas.winfo_width(); h = canvas.winfo_height()
+                inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(canvas, "_pressed", False) and inside:
+                canvas.after(10, self.app.go_back)
+            canvas._pressed = False
+        btn_back_canvas.bind("<ButtonPress-1>", _back_press)
+        btn_back_canvas.bind("<ButtonRelease-1>", _back_release)
+        btn_back_canvas.place(relx=0.0, rely=1.0, x=scale_px(12), y=-scale_px(12), anchor="sw")
+
+        # Hotkeys (accept optional event)
+        self.app.bind("<Escape>", lambda _e=None: self.app.go_back())
+
+    def _show_sticker_screen(self):
+        self.app.show_screen(Screen2)
+
+    def _show_non_sticker_screen(self):
+        from .nonsticker import NScreen2
+        self.app.show_screen(NScreen2)
