@@ -2,6 +2,7 @@
 import os
 
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import ttk, messagebox
 
 from src.state import MM_TO_PX, APP_TITLE
@@ -13,17 +14,23 @@ COLOR_CARD = "#a6a6a6"
 COLOR_TEXT = "#000000"
 COLOR_PILL = "#e6e6e6"
 
-# Helpers: dialogs
-def info(message: str, title: str = "Info"):
-    messagebox.showinfo(title, message)
+UI_SCALE = 1.0
+DPI_PX_PER_INCH = 96
 
+# Helpers: dialogs (keep warn; used across screens)
 def warn(message: str, title: str = "Warning"):
     messagebox.showwarning(title, message)
 
-def error(message: str, title: str = "Error"):
-    messagebox.showerror(title, message)
-
 # Helpers: numeric validation and units
+def scale_px(value: float) -> int:
+    """Scale pixel values by UI_SCALE with rounding."""
+    return int(round(value * UI_SCALE))
+
+
+def font_from_pt(pt_value: float) -> tkfont.Font:
+    px = int(round((pt_value * UI_SCALE) * DPI_PX_PER_INCH / 72.0))
+    return tkfont.Font(family="Myriad Pro", size=-px)
+
 def vcmd_int(root):
     def _is_int(new_value: str) -> bool:
         return new_value.isdigit() or new_value == ""
@@ -39,26 +46,6 @@ def vcmd_float(root):
         except ValueError:
             return False
     return root.register(_is_float)
-
-# Helpers: conversions
-def to_int(value, default: int = 0) -> int:
-    try:
-        return int(value)
-    except Exception:
-        return default
-
-def to_float(value, default: float = 0.0) -> float:
-    try:
-        return float(value)
-    except Exception:
-        return default
-
-def mm_to_px(mm_value) -> int:
-    try:
-        return int(float(mm_value) * MM_TO_PX)
-    except Exception:
-        return 0
-
 
 def apply_styles(root):
     style = ttk.Style(root)
@@ -167,8 +154,6 @@ class Screen(ttk.Frame):
             on_back = self.app.go_back
         ttk.Button(row, text="Go Back", command=on_back).pack(side="left", padx=12)
         ttk.Button(row, text=next_text, command=on_next).pack(side="right", padx=12)
-        # Default hotkeys: Enter → next, Escape → back/quit
-        if on_next:
-            self.app.bind("<Return>", lambda _e: on_next())
+        # Default hotkeys: Escape → back/quit
         if on_back:
             self.app.bind("<Escape>", lambda _e: on_back())
