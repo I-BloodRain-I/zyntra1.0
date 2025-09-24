@@ -1,14 +1,9 @@
-import os
-import re
-import struct
-from pathlib import Path
-from typing import Optional, Tuple
-
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import ttk, messagebox, filedialog
 
-from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL
-from src.state import state, MM_TO_PX, IMAGES_PATH
+from src.core import Screen, COLOR_BG_DARK, COLOR_TEXT, COLOR_PILL, COLOR_BG_SCREEN, UI_SCALE, scale_px, COLOR_BG_SCREEN_FOR_LABELS
+from src.state import state
 
 # ---- tiny helper: write a minimal PDF so Download has content ----
 def _write_minimal_pdf(path: str):
@@ -39,50 +34,225 @@ startxref
 
 
 class NStickerResultsDownloadScreen(Screen):
-    """Non-sticker success + download."""
+    """Non-sticker results screen exactly like the screenshot."""
+
     def __init__(self, master, app):
         super().__init__(master, app)
 
-        # App title + screen title
-        self.header(self, "Product Added Successfully")
+        # Top brand bar and left-top SKU pill like OrderRangeScreen
+        self.brand_bar(self)
+        tk.Label(self,
+                 text=(state.sku or "—"),
+                 bg=COLOR_BG_DARK,
+                 fg=COLOR_TEXT,
+                 font=("Myriad Pro", int(round(24 * UI_SCALE))))\
+            .pack(anchor="w", padx=scale_px(12), pady=(scale_px(8), 0))
 
-        wrap = ttk.Frame(self, style="Screen.TFrame")
-        wrap.pack(expand=True, fill="both", padx=20, pady=20)
+        # Center layout area (like OrderRangeScreen)
+        mid = ttk.Frame(self, style="Screen.TFrame"); mid.pack(expand=True, fill="both")
+        try:
+            mid.grid_columnconfigure(0, weight=1)
+            mid.grid_columnconfigure(1, weight=0)
+            mid.grid_columnconfigure(2, weight=1)
+            mid.grid_rowconfigure(0, weight=1)
+            mid.grid_rowconfigure(1, weight=0)
+            mid.grid_rowconfigure(2, weight=2)
+        except Exception:
+            pass
+        content = tk.Frame(mid, bg=COLOR_BG_SCREEN)
+        content.grid(row=1, column=1)
 
-        # keep main success header within wrap for spacing consistency
-        ttk.Label(wrap, text="Product Added Successfully", style="H1.TLabel").pack(pady=(10, 16))
+        # Compute uniform chip width so all labels start at same x
+        chip_font = tkfont.Font(font=("Myriad Pro", 24))
+        pad_px = 32
+        self._chip_w = max(
+            chip_font.measure("Co2 laser cut Jig"),
+            chip_font.measure("Test File .pdf"),
+            chip_font.measure("Test File Backside .pdf"),
+        ) + pad_px
+        self._chip_h = int(chip_font.metrics("linespace") + 20)
 
-        chk = tk.Canvas(wrap, width=180, height=180, bg="#4d4d4d", highlightthickness=0)
-        chk.pack(pady=(0, 12))
-        r = 80
-        cx, cy = 90, 90
-        chk.create_oval(cx - r, cy - r, cx + r, cy + r, outline="#17a24b", width=10)
-        chk.create_line(55, 95, 85, 120, fill="#17a24b", width=12, capstyle="round")
-        chk.create_line(85, 120, 140, 60, fill="#17a24b", width=12, capstyle="round")
+        # Three file rows with pill-style Download buttons
+        self._file_row(content, "Co2 laser cut Jig", lambda: self._download_pdf(single=True)).pack(pady=(10, 8))
+        self._file_row(content, "Test File .pdf", lambda: self._download_pdf(single=True)).pack(pady=(8, 8))
+        self._file_row(content, "Test File Backside .pdf", lambda: self._download_pdf(single=True)).pack(pady=(8, 8))
 
-        product_name = state.saved_product if state.saved_product else "Product"
-        ttk.Label(wrap, text=f"Sku {product_name}", style="H1.TLabel").pack(pady=(6, 0))
-        ttk.Label(wrap, text=(state.sku or "—"), style="H1.TLabel").pack(pady=(0, 16))
+        # Report row: left strip for "Report:", then plain text on screen bg
+        report_row = tk.Frame(content, bg=COLOR_BG_SCREEN)
+        report_row.pack(fill="x", pady=(16, 10))
+        report_strip = tk.Frame(report_row, bg=COLOR_BG_SCREEN_FOR_LABELS)
+        report_strip.pack(side="left", fill="x")
+        tk.Label(report_strip, text="Report:", bg=COLOR_BG_SCREEN_FOR_LABELS, fg="#000000",
+                 font=("Myriad Pro", 24)).pack(side="left", padx=(0, 8))
+        tk.Label(report_row, text="Successful", bg=COLOR_BG_SCREEN, fg="#6fe28f",
+                 font=("Myriad Pro", 24)).pack(side="left", padx=(12, 0))
 
-        row = ttk.Frame(wrap, style="Screen.TFrame")
-        row.pack(pady=(8, 0))
-        chip = ttk.Frame(row, style="Card.TFrame", padding=10)
-        chip.pack(side="left")
-        ttk.Label(chip, text="Test File .pdf", style="H2.TLabel").pack()
-        ttk.Button(row, text="Download", command=self._download).pack(side="left", padx=14)
+        # Totals row: left strip with the label, then value on screen bg
+        totals_row = tk.Frame(content, bg=COLOR_BG_SCREEN)
+        totals_row.pack(fill="x", pady=(6, 2))
+        totals_strip = tk.Frame(totals_row, bg=COLOR_BG_SCREEN_FOR_LABELS)
+        totals_strip.pack(side="left")
+        tk.Label(totals_strip, text="Total items in 1 batch:", bg=COLOR_BG_SCREEN_FOR_LABELS, fg="#000000",
+                 font=("Myriad Pro", 18)).pack(side="left")
+        # Show count of image objects (from canvas)
+        tk.Label(totals_row, text=f"{state.nonsticker_image_count} pcs", bg=COLOR_BG_SCREEN, fg="#000000",
+                 font=("Myriad Pro", 18)).pack(side="left", padx=(8, 0))
 
-        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.app.quit_app, next_text="Done")
+        # Bottom-right "Back to home" dark button (no Go Back)
+        next_text = "Back to home"
+        next_font_obj = tkfont.Font(font=("Myriad Pro", 14))
+        next_width_px = int(next_font_obj.measure(next_text) + scale_px(16))
+        next_height_px = int(next_font_obj.metrics("linespace") + scale_px(20))
+        btn_next_canvas = tk.Canvas(self, width=next_width_px, height=next_height_px, bg=COLOR_BG_DARK,
+                                    highlightthickness=0, bd=0, cursor="hand2")
+        nx_left = 8
+        ny_center = next_height_px // 2
+        next_text_id = btn_next_canvas.create_text(nx_left, ny_center, text=next_text, font=("Myriad Pro", 14), fill=COLOR_TEXT, anchor="w")
+        def _next_press(_e, canvas=btn_next_canvas, tid=next_text_id):
+            canvas.configure(bg="#3f3f3f"); canvas.move(tid, 1, 1); canvas._pressed = True
+        def _next_release(e, canvas=btn_next_canvas, tid=next_text_id):
+            canvas.configure(bg=COLOR_BG_DARK); canvas.move(tid, -1, -1)
+            try:
+                w = canvas.winfo_width(); h = canvas.winfo_height(); inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(canvas, "_pressed", False) and inside:
+                canvas.after(10, self._back_home)
+            canvas._pressed = False
+        btn_next_canvas.bind("<ButtonPress-1>", _next_press)
+        btn_next_canvas.bind("<ButtonRelease-1>", _next_release)
+        btn_next_canvas.place(relx=1.0, rely=1.0, x=-scale_px(12), y=-scale_px(12), anchor="se")
 
-    def _download(self):
+    # ---------- helpers ----------
+    def _pill_button(self, parent, text: str, command):
+        f_obj = tkfont.Font(font=("Myriad Pro", 14))
+        pad_x = 16
+        pad_y = 10
+        w_px = int(f_obj.measure(text) + pad_x * 2)
+        h_px = int(f_obj.metrics("linespace") + pad_y * 2)
+        btn = tk.Canvas(parent, width=w_px, height=h_px, bg=COLOR_BG_SCREEN,
+                        highlightthickness=0, bd=0, cursor="hand2")
+        r = max(6, int(round(h_px * 0.5)))
+        x1, y1, x2, y2 = 0, 0, w_px, h_px
+        shapes = []
+        shapes.append(btn.create_rectangle(x1 + r, y1, x2 - r, y2, fill=COLOR_PILL, outline=""))
+        shapes.append(btn.create_oval(x1, y1, x1 + 2 * r, y1 + 2 * r, fill=COLOR_PILL, outline=""))
+        shapes.append(btn.create_oval(x2 - 2 * r, y1, x2, y1 + 2 * r, fill=COLOR_PILL, outline=""))
+        txt_id = btn.create_text(pad_x, h_px // 2, text=text, font=("Myriad Pro", 14), fill=COLOR_TEXT, anchor="w")
+
+        def _press(_e):
+            for sid in shapes:
+                btn.itemconfigure(sid, fill="#dcdcdc")
+            btn.move(txt_id, 1, 1)
+            btn._pressed = True
+
+        def _release(e):
+            for sid in shapes:
+                btn.itemconfigure(sid, fill=COLOR_PILL)
+            btn.move(txt_id, -1, -1)
+            try:
+                w = btn.winfo_width(); h = btn.winfo_height()
+                inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(btn, "_pressed", False) and inside:
+                try:
+                    command()
+                except Exception:
+                    pass
+            btn._pressed = False
+
+        btn.bind("<ButtonPress-1>", _press)
+        btn.bind("<ButtonRelease-1>", _release)
+        return btn
+
+    def _pill_label(self, parent, text: str):
+        f_obj = tkfont.Font(font=("Myriad Pro", 12))
+        pad_x = 12
+        pad_y = 6
+        w_px = int(f_obj.measure(text) + pad_x * 2)
+        h_px = int(f_obj.metrics("linespace") + pad_y * 2)
+        cnv = tk.Canvas(parent, width=w_px, height=h_px, bg=COLOR_BG_SCREEN, highlightthickness=0, bd=0)
+        r = max(6, int(round(h_px * 0.5)))
+        x1, y1, x2, y2 = 0, 0, w_px, h_px
+        cnv.create_rectangle(x1 + r, y1, x2 - r, y2, fill=COLOR_PILL, outline="")
+        cnv.create_oval(x1, y1, x1 + 2 * r, y1 + 2 * r, fill=COLOR_PILL, outline="")
+        cnv.create_oval(x2 - 2 * r, y1, x2, y1 + 2 * r, fill=COLOR_PILL, outline="")
+        cnv.create_text(pad_x, h_px // 2, text=text, font=("Myriad Pro", 12), fill=COLOR_TEXT, anchor="w")
+        return cnv
+
+    def _file_row(self, parent, label_text: str, command, small_note: str | None = None):
+        row = ttk.Frame(parent, style="Screen.TFrame")
+        # Fixed-width wrapper to ensure same x start; give explicit height to avoid collapse
+        chip_wrap = tk.Frame(row, bg=COLOR_BG_DARK,
+                             width=getattr(self, "_chip_w", 450),
+                             height=getattr(self, "_chip_h", 48))
+        chip_wrap.pack(side="left")
+        chip_wrap.pack_propagate(False)
+        chip = tk.Frame(chip_wrap, bg=COLOR_BG_SCREEN_FOR_LABELS)
+        chip.pack(expand=True, fill="both")
+        tk.Label(chip, text=label_text, bg=COLOR_BG_SCREEN_FOR_LABELS, fg="#000000",
+                 font=("Myriad Pro", 24)).pack(padx=10, pady=10)
+        col = ttk.Frame(row, style="Screen.TFrame")
+        col.pack(side="left", padx=14)
+        self._pill_button(col, "Download", command).pack()
+        if small_note:
+            tk.Label(col, text=small_note, bg=COLOR_BG_SCREEN_FOR_LABELS, fg="#333333",
+                     font=("Myriad Pro", 10)).pack(pady=(4, 0))
+        return row
+
+    # ---------- actions ----------
+    def _download_pdf(self, single: bool):
+        if single:
+            fname = filedialog.asksaveasfilename(
+                title="Save Test File",
+                defaultextension=".pdf",
+                filetypes=[("PDF files", "*.pdf")]
+            )
+            if not fname:
+                return
+            try:
+                _write_minimal_pdf(fname)
+                messagebox.showinfo("Saved", f"File saved to:\n{fname}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not save file:\n{e}")
+            return
+
+        folder = filedialog.askdirectory(title="Select folder to save 2 files")
+        if not folder:
+            return
+        try:
+            import os as _os
+            p1 = _os.path.join(folder, "test_front.pdf")
+            p2 = _os.path.join(folder, "test_back.pdf")
+            _write_minimal_pdf(p1)
+            _write_minimal_pdf(p2)
+            messagebox.showinfo("Saved", f"Saved 2 files to:\n{folder}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not save files:\n{e}")
+
+    def _download_jig(self):
         fname = filedialog.asksaveasfilename(
-            title="Save Test File",
-            defaultextension=".pdf",
-            filetypes=[("PDF files", "*.pdf")]
+            title="Save Jig File",
+            defaultextension=".svg",
+            filetypes=[("SVG files", "*.svg"), ("All files", "*.*")]
         )
         if not fname:
             return
         try:
-            _write_minimal_pdf(fname)
+            svg = """<svg xmlns='http://www.w3.org/2000/svg' width='200' height='140'>
+<rect x='10' y='10' width='180' height='120' fill='none' stroke='black' stroke-width='3'/>
+<text x='20' y='80' font-size='18' font-family='Arial'>CO2 laser cut jig</text>
+</svg>"""
+            with open(fname, "w", encoding="utf-8") as f:
+                f.write(svg)
             messagebox.showinfo("Saved", f"File saved to:\n{fname}")
         except Exception as e:
             messagebox.showerror("Error", f"Could not save file:\n{e}")
+
+    def _back_home(self):
+        try:
+            from src.screens.common.select_product import SelectProductScreen
+            self.app.show_screen(SelectProductScreen)
+        except Exception:
+            self.app.go_back()

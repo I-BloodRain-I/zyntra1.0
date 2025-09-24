@@ -9,6 +9,7 @@ from src.state import MM_TO_PX, APP_TITLE
 
 # Shared UI colors
 COLOR_BG_SCREEN = "#878787"
+COLOR_BG_SCREEN_FOR_LABELS = "#737373"
 COLOR_BG_DARK = "#474747"
 COLOR_CARD = "#a6a6a6"
 COLOR_TEXT = "#000000"

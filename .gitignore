@@ -1,4 +1,7 @@
 .venv/
 data/
 __pycache__/
+dist/
+build/
 readme.md
+*.spec

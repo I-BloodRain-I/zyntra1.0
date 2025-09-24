@@ -37,6 +37,9 @@ class AppState:
     sheet_per_major: List[int] = field(default_factory=list)
     ai_arrange: bool = False
 
+    # Non-sticker: number of image objects on canvas when proceeding
+    nonsticker_image_count: int = 0
+
 state = AppState()
 
 

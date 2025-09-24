@@ -187,8 +187,8 @@ class NStickerCanvasScreen(Screen):
         self.sel_x.trace_add("write", self._on_pos_change)
         self.sel_y.trace_add("write", self._on_pos_change)
         # Width/Height controls
-        self.sel_w = tk.StringVar(value="210")
-        self.sel_h = tk.StringVar(value="297")
+        self.sel_w = tk.StringVar(value=state.pkg_x or "296")
+        self.sel_h = tk.StringVar(value=state.pkg_y or "415")
         _wb = self._chip(row2, "Width:", self.sel_w, width=8)
         tk.Label(_wb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         _hb = self._chip(row2, "Height:", self.sel_h, width=8)
@@ -238,7 +238,7 @@ class NStickerCanvasScreen(Screen):
         self._drag_size: Tuple[int, int] = (0, 0)
         self._suppress_size_trace: bool = False
         self._suppress_pos_trace: bool = False
-        self._zoom: float = 1.25
+        self._zoom: float = 0.9
         # Per-side scene storage
         self._scene_store: dict[str, list[dict]] = {"front": [], "back": []}
         self._current_side: str = "front"
@@ -1054,7 +1054,7 @@ class NStickerCanvasScreen(Screen):
             jy = float(self.sel_h.get())
         except Exception:
             # fallback to safe defaults
-            jx, jy = 210.0, 297.0
+            jx, jy = 296.0, 415.0
         self.jig_x.set(str(int(jx)))
         self.jig_y.set(str(int(jy)))
         self._did_autosize = True
@@ -1072,6 +1072,17 @@ class NStickerCanvasScreen(Screen):
         state.sku = sku_val
         state.pkg_x = self.jig_x.get().strip()
         state.pkg_y = self.jig_y.get().strip()
+        # Count only rectangle items (images). Text items are stored with type 'text'
+        try:
+            # Count only non-text rectangles (text placeholders use green outline)
+            img_count = sum(
+                1
+                for _cid, meta in self._items.items()
+                if meta.get("type") == "rect" and str(meta.get("outline", "")) != "#17a24b"
+            )
+        except Exception:
+            img_count = 0
+        state.nonsticker_image_count = int(img_count)
         self.app.show_screen(NStickerResultsDownloadScreen)
 
     def _zoom_step(self, direction: int):
