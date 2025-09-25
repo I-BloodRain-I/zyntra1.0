@@ -3,7 +3,7 @@ import tkinter.font as tkfont
 from tkinter import ttk
 
 from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_PILL, COLOR_TEXT, scale_px, font_from_pt, UI_SCALE
-from src.screens.sticker import Screen2
+from src.screens.sticker import StickerBasicInfoScreen
 
 
 class ProductTypeScreen(Screen):
@@ -145,7 +145,7 @@ class ProductTypeScreen(Screen):
         self.app.bind("<Escape>", lambda _e=None: self.app.go_back())
 
     def _show_sticker_screen(self):
-        self.app.show_screen(Screen2)
+        self.app.show_screen(StickerBasicInfoScreen)
 
     def _show_non_sticker_screen(self):
         from src.screens.nonsticker import NStickerCanvasScreen

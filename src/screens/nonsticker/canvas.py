@@ -11,6 +11,13 @@ from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL
 from src.state import state, MM_TO_PX, IMAGES_PATH
 from .results_download import NStickerResultsDownloadScreen
 
+# Optional PIL (Pillow) import for high-quality image scaling
+try:
+    from PIL import Image, ImageTk  # type: ignore
+except Exception:  # pragma: no cover - PIL might not be available in some envs
+    Image = None  # type: ignore
+    ImageTk = None  # type: ignore
+
 class NStickerCanvasScreen(Screen):
     """Non-sticker designer: SKU, jig, import, place, size."""
     def __init__(self, master, app):
@@ -20,7 +27,7 @@ class NStickerCanvasScreen(Screen):
         self.brand_bar(self)
         header_row = ttk.Frame(self, style="Screen.TFrame")
         header_row.pack(padx=0, pady=(25, 25))
-        tk.Label(header_row, text=" Write Name for sku ", bg="#737373", fg=COLOR_TEXT,
+        tk.Label(header_row, text=" Write name for SKU ", bg="#737373", fg=COLOR_TEXT,
                  font=("Myriad Pro", 22)).pack(side="left", padx=(8, 0))
         self.sku_var = tk.StringVar(value=state.sku or "Carmirror134")
         # Flat tk.Entry without focus border, with manual left padding via a black wrapper
@@ -115,14 +122,14 @@ class NStickerCanvasScreen(Screen):
         # Jig X row
         _jxbox = tk.Frame(jig_col, bg="#6f6f6f")
         _jxbox.pack(side="top", pady=2)
-        tk.Label(_jxbox, text="X:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        tk.Label(_jxbox, text="Width: ", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
         tk.Entry(_jxbox, textvariable=self.jig_x, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_jxbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         # Jig Y row
         _jybox = tk.Frame(jig_col, bg="#6f6f6f")
         _jybox.pack(side="top", pady=2)
-        tk.Label(_jybox, text="Y:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        tk.Label(_jybox, text="Height:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
         tk.Entry(_jybox, textvariable=self.jig_y, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_jybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
@@ -418,7 +425,12 @@ class NStickerCanvasScreen(Screen):
                 size = (float(self.sel_w.get()), float(self.sel_h.get()))
             except Exception:
                 size = (40.0, 50.0)
-        self._create_placeholder(label, size[0], size[1])
+        # For SVGs, keep placeholder since rasterization may not be available
+        if str(Path(path).suffix).lower() == ".svg":
+            self._create_placeholder(label, size[0], size[1])
+            return
+        # For raster images, render real content
+        self._create_image_item(path, size[0], size[1])
 
     def _create_placeholder(self, label, w_mm, h_mm, text_fill: str = "white", outline: str = "#d0d0d0"):
         # place at the center of current viewport (like text)
@@ -474,6 +486,80 @@ class NStickerCanvasScreen(Screen):
         # Text rectangles use green outline
         self._create_placeholder("Text", default_w, default_h, text_fill="#17a24b", outline="#17a24b")
 
+    # ---- Image support ----
+    def _render_photo(self, meta: dict, w_px: int, h_px: int) -> Optional[tk.PhotoImage]:
+        # Returns a tk.PhotoImage of requested size; stores reference on meta to avoid GC
+        if w_px < 1 or h_px < 1:
+            return None
+        path = meta.get("path")
+        if not path or not os.path.exists(path):
+            return None
+        # Try high-quality resize via PIL
+        try:
+            if Image is not None and ImageTk is not None:
+                pil = meta.get("pil")
+                if pil is None:
+                    pil = Image.open(path)
+                    meta["pil"] = pil
+                resized = pil.resize((int(w_px), int(h_px)), Image.LANCZOS)
+                photo = ImageTk.PhotoImage(resized)
+                meta["photo"] = photo
+                return photo
+        except Exception:
+            pass
+        # Fallback to tk.PhotoImage (best-effort; may not scale exactly)
+        try:
+            photo = tk.PhotoImage(file=path)
+            meta["photo"] = photo
+            return photo
+        except Exception:
+            return None
+
+    def _create_image_item(self, path: str, w_mm: float, h_mm: float) -> None:
+        # place at the center of current viewport similar to placeholders
+        cw = max(1, self.canvas.winfo_width())
+        ch = max(1, self.canvas.winfo_height())
+        cx = self.canvas.canvasx(cw // 2)
+        cy = self.canvas.canvasy(ch // 2)
+        # snap width/height to integer millimeters
+        qw_mm = self._snap_mm(w_mm)
+        qh_mm = self._snap_mm(h_mm)
+        base_w = float(qw_mm) * MM_TO_PX
+        base_h = float(qh_mm) * MM_TO_PX
+        scaled_w = int(round(base_w * self._zoom))
+        scaled_h = int(round(base_h * self._zoom))
+        # Ensure within jig; compute snapped top-left mm
+        ox = self._item_outline_half_px()
+        oy = self._item_outline_half_px()
+        jx0, jy0, jx1, jy1 = self._jig_inner_rect_px()
+        x_mm = (cx - scaled_w / 2 - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))
+        y_mm = (cy - scaled_h / 2 - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))
+        sx_mm = self._snap_mm(x_mm)
+        sy_mm = self._snap_mm(y_mm)
+        new_left = (jx0 + ox) + sx_mm * MM_TO_PX * self._zoom
+        new_top = (jy0 + oy) + sy_mm * MM_TO_PX * self._zoom
+        # Build meta and render
+        meta = {
+            "type": "image",
+            "path": path,
+            "w_mm": float(qw_mm),
+            "h_mm": float(qh_mm),
+            "x_mm": float(sx_mm),
+            "y_mm": float(sy_mm),
+            "photo": None,
+            "pil": None,
+            "border_id": None,
+        }
+        photo = self._render_photo(meta, scaled_w, scaled_h)
+        if photo is None:
+            # fallback to placeholder if render failed
+            self._create_placeholder(os.path.basename(path), qw_mm, qh_mm)
+            return
+        img_id = self.canvas.create_image(new_left, new_top, image=photo, anchor="nw")
+        self._items[img_id] = meta
+        self._select(img_id)
+        self._update_scrollregion()
+
     def _ai_arrange(self):
         pads = int(round(8 * self._zoom))
         x0, y0, x1, y1 = self._jig_inner_rect_px()
@@ -481,7 +567,7 @@ class NStickerCanvasScreen(Screen):
         row_h = 0
         max_w = x1 - x0 - 2 * pads
         for cid, meta in self._items.items():
-            if meta["type"] != "rect":
+            if meta["type"] not in ("rect", "image"):
                 continue
             w = int(round(meta["w_mm"] * MM_TO_PX * self._zoom))
             h = int(round(meta["h_mm"] * MM_TO_PX * self._zoom))
@@ -489,10 +575,7 @@ class NStickerCanvasScreen(Screen):
                 x = x0 + pads
                 y += row_h + pads
                 row_h = 0
-            self.canvas.coords(cid, x, y, x + w, y + h)
-            self.canvas.coords(meta["label_id"], x + w / 2, y + h / 2)
-            self._raise_all_labels()
-            # snap placed rect to nearest 1mm grid and persist
+            # compute clamped left/top
             ox = self._item_outline_half_px()
             oy = self._item_outline_half_px()
             jx0, jy0, jx1, jy1 = self._jig_inner_rect_px()
@@ -502,6 +585,21 @@ class NStickerCanvasScreen(Screen):
             max_top = jy1 - oy - h
             left = max(min_left, min(x, max_left))
             top = max(min_top, min(y, max_top))
+            if meta["type"] == "rect":
+                self.canvas.coords(cid, left, top, left + w, top + h)
+                if meta.get("label_id"):
+                    self.canvas.coords(meta["label_id"], left + w / 2, top + h / 2)
+                self._raise_all_labels()
+            else:
+                # image: ensure image rendered at current size
+                photo = self._render_photo(meta, max(1, int(w)), max(1, int(h)))
+                if photo is not None:
+                    self.canvas.itemconfig(cid, image=photo)
+                self.canvas.coords(cid, left, top)
+                bid = meta.get("border_id")
+                if bid:
+                    self.canvas.coords(bid, left, top, left + w, top + h)
+            # snap placed to nearest 1mm grid and persist
             raw_x_mm = (left - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))
             raw_y_mm = (top - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))
             sx_mm = self._snap_mm(raw_x_mm)
@@ -515,8 +613,15 @@ class NStickerCanvasScreen(Screen):
             sy_mm = int(max(min_mm_y, min(sy_mm, max_mm_y)))
             new_left = (jx0 + ox) + sx_mm * MM_TO_PX * self._zoom
             new_top = (jy0 + oy) + sy_mm * MM_TO_PX * self._zoom
-            self.canvas.coords(cid, new_left, new_top, new_left + w, new_top + h)
-            self.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
+            if meta["type"] == "rect":
+                self.canvas.coords(cid, new_left, new_top, new_left + w, new_top + h)
+                if meta.get("label_id"):
+                    self.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
+            else:
+                self.canvas.coords(cid, new_left, new_top)
+                bid = meta.get("border_id")
+                if bid:
+                    self.canvas.coords(bid, new_left, new_top, new_left + w, new_top + h)
             meta["x_mm"] = float(sx_mm)
             meta["y_mm"] = float(sy_mm)
             row_h = max(row_h, h)
@@ -543,11 +648,11 @@ class NStickerCanvasScreen(Screen):
         self._select(target)
         if target:
             meta = self._items.get(target, {})
-            if meta.get("type") == "rect":
+            if meta.get("type") in ("rect", "image"):
                 x1, y1, x2, y2 = self.canvas.bbox(target)
                 self._drag_off = (e.x - x1, e.y - y1)
-                rx1, ry1, rx2, ry2 = self.canvas.coords(target)
-                self._drag_size = (rx2 - rx1, ry2 - ry1)
+                # Use bbox size for both rects and images
+                self._drag_size = (x2 - x1, y2 - y1)
                 self._drag_kind = "rect"
             else:
                 cx, cy = self.canvas.coords(target)
@@ -589,10 +694,17 @@ class NStickerCanvasScreen(Screen):
                 return
             new_left = (jx0 + ox) + sx_mm * MM_TO_PX * self._zoom
             new_top = (jy0 + oy) + sy_mm * MM_TO_PX * self._zoom
-            self.canvas.coords(self._selected, new_left, new_top, new_left + w, new_top + h)
-            if meta.get("label_id"):
-                self.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
-                self._raise_all_labels()
+            if meta.get("type") == "rect":
+                self.canvas.coords(self._selected, new_left, new_top, new_left + w, new_top + h)
+                if meta.get("label_id"):
+                    self.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
+                    self._raise_all_labels()
+            elif meta.get("type") == "image":
+                self.canvas.coords(self._selected, new_left, new_top)
+                # move selection border if present
+                bid = meta.get("border_id")
+                if bid:
+                    self.canvas.coords(bid, new_left, new_top, new_left + w, new_top + h)
             # update integer position fields and persist
             try:
                 self._suppress_pos_trace = True
@@ -628,6 +740,13 @@ class NStickerCanvasScreen(Screen):
             return
         try:
             self.canvas.delete(cid)
+        except Exception:
+            pass
+        # delete selection border if any
+        try:
+            bid = meta.get("border_id")
+            if bid:
+                self.canvas.delete(bid)
         except Exception:
             pass
         try:
@@ -676,6 +795,15 @@ class NStickerCanvasScreen(Screen):
             elif prev_meta.get("type") == "text":
                 # restore default text color when deselected
                 self.canvas.itemconfig(self._selected, fill=prev_meta.get("default_fill", "white"))
+            elif prev_meta.get("type") == "image":
+                # remove selection border if present
+                bid = prev_meta.get("border_id")
+                if bid:
+                    try:
+                        self.canvas.delete(bid)
+                    except Exception:
+                        pass
+                    prev_meta["border_id"] = None
         self._selected = cid
         if not cid:
             # clear fields when no selection
@@ -707,6 +835,26 @@ class NStickerCanvasScreen(Screen):
                 self.sel_y.set(str(int(round(float(meta.get("y_mm", 0.0))))))
             finally:
                 self._suppress_pos_trace = False
+        elif meta.get("type") == "image":
+            # draw selection border around image
+            try:
+                x1, y1, x2, y2 = self.canvas.bbox(cid)
+                bid = self.canvas.create_rectangle(x1, y1, x2, y2, outline="#6ec8ff", width=3)
+                meta["border_id"] = bid
+            except Exception:
+                pass
+            try:
+                self._suppress_size_trace = True
+                self.sel_w.set(str(int(round(float(meta["w_mm"] or 0)))))
+                self.sel_h.set(str(int(round(float(meta["h_mm"] or 0)))))
+            finally:
+                self._suppress_size_trace = False
+            try:
+                self._suppress_pos_trace = True
+                self.sel_x.set(str(int(round(float(meta.get("x_mm", 0.0))))))
+                self.sel_y.set(str(int(round(float(meta.get("y_mm", 0.0))))))
+            finally:
+                self._suppress_pos_trace = False
         elif meta.get("type") == "text":
             # highlight selected text in blue
             self.canvas.itemconfig(cid, fill="#6ec8ff")
@@ -715,11 +863,14 @@ class NStickerCanvasScreen(Screen):
         if not self._selected:
             return
         meta = self._items.get(self._selected, {})
-        if meta.get("type") != "rect":
+        if meta.get("type") not in ("rect", "image"):
             return
+        # Treat empty inputs as 0mm without overwriting the entry text
+        raw_w = (self.sel_w.get() or "").strip()
+        raw_h = (self.sel_h.get() or "").strip()
         try:
-            w_mm = self._snap_mm(self.sel_w.get())
-            h_mm = self._snap_mm(self.sel_h.get())
+            w_mm = 0 if raw_w == "" else self._snap_mm(raw_w)
+            h_mm = 0 if raw_h == "" else self._snap_mm(raw_h)
         except ValueError:
             messagebox.showerror("Invalid size", "Enter numeric X/Y (mm).")
             return
@@ -728,21 +879,32 @@ class NStickerCanvasScreen(Screen):
         x1, y1, x2, y2 = self.canvas.bbox(self._selected)
         cx = (x1 + x2) / 2
         cy = (y1 + y2) / 2
-        w = w_mm * MM_TO_PX * self._zoom
-        h = h_mm * MM_TO_PX * self._zoom
-        self.canvas.coords(self._selected, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
-        if meta.get("label_id"):
-            self.canvas.coords(meta["label_id"], cx, cy)
-            self._raise_all_labels()
+        w = int(round(w_mm * MM_TO_PX * self._zoom))
+        h = int(round(h_mm * MM_TO_PX * self._zoom))
+        if meta.get("type") == "rect":
+            self.canvas.coords(self._selected, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+            if meta.get("label_id"):
+                self.canvas.coords(meta["label_id"], cx, cy)
+                self._raise_all_labels()
+        elif meta.get("type") == "image":
+            # re-render image at new size and keep center
+            photo = self._render_photo(meta, max(1, int(w)), max(1, int(h)))
+            if photo is not None:
+                # move to top-left to keep same center
+                self.canvas.coords(self._selected, cx - w / 2, cy - h / 2)
+                self.canvas.itemconfig(self._selected, image=photo)
+                bid = meta.get("border_id")
+                if bid:
+                    self.canvas.coords(bid, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
         self._update_scrollregion()
         # update position fields to new top-left after resize
         try:
             self._suppress_pos_trace = True
-            nx1, ny1, nx2, ny2 = self.canvas.coords(self._selected)
+            bx1, by1, bx2, by2 = self.canvas.bbox(self._selected)
             jx0, jy0, jx1, jy1 = self._jig_inner_rect_px()
             ox = self._item_outline_half_px(); oy = self._item_outline_half_px()
-            raw_x_mm = (nx1 - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))
-            raw_y_mm = (ny1 - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))
+            raw_x_mm = (bx1 - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))
+            raw_y_mm = (by1 - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))
             sx_mm = self._snap_mm(raw_x_mm)
             sy_mm = self._snap_mm(raw_y_mm)
             self.sel_x.set(str(int(sx_mm)))
@@ -759,18 +921,22 @@ class NStickerCanvasScreen(Screen):
         if not self._selected:
             return
         meta = self._items.get(self._selected, {})
-        if meta.get("type") != "rect":
+        if meta.get("type") not in ("rect", "image"):
             return
+        raw_w = (self.sel_w.get() or "").strip()
+        raw_h = (self.sel_h.get() or "").strip()
         try:
-            w_mm = self._snap_mm(self.sel_w.get())
-            h_mm = self._snap_mm(self.sel_h.get())
+            w_mm = 0 if raw_w == "" else self._snap_mm(raw_w)
+            h_mm = 0 if raw_h == "" else self._snap_mm(raw_h)
         except ValueError:
             return
-        # reflect integer values in the inputs
+        # Reflect integer values only if user did not clear the input
         try:
             self._suppress_size_trace = True
-            self.sel_w.set(str(int(w_mm)))
-            self.sel_h.set(str(int(h_mm)))
+            if raw_w != "":
+                self.sel_w.set(str(int(w_mm)))
+            if raw_h != "":
+                self.sel_h.set(str(int(h_mm)))
         finally:
             self._suppress_size_trace = False
         meta["w_mm"] = float(w_mm)
@@ -778,21 +944,34 @@ class NStickerCanvasScreen(Screen):
         x1, y1, x2, y2 = self.canvas.bbox(self._selected)
         cx = (x1 + x2) / 2
         cy = (y1 + y2) / 2
-        w = w_mm * MM_TO_PX * self._zoom
-        h = h_mm * MM_TO_PX * self._zoom
-        self.canvas.coords(self._selected, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
-        if meta.get("label_id"):
-            self.canvas.coords(meta["label_id"], cx, cy)
-            self._raise_all_labels()
+        if meta.get("type") == "rect":
+            w = w_mm * MM_TO_PX * self._zoom
+            h = h_mm * MM_TO_PX * self._zoom
+            self.canvas.coords(self._selected, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+            if meta.get("label_id"):
+                self.canvas.coords(meta["label_id"], cx, cy)
+                self._raise_all_labels()
+        else:
+            # image: re-render at new size and keep center
+            w_px = max(1, int(round(w_mm * MM_TO_PX * self._zoom)))
+            h_px = max(1, int(round(h_mm * MM_TO_PX * self._zoom)))
+            photo = self._render_photo(meta, w_px, h_px)
+            if photo is not None:
+                self.canvas.itemconfig(self._selected, image=photo)
+            # move image so center remains the same
+            self.canvas.coords(self._selected, cx - w_px / 2, cy - h_px / 2)
+            bid = meta.get("border_id")
+            if bid:
+                self.canvas.coords(bid, cx - w_px / 2, cy - h_px / 2, cx + w_px / 2, cy + h_px / 2)
         self._update_scrollregion()
         # update position fields to new top-left after resize
         try:
             self._suppress_pos_trace = True
-            nx1, ny1, nx2, ny2 = self.canvas.coords(self._selected)
+            bx1, by1, bx2, by2 = self.canvas.bbox(self._selected)
             jx0, jy0, jx1, jy1 = self._jig_inner_rect_px()
             ox = self._item_outline_half_px(); oy = self._item_outline_half_px()
-            raw_x_mm = (nx1 - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))
-            raw_y_mm = (ny1 - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))
+            raw_x_mm = (bx1 - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))
+            raw_y_mm = (by1 - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))
             sx_mm = self._snap_mm(raw_x_mm)
             sy_mm = self._snap_mm(raw_y_mm)
             self.sel_x.set(str(int(sx_mm)))
@@ -807,7 +986,7 @@ class NStickerCanvasScreen(Screen):
         if not self._selected:
             return
         meta = self._items.get(self._selected, {})
-        if meta.get("type") != "rect":
+        if meta.get("type") not in ("rect", "image"):
             return
         try:
             x_mm = self._snap_mm(self.sel_x.get())
@@ -841,10 +1020,16 @@ class NStickerCanvasScreen(Screen):
             finally:
                 self._suppress_pos_trace = False
         # move selection and label
-        self.canvas.coords(self._selected, new_left, new_top, new_left + w, new_top + h)
-        if meta.get("label_id"):
-            self.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
-            self._raise_all_labels()
+        if meta.get("type") == "rect":
+            self.canvas.coords(self._selected, new_left, new_top, new_left + w, new_top + h)
+            if meta.get("label_id"):
+                self.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
+                self._raise_all_labels()
+        elif meta.get("type") == "image":
+            self.canvas.coords(self._selected, new_left, new_top)
+            bid = meta.get("border_id")
+            if bid:
+                self.canvas.coords(bid, new_left, new_top, new_left + w, new_top + h)
         # persist mm
         meta["x_mm"], meta["y_mm"] = float(int(x_mm)), float(int(y_mm))
         self._update_scrollregion()
@@ -903,6 +1088,34 @@ class NStickerCanvasScreen(Screen):
                 if meta.get("label_id"):
                     self.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
                 self._raise_all_labels()
+                # don't mutate stored mm during redraw
+            elif t == "image":
+                try:
+                    x_mm = float(meta.get("x_mm", 0.0))
+                    y_mm = float(meta.get("y_mm", 0.0))
+                    w_mm = float(meta.get("w_mm", 0.0))
+                    h_mm = float(meta.get("h_mm", 0.0))
+                except Exception:
+                    continue
+                ox = self._item_outline_half_px()
+                oy = self._item_outline_half_px()
+                w = int(round(w_mm * MM_TO_PX * self._zoom))
+                h = int(round(h_mm * MM_TO_PX * self._zoom))
+                min_left = x0 + ox
+                min_top = y0 + oy
+                max_left = x1 - ox - w
+                max_top = y1 - oy - h
+                left = x0 + x_mm * MM_TO_PX * self._zoom + ox
+                top = y0 + y_mm * MM_TO_PX * self._zoom + oy
+                new_left = max(min_left, min(left, max_left))
+                new_top = max(min_top, min(top, max_top))
+                photo = self._render_photo(meta, max(1, int(w)), max(1, int(h)))
+                if photo is not None:
+                    self.canvas.itemconfig(cid, image=photo)
+                self.canvas.coords(cid, new_left, new_top)
+                bid = meta.get("border_id")
+                if bid:
+                    self.canvas.coords(bid, new_left, new_top, new_left + w, new_top + h)
                 # don't mutate stored mm during redraw
             elif t == "text":
                 try:
@@ -1208,6 +1421,18 @@ class NStickerCanvasScreen(Screen):
                     })
                 except Exception:
                     continue
+            elif t == "image":
+                try:
+                    items.append({
+                        "type": "image",
+                        "path": str(meta.get("path", "")),
+                        "w_mm": float(meta.get("w_mm", 0.0)),
+                        "h_mm": float(meta.get("h_mm", 0.0)),
+                        "x_mm": float(meta.get("x_mm", 0.0)),
+                        "y_mm": float(meta.get("y_mm", 0.0)),
+                    })
+                except Exception:
+                    continue
             elif t == "text":
                 try:
                     txt = self.canvas.itemcget(cid, "text")
@@ -1241,6 +1466,38 @@ class NStickerCanvasScreen(Screen):
                     outline=outline,
                     text_fill=text_fill,
                 )
+            elif t == "image":
+                path = str(it.get("path", ""))
+                if path and os.path.exists(path):
+                    # Create image at specified mm top-left
+                    x_mm = float(it.get("x_mm", 0.0))
+                    y_mm = float(it.get("y_mm", 0.0))
+                    w_mm = float(it.get("w_mm", 0.0))
+                    h_mm = float(it.get("h_mm", 0.0))
+                    # Create at explicit mm rather than centered
+                    # Reuse helper via temporary meta
+                    # Compute px and create image
+                    jx0, jy0, jx1, jy1 = self._jig_inner_rect_px()
+                    ox = self._item_outline_half_px(); oy = self._item_outline_half_px()
+                    w_px = int(round(w_mm * MM_TO_PX * self._zoom))
+                    h_px = int(round(h_mm * MM_TO_PX * self._zoom))
+                    left = jx0 + ox + x_mm * MM_TO_PX * self._zoom
+                    top = jy0 + oy + y_mm * MM_TO_PX * self._zoom
+                    meta = {
+                        "type": "image",
+                        "path": path,
+                        "w_mm": float(self._snap_mm(w_mm)),
+                        "h_mm": float(self._snap_mm(h_mm)),
+                        "x_mm": float(self._snap_mm(x_mm)),
+                        "y_mm": float(self._snap_mm(y_mm)),
+                        "photo": None,
+                        "pil": None,
+                        "border_id": None,
+                    }
+                    photo = self._render_photo(meta, max(1, int(w_px)), max(1, int(h_px)))
+                    if photo is not None:
+                        img_id = self.canvas.create_image(left, top, image=photo, anchor="nw")
+                        self._items[img_id] = meta
             elif t == "text":
                 self._create_text_at_mm(
                     it.get("text", "Text"),
@@ -1250,6 +1507,11 @@ class NStickerCanvasScreen(Screen):
                 )
 
     def _on_backside_toggle(self, *_):
+        # Deselect any current selection before switching sides
+        try:
+            self._select(None)
+        except Exception:
+            pass
         # Save current scene under current side
         try:
             self._scene_store[self._current_side] = self._serialize_scene()

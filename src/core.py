@@ -28,6 +28,8 @@ def scale_px(value: float) -> int:
     return int(round(value * UI_SCALE))
 
 
+
+
 def font_from_pt(pt_value: float) -> tkfont.Font:
     px = int(round((pt_value * UI_SCALE) * DPI_PX_PER_INCH / 72.0))
     return tkfont.Font(family="Myriad Pro", size=-px)
