@@ -2,7 +2,7 @@ import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import ttk, messagebox, filedialog
 
-from src.state import state
+from src.core.state import state
 from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_TEXT, scale_px, font_from_pt, UI_SCALE
 from src.screens.sticker import _write_minimal_pdf
 

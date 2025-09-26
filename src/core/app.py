@@ -1,11 +1,12 @@
 # App (Tk), стили ttk, базовый Screen
 import os
 
+import tempfile
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import ttk, messagebox
 
-from src.state import MM_TO_PX, APP_TITLE
+from .state import MM_TO_PX, APP_TITLE
 
 # Shared UI colors
 COLOR_BG_SCREEN = "#878787"
@@ -18,6 +19,10 @@ COLOR_PILL = "#e6e6e6"
 UI_SCALE = 1.0
 DPI_PX_PER_INCH = 96
 
+TEMP_FOLDER = os.path.join(tempfile.gettempdir(), "zyntra_temp")
+if not os.path.exists(TEMP_FOLDER):
+    os.mkdir(TEMP_FOLDER)
+
 # Helpers: dialogs (keep warn; used across screens)
 def warn(message: str, title: str = "Warning"):
     messagebox.showwarning(title, message)
@@ -26,9 +31,6 @@ def warn(message: str, title: str = "Warning"):
 def scale_px(value: float) -> int:
     """Scale pixel values by UI_SCALE with rounding."""
     return int(round(value * UI_SCALE))
-
-
-
 
 def font_from_pt(pt_value: float) -> tkfont.Font:
     px = int(round((pt_value * UI_SCALE) * DPI_PX_PER_INCH / 72.0))
@@ -82,9 +84,16 @@ class App(tk.Tk):
     def __init__(self, title: str = APP_TITLE, size: str = "960x720"):
         super().__init__()
         self.title(title)
-        self.geometry(size)
-        self.minsize(960, 720)
-        self.maxsize(960, 720)  # static layout, fixed 4:3 ratio
+        self.size = (int(size.split("x")[0]), int(size.split("x")[1]))
+
+        self.resizable(True, True)
+        screen_width, screen_height = self.winfo_screenwidth(), self.winfo_screenheight()
+        self.minsize(self.size[0], self.size[1])
+        self.maxsize(screen_width, screen_height) 
+        self.geometry(f"{screen_width}x{screen_height}")
+        self.attributes("-fullscreen", True)
+        self.is_fullscreen = True
+
         self.configure(bg=COLOR_BG_SCREEN)
         apply_styles(self)
         self.current = None
@@ -117,19 +126,25 @@ class App(tk.Tk):
         else:
             self.quit_app()
 
+    def toggle_fullscreen(self):
+        if self.is_fullscreen:
+            self.geometry(f"{self.size[0]}x{self.size[1]}")
+        else:
+            self.geometry(f"{self.winfo_screenwidth()}x{self.winfo_screenheight()}")
+        self.attributes("-fullscreen", not self.is_fullscreen)
+        self.is_fullscreen = not self.is_fullscreen
+
 
 class Screen(ttk.Frame):
-    def __init__(self, master, app):
+    def __init__(self, master: tk.Tk, app: App):
         super().__init__(master)
         self.app = app
         self.configure(style="Screen.TFrame")
-
-    # UI scale (duplicated here for independence from zyntra module)
-    UI_SCALE = float(os.environ.get("ZYNTRA_UI_SCALE", "1.0"))
+        self.app.bind("<F11>", lambda _e: self.app.toggle_fullscreen())
 
     def scale_px(self, value: float) -> int:
         try:
-            return int(round(value * self.UI_SCALE))
+            return int(round(value * UI_SCALE))
         except Exception:
             return int(round(value))
 
@@ -142,7 +157,7 @@ class Screen(ttk.Frame):
             text=APP_TITLE,
             bg=COLOR_BG_DARK,
             fg=COLOR_TEXT,
-            font=("Myriad Pro", int(round(24 * self.UI_SCALE))),
+            font=("Myriad Pro", int(round(24 * UI_SCALE))),
         ).pack(side="left", padx=self.scale_px(8), pady=0)
         return bar
 

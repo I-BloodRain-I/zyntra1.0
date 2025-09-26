@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from src.core import Screen, vcmd_int, vcmd_float, warn, COLOR_PILL, COLOR_BG_SCREEN, COLOR_BG_SCREEN_FOR_LABELS, COLOR_TEXT, font_from_pt, scale_px
-from src.state import state
+from src.core.state import state
 from .sticker_copy import Screen3
 
 

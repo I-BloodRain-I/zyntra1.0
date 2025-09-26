@@ -1,52 +1,9 @@
-from typing import Tuple, Optional, Callable, Union
+from typing import Tuple, Optional, Union
 
 import tkinter as tk
 import tkinter.font as tkfont
-from dataclasses import dataclass
 
-
-@dataclass
-class TextInfo:
-    text: str
-    color: str
-    font_size: int
-    font_family: str = "Myriad Pro"
-    font_weight: str = "normal"
-    justify: str = "center"
-
-
-@dataclass
-class BaseWidgetInfo:
-    parent: tk.Widget
-    width: int = 0
-    height: int = 0
-    radius: int = 0
-    background_color: Optional[str] = None
-    foreground_color: Optional[str] = None
-    text_info: Optional[TextInfo] = None
-    border: int = 0
-    border_color: Optional[str] = None
-    padding_x: int = 0
-    padding_y: int = 0
-    tag: str = ""
-    
-
-@dataclass
-class ButtonInfo(BaseWidgetInfo):
-    button_color: str = "#808080"
-    hover_color: str = "#3f3f3f"
-    active_color: str = "#dcdcdc"
-    command: Optional[Callable[[], None]] = None
-
-
-@dataclass
-class EntryInfo(BaseWidgetInfo):
-    fill: str = "white"
-    
-
-@dataclass
-class PillLabelInfo(BaseWidgetInfo):
-    fill: str = "#e5e5e5"
+from src.core import EntryInfo, ButtonInfo, PillLabelInfo, TextInfo
 
 
 def _rounded_rect(
@@ -59,22 +16,26 @@ def _rounded_rect(
     width: int = 1,
     tag: str = ""
 ) -> Tuple[int, ...]:
-    """Draws a rounded rectangle using arcs and rectangles.
+    """
+    Draw a rounded rectangle on a canvas by combining two rectangles with four quarter-circle arcs.
+
+    The corner radius is clamped so it cannot exceed half of the rectangle’s width or height.
 
     Args:
-        canvas: The Tkinter canvas on which to draw.
+        canvas: The drawing surface on which to create items.
         x0: Left coordinate of the rectangle.
         y0: Top coordinate of the rectangle.
         x1: Right coordinate of the rectangle.
         y1: Bottom coordinate of the rectangle.
-        r: Corner radius for rounded edges.
-        fill: Fill color of the rectangle.
-        outline: Outline color of the rectangle. Defaults to "".
-        width: Outline width. Defaults to 1.
-        tag: Canvas tag to assign to all items.
+        r: Corner radius for rounded corners; values larger than half the edge lengths are reduced.
+        fill: Fill color for all created items.
+        outline: Outline color for all created items. Defaults to an empty string (no outline).
+        width: Outline width for all created items. Defaults to 1.
+        tag: A canvas tag assigned to all created items (in addition to any internal tags).
 
     Returns:
-        Tuple of created item ids.
+        A tuple of item identifiers, in drawing order: the two central/side rectangles
+        followed by the four corner arcs (top-left, top-right, bottom-left, bottom-right).
     """
     r = max(0, min(r, (x1 - x0) // 2, (y1 - y0) // 2))
     ids = []
@@ -98,15 +59,24 @@ def _rounded_rect(
 
 def create_entry(info: EntryInfo) -> Tuple[tk.Entry, tk.Canvas]:
     """
-    Draws a rounded input field.
+    Create a rounded input field consisting of a canvas background and an embedded text entry.
 
-    The entry automatically sizes itself based on the text width and padding.
-    It supports rounded corners, custom background colors, and an optional
-    border.
+    Behavior:
+      • The canvas size is computed from the requested width/height in `info`, the measured text,
+        and `padding_x`/`padding_y`. The larger of the computed size and the requested size is used.
+      • If `border` is positive, a border layer is drawn beneath the field using `border_color`
+        and the inner field radius is reduced by the border width.
+      • An entry widget is embedded at the center of the canvas using a canvas window.
+      • The entry’s font size, foreground color, initial text, and justification are derived from `info.text_info`.
+      • The canvas is packed into `info.parent`; the embedded entry becomes a child of that canvas.
+
+    Args:
+        info: Configuration describing parent container, geometry (width, height, radius, padding),
+              colors (`background_color`, `fill`, optional `border_color`), border thickness, and text styling.
 
     Returns:
-        A tuple containing the Entry widget and the Canvas used
-        to draw the rounded background.
+        A tuple `(entry, canvas)` where `entry` is the created text entry widget and `canvas`
+        is the background canvas that contains it.
     """
     if info.text_info is None:
         info.text_info = TextInfo(text="", color="", font_size=0)
@@ -137,7 +107,18 @@ def create_entry(info: EntryInfo) -> Tuple[tk.Entry, tk.Canvas]:
 
 
 def _shade(hex_color: str, delta: int) -> str:
-    """Return a shade of hex_color by adding delta to each RGB channel."""
+    """
+    Produce a lighter or darker shade of a hexadecimal color.
+
+    Each RGB channel is adjusted by `delta` and clamped to the range [0, 255].
+
+    Args:
+        hex_color: A color string in the form "#rrggbb".
+        delta: The signed amount to add to each RGB channel.
+
+    Returns:
+        A color string in the form "#rrggbb" representing the adjusted shade.
+    """
     s = hex_color.lstrip("#")
     r = max(0, min(255, int(s[0:2], 16) + delta))
     g = max(0, min(255, int(s[2:4], 16) + delta))
@@ -147,14 +128,25 @@ def _shade(hex_color: str, delta: int) -> str:
 
 def create_button(info: ButtonInfo) -> tk.Canvas:
     """
-    Create a rounded button on a Canvas sized from its label.
+    Create a rounded, text-labeled button on a canvas with hover and active visual states.
 
-    The button automatically sizes itself based on the text width and padding.
-    It supports rounded corners, custom background colors, and an optional
-    hover and active states.
+    Behavior:
+      • The canvas size is computed from the requested width/height in `info`, measured label text,
+        and `padding_x`/`padding_y`. The larger of the computed size and the requested size is used.
+      • The button face is drawn as a rounded rectangle; text is left-anchored with a small left inset.
+      • Hover and active background colors are taken from `info.hover_color` and `info.active_color`.
+        If not provided, fallback shades are derived from `info.button_color`.
+      • Pointer events (<Enter>, <Leave>, <ButtonPress-1>, <ButtonRelease-1>) update the background
+        and invoke `info.command` on click if provided.
+      • The canvas is packed into `info.parent`.
+
+    Args:
+        info: Configuration describing parent container, geometry (width, height, radius, padding),
+              label styling via `text_info`, base color (`button_color`), optional hover/active colors,
+              an optional command callback, and an optional tag.
 
     Returns:
-        The Canvas containing the button.
+        The canvas that contains the button background and label.
     """
     if info.text_info is None:
         info.text_info = TextInfo(text="", color="", font_size=0)
@@ -217,14 +209,24 @@ def create_button(info: ButtonInfo) -> tk.Canvas:
 
 def create_pill_label(info: PillLabelInfo) -> tk.Canvas:
     """
-    Create a rounded "pill-style" label inside a Canvas.
+    Create a rounded “pill” label on a canvas with text content.
 
-    The label automatically sizes itself based on the text width and padding.
-    It supports rounded corners, custom background colors, and an optional
-    drop shadow effect for a speech-bubble look.
+    Behavior:
+      • The canvas size is computed from the requested width/height in `info`, measured text,
+        and `padding_x`/`padding_y`. The larger of the computed size and the requested size is used.
+      • A rounded rectangle is drawn as the label’s background using `info.fill`.
+      • Text is drawn left-anchored at `padding_x`. Vertical placement is:
+          – top if `text_info.justify == "top"`,
+          – bottom if `text_info.justify == "bottom"`,
+          – vertically centered otherwise.
+      • The canvas is packed into `info.parent`.
+
+    Args:
+        info: Configuration describing parent container, geometry (width, height, radius, padding),
+              background (`background_color`), fill color (`fill`), optional tag, and text styling.
 
     Returns:
-        A Tkinter Canvas object containing the rounded pill label.
+        The canvas that contains the pill label background and text.
     """
     if info.text_info is None:
         info.text_info = TextInfo(text="", color="", font_size=0)
@@ -254,11 +256,31 @@ def append_object_to_pill_label(
     object_padding_y: int = 0
 ) -> Tuple[tk.Canvas, tk.Canvas, Optional[tk.Entry]]:
     """
-    Append an object to a pill label.
+    Attach a secondary component (entry, button, or pill label) to the right side of a pill label.
+
+    Behavior:
+      • If `pill_canvas` is not provided, a pill label canvas is created (and packed) using `pill_label`.
+      • The target component’s parent is set to the pill canvas; its background is aligned to the pill fill.
+      • The component is created:
+          – entries via `create_entry` (returns `(entry, canvas)`),
+          – buttons via `create_button` (returns `canvas`),
+          – pill labels via `create_pill_label` (returns `canvas`).
+      • The created component’s canvas is placed inside the pill canvas using a canvas window near the right edge.
+      • Geometry is computed from `object_info.width`/`height`, `object_info.padding_x`/`padding_y`,
+        and the optional `object_padding_x`/`object_padding_y`.
+
+    Args:
+        pill_label: Configuration for the host pill label.
+        object_info: Configuration for the component to append (entry, button, or pill label).
+        pill_canvas: An existing pill canvas to use. If omitted, a new one is created.
+        object_padding_x: Additional horizontal offset applied during placement.
+        object_padding_y: Additional vertical offset applied during placement.
 
     Returns:
-        A tuple containing the pill label canvas, the object canvas, and the object.
-        If the object is an entry, the object is returned.
+        A tuple `(pill_canvas_out, object_canvas, entry_or_none)` where:
+          • `pill_canvas_out` is the pill label canvas,
+          • `object_canvas` is the canvas of the appended component,
+          • `entry_or_none` is the entry widget if an entry was appended, otherwise `None`.
     """
     canvas = pill_canvas if pill_canvas else create_pill_label(pill_label)
     pill_label.parent.update()

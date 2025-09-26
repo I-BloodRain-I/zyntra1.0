@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
 from src.core import Screen, vcmd_int, vcmd_float, warn, COLOR_BG_DARK, COLOR_TEXT
-from src.state import state
+from src.core.state import state
 
 
 def _write_minimal_pdf(path: str):

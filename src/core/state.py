@@ -1,7 +1,7 @@
-from dataclasses import dataclass, field, asdict
-from typing import List, Tuple, Optional
 import json
 from pathlib import Path
+from typing import List, Tuple, Optional
+from dataclasses import dataclass, field, asdict
 
 ALL_PRODUCTS = [
     "Lighteruv1", "Lighteruv2", "LighterMax", "LighterMini",
@@ -10,7 +10,7 @@ ALL_PRODUCTS = [
 ]
 MM_TO_PX = 1  # simple scale mm→px for drawing
 APP_TITLE = "Zyntra 1.0"
-IMAGES_PATH = Path(__file__).parent.parent / "images"
+IMAGES_PATH = Path.cwd() / "images"
 
 
 @dataclass

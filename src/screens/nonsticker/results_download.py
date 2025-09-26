@@ -1,9 +1,12 @@
+import os
+import shutil
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import ttk, messagebox, filedialog
 
 from src.core import Screen, COLOR_BG_DARK, COLOR_TEXT, COLOR_PILL, COLOR_BG_SCREEN, UI_SCALE, scale_px, COLOR_BG_SCREEN_FOR_LABELS
-from src.state import state
+from src.core.app import TEMP_FOLDER
+from src.core.state import state
 
 # ---- tiny helper: write a minimal PDF so Download has content ----
 def _write_minimal_pdf(path: str):
@@ -73,9 +76,9 @@ class NStickerResultsDownloadScreen(Screen):
         self._chip_h = int(chip_font.metrics("linespace") + 20)
 
         # Three file rows with pill-style Download buttons
-        self._file_row(content, "Co2 laser cut Jig", lambda: self._download_pdf(single=True)).pack(pady=(10, 8))
-        self._file_row(content, "Test File .pdf", lambda: self._download_pdf(single=True)).pack(pady=(8, 8))
-        self._file_row(content, "Test File Backside .pdf", lambda: self._download_pdf(single=True)).pack(pady=(8, 8))
+        self._file_row(content, "Co2 laser cut Jig", lambda: self._download_pdf(True, "jig")).pack(pady=(10, 8))
+        self._file_row(content, "Test File .pdf", lambda: self._download_pdf(True, "front")).pack(pady=(8, 8))
+        self._file_row(content, "Test File Backside .pdf", lambda: self._download_pdf(True, "back")).pack(pady=(8, 8))
 
         # Report row: left strip for "Report:", then plain text on screen bg
         report_row = tk.Frame(content, bg=COLOR_BG_SCREEN)
@@ -202,17 +205,25 @@ class NStickerResultsDownloadScreen(Screen):
         return row
 
     # ---------- actions ----------
-    def _download_pdf(self, single: bool):
+    def _download_pdf(self, single: bool, type: str):
+        filename = ""
+        if type == "jig":
+            filename = "Jig_file.pdf"
+        elif type == "front":
+            filename = "Test_file.pdf"
+        elif type == "back":
+            filename = "Test_file_backside.pdf"
         if single:
             fname = filedialog.asksaveasfilename(
-                title="Save Test File",
+                title="Save PDF File",
                 defaultextension=".pdf",
-                filetypes=[("PDF files", "*.pdf")]
+                filetypes=[("PDF files", "*.pdf")],
+                initialfile=filename
             )
             if not fname:
                 return
             try:
-                _write_minimal_pdf(fname)
+                shutil.copy(os.path.join(TEMP_FOLDER, filename), fname)
                 messagebox.showinfo("Saved", f"File saved to:\n{fname}")
             except Exception as e:
                 messagebox.showerror("Error", f"Could not save file:\n{e}")
