@@ -361,9 +361,10 @@ class NStickerCanvasScreen(Screen):
         self.canvas.bind("<Button-3>", self.selection.maybe_show_context_menu)
 
         # Key bindings for zoom in/out
-        for seq in ("<KeyPress-+>", "<KeyPress-equal>", "<KP_Add>"):
+        for seq in ("<KeyPress-plus>", "<KeyPress-equal>", "<KP_Add>"):
             self.app.bind(seq, lambda _e: self._zoom_step(1))
-        for seq in ("<KeyPress-minus>", "<KP_Subtract>"):
+
+        for seq in ("<KeyPress-minus>", "<KeyPress-KP_Subtract>"):
             self.app.bind(seq, lambda _e: self._zoom_step(-1))
 
         # Bottom buttons styled exactly like ProductTypeScreen
