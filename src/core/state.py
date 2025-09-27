@@ -10,7 +10,10 @@ ALL_PRODUCTS = [
 ]
 MM_TO_PX = 1  # simple scale mm→px for drawing
 APP_TITLE = "Zyntra 1.0"
-IMAGES_PATH = Path.cwd() / "images"
+IMAGES_PATH  = Path.cwd() / "images"
+FONTS_PATH    = Path.cwd() / "fonts"
+PRODUCTS_PATH = Path.cwd() / "products"
+PRODUCTS_PATH.mkdir(exist_ok=True)
 
 
 @dataclass
@@ -39,6 +42,12 @@ class AppState:
 
     # Non-sticker: number of image objects on canvas when proceeding
     nonsticker_image_count: int = 0
+
+    # Background processing status for non-blocking generation
+    is_processing: bool = False
+    processing_message: str = ""
+    is_failed: bool = False
+    error_message: str = ""
 
 state = AppState()
 

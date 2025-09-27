@@ -707,7 +707,7 @@ class CanvasSelection:
         finally:
             self._suppress_pos_trace = False
 
-    def on_pos_change(self, *_):
+    def on_pos_change(self, *_, **kwargs):
         if self._suppress_pos_trace:
             return
         if not self._selected:

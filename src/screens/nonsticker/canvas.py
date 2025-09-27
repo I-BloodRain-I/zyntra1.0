@@ -1,19 +1,23 @@
 import os
 import re
-import shutil
 import struct
+import logging
 from pathlib import Path
-import tempfile
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
+import threading
+import math
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
+from PIL import ImageDraw
+
 from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL, MM_TO_PX, IMAGES_PATH, TEMP_FOLDER
-from src.core.state import state
-from src.utils import create_button, ButtonInfo, TextInfo, _rounded_rect
+from src.core.state import FONTS_PATH, PRODUCTS_PATH, state
 from src.canvas import CanvasObject, CanvasSelection
 from .results_download import NStickerResultsDownloadScreen
+
+logger = logging.getLogger(__name__)
 
 # Optional PIL (Pillow) import for high-quality image scaling
 try:
@@ -31,6 +35,9 @@ class NStickerCanvasScreen(Screen):
         self.brand_bar(self)
         if not self.app.is_fullscreen:
             self.app.toggle_fullscreen()
+
+        state.is_failed = False
+        state.error_message = ""
 
         header_row = ttk.Frame(self, style="Screen.TFrame")
         header_row.pack(padx=0, pady=(25, 25))
@@ -82,38 +89,23 @@ class NStickerCanvasScreen(Screen):
 
         def _pill_press(_e, c=self.btn_import_img, shapes=_pill_shapes, tids=_pill_text_ids):
             for sid in shapes:
-                try:
-                    c.itemconfigure(sid, fill="#3f3f3f")
-                except Exception:
-                    pass
+                c.itemconfigure(sid, fill="#3f3f3f")
             for tid in tids:
-                try:
-                    c.move(tid, 1, 1)
-                except Exception:
-                    pass
+                c.move(tid, 1, 1)
             c._pressed = True
 
         def _pill_release(e, c=self.btn_import_img, shapes=_pill_shapes, tids=_pill_text_ids):
             for sid in shapes:
-                try:
-                    c.itemconfigure(sid, fill=COLOR_PILL)
-                except Exception:
-                    pass
+                c.itemconfigure(sid, fill=COLOR_PILL)
             for tid in tids:
-                try:
-                    c.move(tid, -1, -1)
-                except Exception:
-                    pass
+                c.move(tid, -1, -1)
             try:
                 w = c.winfo_width(); h = c.winfo_height()
                 inside = 0 <= e.x <= w and 0 <= e.y <= h
             except Exception:
                 inside = True
             if getattr(c, "_pressed", False) and inside:
-                try:
-                    c.after(10, self._import_image)
-                except Exception:
-                    pass
+                c.after(10, self._import_image)
             c._pressed = False
 
         self.btn_import_img.bind("<ButtonPress-1>", _pill_press)
@@ -195,22 +187,22 @@ class NStickerCanvasScreen(Screen):
         tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
         # Step Size label and fields
         tk.Label(bar, text="Step Size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left", padx=(0, 6))
-        self.step_w = tk.StringVar(value=self.slot_w.get())
-        self.step_h = tk.StringVar(value=self.slot_h.get())
+        self.step_x = tk.StringVar(value=self.slot_w.get())
+        self.step_y = tk.StringVar(value=self.slot_h.get())
         step_col = tk.Frame(bar, bg="black")
         step_col.pack(side="left", padx=8, pady=8)
         # Step X row
         _sxbox = tk.Frame(step_col, bg="#6f6f6f")
         _sxbox.pack(side="top", pady=2)
-        tk.Label(_sxbox, text="Width: ", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        tk.Entry(_sxbox, textvariable=self.step_w, width=8, bg="#d9d9d9", justify="center",
+        tk.Label(_sxbox, text="X:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        tk.Entry(_sxbox, textvariable=self.step_x, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_sxbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         # Step Y row
         _sybox = tk.Frame(step_col, bg="#6f6f6f")
         _sybox.pack(side="top", pady=2)
-        tk.Label(_sybox, text="Height:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        tk.Entry(_sybox, textvariable=self.step_h, width=8, bg="#d9d9d9", justify="center",
+        tk.Label(_sybox, text="Y:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        tk.Entry(_sybox, textvariable=self.step_y, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_sybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
 
@@ -260,11 +252,8 @@ class NStickerCanvasScreen(Screen):
         shortcuts = tk.Frame(bar, bg="black")
         shortcuts.pack(side="right", padx=8, pady=8)
         # 2 columns x 3 rows grid of shortcuts
-        try:
-            shortcuts.grid_columnconfigure(0, weight=0)
-            shortcuts.grid_columnconfigure(1, weight=0)
-        except Exception:
-            pass
+        shortcuts.grid_columnconfigure(0, weight=0)
+        shortcuts.grid_columnconfigure(1, weight=0)
 
         tk.Label(shortcuts, text="+ / -", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=0, column=0, sticky="e", padx=(0, 0))
         tk.Label(shortcuts, text="→    Zoom in/out", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=0, column=1, sticky="w")
@@ -347,8 +336,8 @@ class NStickerCanvasScreen(Screen):
         self.slot_h.trace_add("write", lambda *_: self._maybe_recreate_slots())
         self.origin_x.trace_add("write", lambda *_: self._maybe_recreate_slots())
         self.origin_y.trace_add("write", lambda *_: self._maybe_recreate_slots())
-        self.step_w.trace_add("write", lambda *_: self._maybe_recreate_slots())
-        self.step_h.trace_add("write", lambda *_: self._maybe_recreate_slots())
+        self.step_x.trace_add("write", lambda *_: self._maybe_recreate_slots())
+        self.step_y.trace_add("write", lambda *_: self._maybe_recreate_slots())
         # Initial auto placement
         self.after(0, lambda: self._place_slots(silent=True))
 
@@ -429,15 +418,9 @@ class NStickerCanvasScreen(Screen):
 
     
     def _raise_all_labels(self):
-        try:
-            # Ensure text squares (rect + label) are above normal items
-            self.canvas.tag_raise("text_item")
-        except Exception:
-            pass
-        try:
-            self.canvas.tag_raise("label")
-        except Exception:
-            pass
+        # Ensure text squares (rect + label) are above normal items
+        self.canvas.tag_raise("text_item")
+        self.canvas.tag_raise("label")
     def _scaled_pt(self, base: int) -> int:
         try:
             return max(1, int(round(base * self._zoom * 0.7)))
@@ -447,20 +430,14 @@ class NStickerCanvasScreen(Screen):
     def _update_all_text_fonts(self):
         # Scale fonts of all canvas item labels according to current zoom
         for cid, meta in list(self._items.items()):
-            try:
-                t = meta.get("type")
-            except Exception:
-                t = None
-            try:
-                if t in ("rect", "slot"):
-                    tid = meta.get("label_id")
-                    if tid:
-                        self.canvas.itemconfig(tid, font=("Myriad Pro", self._scaled_pt(10)))
-                elif t == "text":
-                    tid = meta.get("label_id") or cid
-                    self.canvas.itemconfig(tid, font=("Myriad Pro", self._scaled_pt(12), "bold"))
-            except Exception:
-                pass
+            t = meta.get("type")
+            if t in ("rect", "slot"):
+                tid = meta.get("label_id")
+                if tid:
+                    self.canvas.itemconfig(tid, font=("Myriad Pro", self._scaled_pt(10)))
+            elif t == "text":
+                tid = meta.get("label_id") or cid
+                self.canvas.itemconfig(tid, font=("Myriad Pro", self._scaled_pt(12), "bold"))
     def _chip(self, parent, label, var, width=8):
         box = tk.Frame(parent, bg="#6f6f6f")
         box.pack(side="left", padx=6, pady=8)
@@ -495,33 +472,21 @@ class NStickerCanvasScreen(Screen):
         def _on_click(_e=None):
             original_bg = tile.cget("bg")
             pack_info = {}
-            try:
-                pack_info = icon_lbl.pack_info()
-            except Exception:
-                pass
+            pack_info = icon_lbl.pack_info()
             orig_padx = int(pack_info.get("padx", 0) if isinstance(pack_info.get("padx", 0), (int, str)) else 0)
             orig_pady = int(pack_info.get("pady", 0) if isinstance(pack_info.get("pady", 0), (int, str)) else 0)
 
             def _press():
-                try:
-                    tile.configure(bg="#bdbdbd", relief="sunken", bd=1)
-                    icon_lbl.configure(bg="#bdbdbd")
-                    icon_lbl.pack_configure(padx=orig_padx + 2, pady=orig_pady + 2)
-                except Exception:
-                    pass
+                tile.configure(bg="#bdbdbd", relief="sunken", bd=1)
+                icon_lbl.configure(bg="#bdbdbd")
+                icon_lbl.pack_configure(padx=orig_padx + 2, pady=orig_pady + 2)
                 tile.after(90, _release)
 
             def _release():
-                try:
-                    tile.configure(bg=original_bg, relief="flat", bd=0)
-                    icon_lbl.configure(bg=original_bg)
-                    icon_lbl.pack_configure(padx=orig_padx, pady=orig_pady)
-                except Exception:
-                    pass
-                try:
-                    command()
-                except Exception:
-                    pass
+                tile.configure(bg=original_bg, relief="flat", bd=0)
+                icon_lbl.configure(bg=original_bg)
+                icon_lbl.pack_configure(padx=orig_padx, pady=orig_pady)
+                command()
 
             _press()
 
@@ -530,11 +495,8 @@ class NStickerCanvasScreen(Screen):
         lbl.bind("<Button-1>", _on_click)
 
         # Improve affordance
-        try:
-            tile.configure(cursor="hand2")
-            lbl.configure(cursor="hand2")
-        except Exception:
-            pass
+        tile.configure(cursor="hand2")
+        lbl.configure(cursor="hand2")
 
     def _import_image(self):
         # Allow selecting and importing multiple images at once
@@ -565,26 +527,21 @@ class NStickerCanvasScreen(Screen):
                 else:
                     # Raster images: draw actual content
                     self.create_image_item(path, size[0], size[1])
-            except Exception:
+            except Exception as e:
                 # Ignore failures per-file to allow batch import to proceed
+                logger.debug(f"Failed to import image {path}: {e}")
                 continue
         # Refresh ordering/labels after batch import
         self._update_scrollregion()
         self._raise_all_labels()
-        try:
-            self.selection._reorder_by_z()
-        except Exception:
-            pass
+        self.selection._reorder_by_z()
 
     def _on_jig_change(self, *_):
         # Redraw jig and re-create slots to fill new area
         self._redraw_jig()
         # Recreate slots based on current parameters
         self._place_slots(silent=True)
-        try:
-            self._renumber_slots()
-        except Exception:
-            pass
+        self._renumber_slots()
 
     def _create_slot_at_mm(self, label: str, w_mm: float, h_mm: float, x_mm: float, y_mm: float):
         x0, y0, x1, y1 = self._jig_inner_rect_px()
@@ -614,10 +571,7 @@ class NStickerCanvasScreen(Screen):
             x_mm_i = self._snap_mm((new_left - (x0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6)))
             y_mm_i = self._snap_mm((new_top - (y0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6)))
         # next z
-        try:
-            min_z = min(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
-        except Exception:
-            min_z = 0
+        min_z = min(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
         self._items[rect] = CanvasObject(
             type="slot",
             w_mm=float(w_mm_i),
@@ -636,7 +590,7 @@ class NStickerCanvasScreen(Screen):
             jx = float(self.jig_x.get()); jy = float(self.jig_y.get())
             sw = float(self.slot_w.get()); sh = float(self.slot_h.get())
             ox = float(self.origin_x.get()); oy = float(self.origin_y.get())
-            sx = float(self.step_w.get() or 0.0); sy = float(self.step_h.get() or 0.0)
+            sx = float(self.step_x.get() or 0.0); sy = float(self.step_y.get() or 0.0)
         except Exception:
             if not silent:
                 messagebox.showerror("Invalid input", "Enter numeric jig, slot, origin and step values (mm).")
@@ -650,15 +604,9 @@ class NStickerCanvasScreen(Screen):
             # If slot doesn't fit the jig, remove any existing slots and stop
             for cid, meta in list(self._items.items()):
                 if meta.get("type") == "slot":
-                    try:
-                        if meta.get("label_id"):
-                            self.canvas.delete(meta.get("label_id"))
-                    except Exception:
-                        pass
-                    try:
-                        self.canvas.delete(cid)
-                    except Exception:
-                        pass
+                    if meta.get("label_id"):
+                        self.canvas.delete(meta.get("label_id"))
+                    self.canvas.delete(cid)
                     self._items.pop(cid, None)
             self._update_scrollregion()
             if not silent:
@@ -688,15 +636,9 @@ class NStickerCanvasScreen(Screen):
         # Remove existing slots before laying out new ones
         for cid, meta in list(self._items.items()):
             if meta.get("type") == "slot":
-                try:
-                    if meta.get("label_id"):
-                        self.canvas.delete(meta.get("label_id"))
-                except Exception:
-                    pass
-                try:
-                    self.canvas.delete(cid)
-                except Exception:
-                    pass
+                if meta.get("label_id"):
+                    self.canvas.delete(meta.get("label_id"))
+                self.canvas.delete(cid)
                 self._items.pop(cid, None)
 
         # Lay out grid row-major from lower-right: left first, then move up
@@ -727,20 +669,11 @@ class NStickerCanvasScreen(Screen):
         # Finalize visuals
         self._update_scrollregion()
         self._raise_all_labels()
-        try:
-            self.selection._reorder_by_z()
-        except Exception:
-            pass
+        self.selection._reorder_by_z()
         # After repositioning items, ensure slot labels are sequential in desired order
-        try:
-            self._renumber_slots()
-        except Exception:
-            pass
+        self._renumber_slots()
         # Ensure labels are contiguous and ordered right-to-left, bottom-to-top
-        try:
-            self._renumber_slots()
-        except Exception:
-            pass
+        self._renumber_slots()
 
     def _renumber_slots(self):
         # Build list of (left_px, top_px, rect_id, label_id) for slot rectangles using current canvas positions
@@ -749,7 +682,8 @@ class NStickerCanvasScreen(Screen):
             if meta.get("type") == "slot":
                 try:
                     x1, y1, x2, y2 = self.canvas.bbox(cid)
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Failed to get bbox for slot {cid}: {e}")
                     continue
                 slots.append((float(x1), float(y1), cid, meta.get("label_id")))
         # Sort rows first: bottom-to-top (y desc), then within row right-to-left (x desc)
@@ -757,10 +691,7 @@ class NStickerCanvasScreen(Screen):
         # Apply contiguous labels starting from 1
         for idx, (_lx, _ty, _cid, lbl_id) in enumerate(slots, start=1):
             if lbl_id:
-                try:
-                    self.canvas.itemconfig(lbl_id, text=f"Slot {idx}")
-                except Exception:
-                    pass
+                self.canvas.itemconfig(lbl_id, text=f"Slot {idx}")
 
     def _maybe_recreate_slots(self):
         self._place_slots(silent=True)
@@ -811,10 +742,7 @@ class NStickerCanvasScreen(Screen):
         self.canvas.coords(txt, new_left + scaled_w / 2, new_top + scaled_h / 2)
         
         # compute next z to keep newer items above older ones
-        try:
-            max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
-        except Exception:
-            max_z = 0
+        max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
         self._items[rect] = CanvasObject(
             type="rect",
             w_mm=float(qw_mm),
@@ -829,10 +757,7 @@ class NStickerCanvasScreen(Screen):
         self.selection.select(rect)
         self._update_scrollregion()
         self._raise_all_labels()
-        try:
-            self.selection._reorder_by_z()
-        except Exception:
-            pass
+        self.selection._reorder_by_z()
 
     def _drop_text(self):
         # Create a square rectangle with a text label inside, so it behaves like images
@@ -860,8 +785,8 @@ class NStickerCanvasScreen(Screen):
                 photo = ImageTk.PhotoImage(resized)
                 meta["photo"] = photo
                 return photo
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to render photo with PIL: {e}")
         # Fallback to tk.PhotoImage (best-effort; may not scale exactly)
         try:
             photo = tk.PhotoImage(file=path)
@@ -912,21 +837,12 @@ class NStickerCanvasScreen(Screen):
         img_id = self.canvas.create_image(new_left, new_top, image=photo, anchor="nw")
         meta.canvas_id = img_id
         # assign next z
-        try:
-            max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
-        except Exception:
-            max_z = 0
-        try:
-            meta["z"] = int(max_z + 1)
-        except Exception:
-            pass
+        max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
+        meta["z"] = int(max_z + 1)
         self._items[img_id] = meta
         self.selection.select(img_id)
         self._update_scrollregion()
-        try:
-            self.selection._reorder_by_z()
-        except Exception:
-            pass
+        self.selection._reorder_by_z()
 
     def _ai_arrange(self):
         # Arrange non-slot items into existing slots.
@@ -934,13 +850,14 @@ class NStickerCanvasScreen(Screen):
         # so the first item goes to the lower-right slot, then leftwards, then rows upwards.
 
         # Collect and order slots by current canvas position
-        slot_entries = []  # (left_px, top_px, slot_cid, slot_meta)
+        slot_entries: List[Tuple[float, float, int, CanvasObject]] = []  # (left_px, top_px, slot_cid, slot_meta)
         for scid, smeta in self._items.items():
             if smeta.get("type") != "slot":
                 continue
             try:
                 bx = self.canvas.bbox(scid)
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Failed to get bbox for slot: {e}")
                 bx = None
             if not bx:
                 continue
@@ -953,20 +870,22 @@ class NStickerCanvasScreen(Screen):
             return
 
         # Collect placeable items (rect or image), ordered bottom->top, right->left
-        item_entries = []  # (left_px, top_px, cid, meta)
+        item_entries: List[Tuple[float, float, int, CanvasObject]] = []  # (left_px, top_px, cid, meta)
         for cid, meta in self._items.items():
             if meta.get("type") not in ("rect", "image"):
                 continue
             try:
                 bx = self.canvas.bbox(cid)
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Failed to get bbox for item {cid}: {e}")
                 bx = None
             if not bx:
                 # For images sometimes bbox can be None until drawn; use coords as fallback
                 try:
                     cx, cy = self.canvas.coords(cid)
                     bx = (float(cx), float(cy), float(cx), float(cy))
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Failed to get coords for item {cid}: {e}")
                     continue
             ix, iy, _ix2, _iy2 = bx
             item_entries.append((float(ix), float(iy), cid, meta))
@@ -980,20 +899,36 @@ class NStickerCanvasScreen(Screen):
             if idx >= len(slot_entries):
                 break
             _sx_px, _sy_px, slot_cid, slot_meta = slot_entries[idx]
-            try:
-                item_w_mm = float(meta.get("w_mm", 0.0))
-                item_h_mm = float(meta.get("h_mm", 0.0))
-                x_mm = float(slot_meta.get("x_mm", 0.0))
-                y_mm = float(slot_meta.get("y_mm", 0.0))
-            except Exception:
-                continue
+            item_w_mm = float(meta.get("w_mm", 0.0))
+            item_h_mm = float(meta.get("h_mm", 0.0))
+            x_mm = float(slot_meta.get("x_mm", 0.0))
+            y_mm = float(slot_meta.get("y_mm", 0.0))
 
-            # Item size in pixels (keep as-is, do NOT resize)
+            # Slot size in mm
+            slot_w_mm = float(slot_meta.get("w_mm", 0.0))
+            slot_h_mm = float(slot_meta.get("h_mm", 0.0))
+            
+            # Check if item is larger than slot and resize if necessary
+            if item_w_mm > slot_w_mm or item_h_mm > slot_h_mm:
+                # Calculate scaling factor to fit within slot while maintaining aspect ratio
+                scale_w = slot_w_mm / item_w_mm if item_w_mm > 0 else 1.0
+                scale_h = slot_h_mm / item_h_mm if item_h_mm > 0 else 1.0
+                scale = min(scale_w, scale_h)  # Use the smaller scale to fit both dimensions
+                
+                # Update item dimensions
+                new_w_mm = item_w_mm * scale
+                new_h_mm = item_h_mm * scale
+                meta["w_mm"] = new_w_mm
+                meta["h_mm"] = new_h_mm
+                
+                # Update item size variables
+                item_w_mm = new_w_mm
+                item_h_mm = new_h_mm
+
+            # Item size in pixels (after potential resize)
             w_px = int(round(item_w_mm * MM_TO_PX * self._zoom))
             h_px = int(round(item_h_mm * MM_TO_PX * self._zoom))
             # Slot size and top-left in pixels
-            slot_w_mm = float(slot_meta.get("w_mm", 0.0))
-            slot_h_mm = float(slot_meta.get("h_mm", 0.0))
             slot_w_px = int(round(slot_w_mm * MM_TO_PX * self._zoom))
             slot_h_px = int(round(slot_h_mm * MM_TO_PX * self._zoom))
             slot_left_px = jx0 + ox + x_mm * MM_TO_PX * self._zoom
@@ -1009,13 +944,16 @@ class NStickerCanvasScreen(Screen):
             left = max(min_left, min(desired_left, max_left))
             top = max(min_top, min(desired_top, max_top))
 
+            left = self._jig_inner_rect_px()[0] + (slot_meta.x_mm * self._zoom) + (((slot_meta.w_mm * self._zoom) - (meta.w_mm * self._zoom)) / 2.0)
+            top = self._jig_inner_rect_px()[1] + (slot_meta.y_mm * self._zoom) + (((slot_meta.h_mm * self._zoom) - (meta.h_mm * self._zoom)) / 2.0)
             if meta.get("type") == "rect":
+                # Update rectangle coordinates
                 self.canvas.coords(cid, left, top, left + w_px, top + h_px)
                 lbl_id = meta.get("label_id")
                 if lbl_id:
                     self.canvas.coords(lbl_id, left + w_px / 2, top + h_px / 2)
-                meta["x_mm"] = float(self._snap_mm((left - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))))
-                meta["y_mm"] = float(self._snap_mm((top - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))))
+                meta.x_mm = slot_meta.x_mm - ((meta.w_mm - slot_meta.w_mm) / 2.0)
+                meta.y_mm = slot_meta.y_mm - ((meta.h_mm - slot_meta.h_mm) / 2.0)
                 self._raise_all_labels()
             else:
                 # Ensure image rendered at current size (based on its own mm)
@@ -1026,13 +964,11 @@ class NStickerCanvasScreen(Screen):
                 bid = meta.get("border_id")
                 if bid:
                     self.canvas.coords(bid, left, top, left + w_px, top + h_px)
-                meta["x_mm"] = float(self._snap_mm((left - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))))
-                meta["y_mm"] = float(self._snap_mm((top - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))))
+                meta.x_mm = slot_meta.x_mm - ((meta.w_mm - slot_meta.w_mm) / 2.0)
+                meta.y_mm = slot_meta.y_mm - ((meta.h_mm - slot_meta.h_mm) / 2.0)
 
-        try:
-            self.selection._reorder_by_z()
-        except Exception:
-            pass
+        self._redraw_jig(center=False)
+        self.selection._reorder_by_z()
 
     # Selection/drag delegated to CanvasSelection
 
@@ -1072,7 +1008,8 @@ class NStickerCanvasScreen(Screen):
                     y_mm = float(meta.get("y_mm", 0.0))
                     w_mm = float(meta.get("w_mm", 0.0))
                     h_mm = float(meta.get("h_mm", 0.0))
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Failed to get dimensions for item {cid}: {e}")
                     continue
                 # Allow touching jig border for rects and slots
                 ox = 0.0
@@ -1089,11 +1026,8 @@ class NStickerCanvasScreen(Screen):
                 new_top = max(min_top, min(top, max_top))
                 self.canvas.coords(cid, new_left, new_top, new_left + w, new_top + h)
                 if meta.get("label_id"):
-                    self.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
-                    try:
-                        self.canvas.itemconfig(meta["label_id"], font=("Myriad Pro", self._scaled_pt(10)))
-                    except Exception:
-                        pass
+                    self.canvas.coords(meta.label_id, new_left + w / 2, new_top + h / 2)
+                    self.canvas.itemconfig(meta.label_id, font=("Myriad Pro", self._scaled_pt(10)))
                 self._raise_all_labels()
                 # don't mutate stored mm during redraw
             elif t == "image":
@@ -1102,7 +1036,8 @@ class NStickerCanvasScreen(Screen):
                     y_mm = float(meta.get("y_mm", 0.0))
                     w_mm = float(meta.get("w_mm", 0.0))
                     h_mm = float(meta.get("h_mm", 0.0))
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Failed to get image dimensions for item {cid}: {e}")
                     continue
                 # Allow touching jig border for images
                 ox = 0.0
@@ -1125,27 +1060,22 @@ class NStickerCanvasScreen(Screen):
                 if bid:
                     self.canvas.coords(bid, new_left, new_top, new_left + w, new_top + h)
                 # don't mutate stored mm during redraw
-            elif t == "text":
-                try:
-                    x_mm = float(meta.get("x_mm", 0.0))
-                    y_mm = float(meta.get("y_mm", 0.0))
-                except Exception:
-                    continue
-                cx = x0 + x_mm * MM_TO_PX * self._zoom
-                cy = y0 + y_mm * MM_TO_PX * self._zoom
-                new_cx = max(x0, min(cx, x1))
-                new_cy = max(y0, min(cy, y1))
-                self.canvas.coords(cid, new_cx, new_cy)
-                try:
-                    self.canvas.itemconfig(cid, font=("Myriad Pro", self._scaled_pt(12), "bold"))
-                except Exception:
-                    pass
+            # elif t == "text":
+            #     try:
+            #         x_mm = float(meta.get("x_mm", 0.0))
+            #         y_mm = float(meta.get("y_mm", 0.0))
+            #     except Exception as e:
+            #         logger.debug(f"Failed to get text position for item {cid}: {e}")
+            #         continue
+            #     cx = x0 + x_mm * MM_TO_PX * self._zoom
+            #     cy = y0 + y_mm * MM_TO_PX * self._zoom
+            #     new_cx = max(x0, min(cx, x1))
+            #     new_cy = max(y0, min(cy, y1))
+            #     self.canvas.coords(cid, new_cx, new_cy)
+            #     self.canvas.itemconfig(cid, font=("Myriad Pro", self._scaled_pt(12), "bold"))
                 # don't mutate stored mm during redraw
         # Re-apply stacking order after positions were updated
-        try:
-            self.selection._reorder_by_z()
-        except Exception:
-            pass
+        self.selection._reorder_by_z()
 
     def _jig_rect_px(self):
         objs = self.canvas.find_withtag("jig")
@@ -1199,16 +1129,16 @@ class NStickerCanvasScreen(Screen):
             frac_x = min(1.0, max(0.0, frac_x))
             try:
                 self.canvas.xview_moveto(frac_x)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to move xview: {e}")
         if total_h > ch:
             target_y = (y0 + y1) / 2 - ch / 2
             frac_y = (target_y - ay0) / max(1, total_h - ch)
             frac_y = min(1.0, max(0.0, frac_y))
             try:
                 self.canvas.yview_moveto(frac_y)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to move yview: {e}")
 
     def _compute_import_size_mm(self, path: str) -> Optional[Tuple[float, float]]:
         """Infer intrinsic image size in mm.
@@ -1238,8 +1168,8 @@ class NStickerCanvasScreen(Screen):
                         return (w_val * 25.4, h_val * 25.4)
                     # assume px
                     return (w_val / MM_TO_PX, h_val / MM_TO_PX)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to parse SVG dimensions: {e}")
             return None
         # Raster: Pillow first
         try:
@@ -1247,15 +1177,15 @@ class NStickerCanvasScreen(Screen):
             with Image.open(path) as im:
                 w_px, h_px = im.size
             return (float(w_px) / MM_TO_PX, float(h_px) / MM_TO_PX)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to get image size with Pillow: {e}")
         # Fallback to tk.PhotoImage (PNG/GIF)
         try:
             img = tk.PhotoImage(file=path)
             w_px, h_px = int(img.width()), int(img.height())
             return (float(w_px) / MM_TO_PX, float(h_px) / MM_TO_PX)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to get image size with tk.PhotoImage: {e}")
         # Last resort: parse PNG IHDR
         try:
             with open(path, 'rb') as f:
@@ -1266,8 +1196,8 @@ class NStickerCanvasScreen(Screen):
                     if chunk_type == b'IHDR' and chunk_len >= 8:
                         w_px, h_px = struct.unpack('>II', f.read(8))
                         return (float(w_px) / MM_TO_PX, float(h_px) / MM_TO_PX)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to parse PNG header: {e}")
         return None
 
     
@@ -1282,7 +1212,8 @@ class NStickerCanvasScreen(Screen):
         try:
             jx = float(self.sel_w.get())
             jy = float(self.sel_h.get())
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Failed to get jig size from fields: {e}")
             # fallback to safe defaults
             jx, jy = 296.0, 415.0
         self.jig_x.set(str(int(jx)))
@@ -1302,48 +1233,327 @@ class NStickerCanvasScreen(Screen):
         state.sku = sku_val
         state.pkg_x = self.jig_x.get().strip()
         state.pkg_y = self.jig_y.get().strip()
-        # Count only rectangle items (images). Text items are stored with type 'text'
+        # Count only image items. Text items are stored with type 'text'
         try:
-            # Count only non-text rectangles (text placeholders use green outline)
-            img_count = sum(
-                1
-                for _cid, meta in self._items.items()
-                if meta.get("type") == "rect" and str(meta.get("outline", "")) != "#17a24b"
-            )
+            img_count = sum(1 for _cid, meta in self._items.items() if meta.get("type") in ["image", "rect"])
         except Exception:
             img_count = 0
         state.nonsticker_image_count = int(img_count)
         # Snapshot current side (exclude slots) so both sides are up-to-date
-        try:
-            current_no_slots = [it for it in self._serialize_scene() if it.get("type") != "slot"]
-            self._scene_store[self._current_side] = current_no_slots
-        except Exception:
-            pass
+        current_no_slots = [it for it in self._serialize_scene() if it.get("type") != "slot"]
+        self._scene_store[self._current_side] = current_no_slots
         # Collect slots from the current canvas (slots are shared across sides)
+        slots_only = [it for it in self._serialize_scene() if it.get("type") == "slot"]
+        # Prepare background job to render PDFs and write JSON without blocking UI
+        p_jig = os.path.join(TEMP_FOLDER, "Jig_file.pdf")
+        p_front = os.path.join(TEMP_FOLDER, "Test_file.pdf")
+        p_back = os.path.join(TEMP_FOLDER, "Test_file_backside.pdf")
         try:
-            slots_only = [it for it in self._serialize_scene() if it.get("type") == "slot"]
+            jx = float(self.jig_x.get() or 0.0)
+            jy = float(self.jig_y.get() or 0.0)
         except Exception:
-            slots_only = []
-        # Ask where to save the two PDFs and render them
-        # folder = filedialog.askdirectory(title="Select folder to save 2 files")
-        try:
-            p_jig = os.path.join(TEMP_FOLDER, "Jig_file.pdf")
-            p_front = os.path.join(TEMP_FOLDER, "Test_file.pdf")
-            p_back = os.path.join(TEMP_FOLDER, "Test_file_backside.pdf")
-            try:
-                jx = float(self.jig_x.get() or 0.0)
-                jy = float(self.jig_y.get() or 0.0)
-            except Exception:
-                jx, jy = 296.0, 415.0
-            front_items = list(slots_only) + list(self._scene_store.get("front") or [])
-            back_items = list(slots_only) + list(self._scene_store.get("back") or [])
+            jx, jy = 296.0, 415.0
+        front_items = list(slots_only) + list(self._scene_store.get("front") or [])
+        back_items = list(slots_only) + list(self._scene_store.get("back") or [])
 
-            self._render_scene_to_pdf(p_jig, front_items, jx, jy, only_jig=True, dpi=1200)
-            self._render_scene_to_pdf(p_front, front_items, jx, jy, dpi=1200)
-            self._render_scene_to_pdf(p_back, back_items, jx, jy, dpi=1200)
-            # messagebox.showinfo("Saved", f"Saved 2 files to:\n{folder}")
+        # Build combined JSON payload on UI thread (safe to read widgets here)
+        try:
+            # Common scene parameters
+            try:
+                step_x = float(self.step_x.get() or 0.0)
+                step_y = float(self.step_y.get() or 0.0)
+            except Exception:
+                step_x, step_y = 0.0, 0.0
+            try:
+                origin_x = float(self.origin_x.get() or 0.0)
+                origin_y = float(self.origin_y.get() or 0.0)
+            except Exception:
+                origin_x, origin_y = 0.0, 0.0
+            try:
+                slot_w = float(self.slot_w.get() or 0.0)
+                slot_h = float(self.slot_h.get() or 0.0)
+            except Exception:
+                slot_w, slot_h = 0.0, 0.0
+
+            # Build z-index maps from current canvas items
+            slot_z_map: dict[tuple[str, float, float, float, float], int] = {}
+            image_z_map: dict[tuple[str, float, float, float, float], int] = {}
+            text_z_map: dict[tuple[str, float, float], int] = {}
+            text_rect_z_map: dict[tuple[str, float, float, float, float], int] = {}
+            for cid, meta in self._items.items():
+                t = meta.get("type")
+                if t == "slot":
+                    try:
+                        label_id = meta.get("label_id")
+                        label_text = self.canvas.itemcget(label_id, "text") if label_id else ""
+                        key = (
+                            str(label_text),
+                            float(meta.get("x_mm", 0.0)),
+                            float(meta.get("y_mm", 0.0)),
+                            float(meta.get("w_mm", 0.0)),
+                            float(meta.get("h_mm", 0.0)),
+                        )
+                        slot_z_map[key] = int(meta.get("z", 0))
+                    except Exception as e:
+                        logger.debug(f"Failed to process slot item {cid}: {e}")
+                        continue
+                elif t == "image":
+                    try:
+                        key = (
+                            str(meta.get("path", "")),
+                            float(meta.get("x_mm", 0.0)),
+                            float(meta.get("y_mm", 0.0)),
+                            float(meta.get("w_mm", 0.0)),
+                            float(meta.get("h_mm", 0.0)),
+                        )
+                        image_z_map[key] = int(meta.get("z", 0))
+                    except Exception as e:
+                        logger.debug(f"Failed to process image item {cid}: {e}")
+                        continue
+                elif t == "text":
+                    try:
+                        key = (
+                            float(meta.get("x_mm", 0.0)),
+                            float(meta.get("y_mm", 0.0)),
+                            0.0,
+                        )
+                        text_z_map[key] = int(meta.get("z", 0))
+                    except Exception as e:
+                        logger.debug(f"Failed to process text item {cid}: {e}")
+                        continue
+                elif t == "rect":
+                    try:
+                        outline = str(meta.get("outline", ""))
+                        if outline == "#17a24b":
+                            key = (
+                                str(meta.get("label", "")),
+                                float(meta.get("x_mm", 0.0)),
+                                float(meta.get("y_mm", 0.0)),
+                                float(meta.get("w_mm", 0.0)),
+                                float(meta.get("h_mm", 0.0)),
+                            )
+                            text_rect_z_map[key] = int(meta.get("z", 0))
+                    except Exception as e:
+                        logger.debug(f"Failed to process rect item {cid}: {e}")
+                        continue
+
+            def _compose_side(items_for_side: list[dict]) -> dict:
+                slot_descs: list[dict] = []
+                for it in items_for_side:
+                    if str(it.get("type", "")) == "slot":
+                        try:
+                            key = (
+                                str(it.get("label", "")),
+                                float(it.get("x_mm", 0.0)),
+                                float(it.get("y_mm", 0.0)),
+                                float(it.get("w_mm", 0.0)),
+                                float(it.get("h_mm", 0.0)),
+                            )
+                            slot_entry = {
+                                "label": str(it.get("label", "")),
+                                "x_mm": float(it.get("x_mm", 0.0)),
+                                "y_mm": float(it.get("y_mm", 0.0)),
+                                "w_mm": float(it.get("w_mm", 0.0)),
+                                "h_mm": float(it.get("h_mm", 0.0)),
+                                "z": int(slot_z_map.get(key, 0)),
+                                "objects": [],
+                            }
+                            slot_descs.append(slot_entry)
+                        except Exception as e:
+                            logger.debug(f"Failed to process slot entry: {e}")
+                            continue
+
+                def _center_in_slot(img: dict, sl: dict) -> bool:
+                    try:
+                        cx = float(img.get("x_mm", 0.0)) + float(img.get("w_mm", 0.0)) / 2.0
+                        cy = float(img.get("y_mm", 0.0)) + float(img.get("h_mm", 0.0)) / 2.0
+                        sx = float(sl.get("x_mm", 0.0))
+                        sy = float(sl.get("y_mm", 0.0))
+                        sw = float(sl.get("w_mm", 0.0))
+                        sh = float(sl.get("h_mm", 0.0))
+                        return (sx <= cx <= sx + sw) and (sy <= cy <= sy + sh)
+                    except Exception as e:
+                        logger.debug(f"Failed to check if image is centered in slot: {e}")
+                        return False
+
+                for it in items_for_side:
+                    if str(it.get("type", "")) != "image":
+                        continue
+                    try:
+                        key = (
+                            str(it.get("path", "")),
+                            float(it.get("x_mm", 0.0)),
+                            float(it.get("y_mm", 0.0)),
+                            float(it.get("w_mm", 0.0)),
+                            float(it.get("h_mm", 0.0)),
+                        )
+                        obj = {
+                            "type": "image",
+                            "path": str(it.get("path", "")),
+                            "x_mm": float(it.get("x_mm", 0.0)),
+                            "y_mm": float(it.get("y_mm", 0.0)),
+                            "w_mm": float(it.get("w_mm", 0.0)),
+                            "h_mm": float(it.get("h_mm", 0.0)),
+                            "z": int(image_z_map.get(key, 0)),
+                        }
+                    except Exception as e:
+                        logger.debug(f"Failed to process image for slot: {e}")
+                        continue
+                    for sl in slot_descs:
+                        if _center_in_slot(obj, sl):
+                            sl["objects"].append(obj)
+                            break
+
+                for it in items_for_side:
+                    if str(it.get("type", "")) != "text":
+                        continue
+                    try:
+                        key = (
+                            str(it.get("text", "")),
+                            float(it.get("x_mm", 0.0)),
+                            float(it.get("y_mm", 0.0)),
+                            str(it.get("fill", "white")),
+                        )
+                        obj = {
+                            "type": "text",
+                            "text": str(it.get("text", "")),
+                            "fill": str(it.get("fill", "white")),
+                            "x_mm": float(it.get("x_mm", 0.0)),
+                            "y_mm": float(it.get("y_mm", 0.0)),
+                            "z": int(text_z_map.get(key, 0)),
+                        }
+                    except Exception as e:
+                        logger.debug(f"Failed to process text for slot: {e}")
+                        continue
+                    for sl in slot_descs:
+                        try:
+                            sx = float(sl.get("x_mm", 0.0))
+                            sy = float(sl.get("y_mm", 0.0))
+                            sw = float(sl.get("w_mm", 0.0))
+                            sh = float(sl.get("h_mm", 0.0))
+                            cx = float(obj.get("x_mm", 0.0))
+                            cy = float(obj.get("y_mm", 0.0))
+                            inside = (sx <= cx <= sx + sw) and (sy <= cy <= sy + sh)
+                        except Exception as e:
+                            logger.debug(f"Failed to check if text is inside slot: {e}")
+                            inside = False
+                        if inside:
+                            try:
+                                sl["objects"].append(obj)
+                            except Exception as e:
+                                logger.debug(f"Failed to append object to slot: {e}")
+                            break
+
+                for it in items_for_side:
+                    if str(it.get("type", "")) != "rect" or str(it.get("outline", "")) != "#17a24b":
+                        continue
+                    try:
+                        key = (
+                            str(it.get("label", "")),
+                            float(it.get("x_mm", 0.0)),
+                            float(it.get("y_mm", 0.0)),
+                            float(it.get("w_mm", 0.0)),
+                            float(it.get("h_mm", 0.0)),
+                        )
+                        obj = {
+                            "type": "text",
+                            "x_mm": float(it.get("x_mm", 0.0)),
+                            "y_mm": float(it.get("y_mm", 0.0)),
+                            "w_mm": float(it.get("w_mm", 0.0)),
+                            "h_mm": float(it.get("h_mm", 0.0)),
+                            "z": int(text_rect_z_map.get(key, 0)),
+                        }
+                    except Exception as e:
+                        logger.debug(f"Failed to process rect for slot: {e}")
+                        continue
+                    for sl in slot_descs:
+                        try:
+                            sx = float(sl.get("x_mm", 0.0))
+                            sy = float(sl.get("y_mm", 0.0))
+                            sw = float(sl.get("w_mm", 0.0))
+                            sh = float(sl.get("h_mm", 0.0))
+                            inside = (sx <= obj["x_mm"] <= sx + sw) and (sy <= obj["y_mm"] <= sy + sh)
+                        except Exception as e:
+                            logger.debug(f"Failed to check if rect is inside slot: {e}")
+                            inside = False
+                        if inside:
+                            try:
+                                sl["objects"].append(obj)
+                            except Exception as e:
+                                logger.debug(f"Failed to append object to slot: {e}")
+                            break
+
+                return {"slots": slot_descs}
+
+            images_cnt_front = sum(1 for it in front_items if str(it.get("type", "")) == "image")
+            text_cnt_front = sum(1 for it in front_items if (str(it.get("type", "")) == "text") or (str(it.get("type", "")) == "rect" and str(it.get("outline", "")) == "#17a24b"))
+            images_cnt_back = sum(1 for it in back_items if str(it.get("type", "")) == "image")
+            text_cnt_back = sum(1 for it in back_items if (str(it.get("type", "")) == "text") or (str(it.get("type", "")) == "rect" and str(it.get("outline", "")) == "#17a24b"))
+            slot_count = sum(1 for it in slots_only)
+            scene_top = {
+                "jig": {"width_mm": float(jx), "height_mm": float(jy)},
+                "step": {"x_mm": float(step_x), "y_mm": float(step_y)},
+                "origin": {"x_mm": float(origin_x), "y_mm": float(origin_y)},
+                "slot_size": {"width_mm": float(slot_w), "height_mm": float(slot_h)},
+                "slot_count": int(slot_count),
+                "objects_count": {
+                    "images": int(images_cnt_front + images_cnt_back),
+                    "text": int(text_cnt_front + text_cnt_back),
+                },
+            }
+            combined = {
+                "Sku": str(state.sku or ""),
+                "Scene": scene_top,
+                "Frontside": _compose_side(front_items),
+                "Backside": _compose_side(back_items),
+            }
         except Exception as e:
-            messagebox.showerror("Error", f"Could not process files:\n{e}")
+            logger.debug(f"Failed to build combined JSON: {e}")
+            combined = {"Sku": str(state.sku or ""), "Scene": {}, "Frontside": {}, "Backside": {}}
+        json_path = PRODUCTS_PATH / f"{state.sku}.json"
+
+        # Mark processing and launch worker thread
+        state.is_processing = True
+
+        def _worker():
+            try:
+                # Render PDFs
+                logger.debug(f"Rendering jig PDF...")
+                state.processing_message = "Rendering jig PDF..."
+                self._render_scene_to_pdf(p_jig, front_items, jx, jy, only_jig=True, dpi=1200)
+                logger.debug(f"Rendering front PDF...")
+                state.processing_message = "Rendering front PDF..."
+                self._render_scene_to_pdf(p_front, front_items, jx, jy, dpi=1200)
+                logger.debug(f"Rendering back PDF...")
+                state.processing_message = "Rendering back PDF..."
+                self._render_scene_to_pdf(p_back, back_items, jx, jy, dpi=1200)
+                # Write JSON
+                try:
+                    import json as _json
+                    logger.debug(f"Writing JSON file...")
+                    state.processing_message = "Writing JSON file..."
+                    with open(json_path, "w", encoding="utf-8") as _f:
+                        _json.dump(combined, _f, ensure_ascii=False, indent=2)
+                    logger.debug(f"Processing completed")
+                    state.processing_message = ""
+                except Exception as e:
+                    state.is_failed = True
+                    state.error_message = str(e)
+                    logger.exception(f"Failed to write JSON file: {e}")
+            except MemoryError:
+                state.is_failed = True
+                state.error_message = "Not enough memory to render PDF"
+                logger.exception("Failed to render PDF: Not enough memory")
+            except Exception as e:
+                state.is_failed = True
+                state.error_message = str(e)
+                logger.exception(f"Failed in worker thread: {e}")
+            finally:
+                state.is_processing = False
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+        # Navigate immediately; results screen will poll state and update UI
         self.app.show_screen(NStickerResultsDownloadScreen)
 
     def _zoom_step(self, direction: int):
@@ -1381,13 +1591,13 @@ class NStickerCanvasScreen(Screen):
                 self.canvas.xview_moveto((desired_left - sx0) / (total_w - cw))
             if total_h > ch:
                 self.canvas.yview_moveto((desired_top - sy0) / (total_h - ch))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to update zoom view: {e}")
         # After zooming, scale all text fonts to match the new zoom
         try:
             self._update_all_text_fonts()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to update text fonts: {e}")
 
 
     # ---- Front/Back scene state management ----
@@ -1396,22 +1606,13 @@ class NStickerCanvasScreen(Screen):
             for cid, meta in list(self._items.items()):
                 if keep_slots and meta.get("type") == "slot":
                     continue
-                try:
-                    self.canvas.delete(cid)
-                except Exception:
-                    pass
-                try:
-                    lbl_id = meta.get("label_id")
-                    if lbl_id:
-                        self.canvas.delete(lbl_id)
-                except Exception:
-                    pass
+                self.canvas.delete(cid)
+                lbl_id = meta.get("label_id")
+                if lbl_id:
+                    self.canvas.delete(lbl_id)
                 self._items.pop(cid, None)
         finally:
-            try:
-                self.selection.select(None)
-            except Exception:
-                pass
+            self.selection.select(None)
 
     def _create_rect_at_mm(self, label: str, w_mm: float, h_mm: float, x_mm: float, y_mm: float, outline: str = "#d0d0d0", text_fill: str = "white"):
         x0, y0, x1, y1 = self._jig_inner_rect_px()
@@ -1441,10 +1642,7 @@ class NStickerCanvasScreen(Screen):
             x_mm_i = self._snap_mm((new_left - (x0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6)))
             y_mm_i = self._snap_mm((new_top - (y0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6)))
         # next z
-        try:
-            max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
-        except Exception:
-            max_z = 0
+        max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
         self._items[rect] = CanvasObject(
             type="rect",
             w_mm=float(w_mm_i),
@@ -1506,7 +1704,8 @@ class NStickerCanvasScreen(Screen):
                         "y_mm": float(meta.get("y_mm", 0.0)),
                         "outline": str(meta.get("outline", "#9a9a9a")),
                     })
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Failed to serialize slot item {cid}: {e}")
                     continue
             elif t == "image":
                 try:
@@ -1518,7 +1717,8 @@ class NStickerCanvasScreen(Screen):
                         "x_mm": float(meta.get("x_mm", 0.0)),
                         "y_mm": float(meta.get("y_mm", 0.0)),
                     })
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Failed to serialize image item {cid}: {e}")
                     continue
             elif t == "text":
                 try:
@@ -1533,7 +1733,8 @@ class NStickerCanvasScreen(Screen):
                         "y_mm": y_mm,
                         "fill": fill,
                     })
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Failed to serialize text item {cid}: {e}")
                     continue
         return items
 
@@ -1592,14 +1793,8 @@ class NStickerCanvasScreen(Screen):
                         img_id = self.canvas.create_image(left, top, image=photo, anchor="nw")
                         meta.canvas_id = img_id
                         # assign next z
-                        try:
-                            max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
-                        except Exception:
-                            max_z = 0
-                        try:
-                            meta["z"] = int(max_z + 1)
-                        except Exception:
-                            pass
+                        max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
+                        meta["z"] = int(max_z + 1)
                         self._items[img_id] = meta
             elif t == "text":
                 self._create_text_at_mm(
@@ -1611,16 +1806,10 @@ class NStickerCanvasScreen(Screen):
 
     def _on_backside_toggle(self, *_):
         # Deselect any current selection before switching sides
-        try:
-            self.selection.select(None)
-        except Exception:
-            pass
+        self.selection.select(None)
         # Save current scene under current side (exclude slots)
-        try:
-            data_no_slots = [it for it in self._serialize_scene() if it.get("type") != "slot"]
-            self._scene_store[self._current_side] = data_no_slots
-        except Exception:
-            pass
+        data_no_slots = [it for it in self._serialize_scene() if it.get("type") != "slot"]
+        self._scene_store[self._current_side] = data_no_slots
         # Switch side based on checkbox
         self._current_side = "back" if self.backside.get() else "front"
         # Clear and restore the target scene; keep slots persistent across sides
@@ -1652,8 +1841,8 @@ class NStickerCanvasScreen(Screen):
             from PIL import Image as _PIL_Image  # type: ignore
             from PIL import ImageDraw as _PIL_Draw  # type: ignore
             from PIL import ImageFont as _PIL_Font  # type: ignore
-        except Exception as _err:
-            raise RuntimeError("Pillow (PIL) is required to export PDF.") from _err
+        except Exception as e:
+            raise RuntimeError("Pillow (PIL) is required to export PDF.") from e
 
         # Page equals jig size in mm
         px_per_mm = float(dpi) / 25.4
@@ -1661,10 +1850,7 @@ class NStickerCanvasScreen(Screen):
         page_h_px = max(1, int(round(jig_h_mm * px_per_mm)))
         img = _PIL_Image.new("RGB", (page_w_px, page_h_px), "white")
         draw = _PIL_Draw.Draw(img)
-        try:
-            font_small = _PIL_Font.load_default()
-        except Exception:
-            font_small = None
+        font_small = _PIL_Font.load_default()
 
         # Jig covers the entire page; draw its border
         jw = max(1, int(round(jig_w_mm * px_per_mm)))
@@ -1698,96 +1884,100 @@ class NStickerCanvasScreen(Screen):
         for it in items:
             t = str(it.get("type", ""))
             if t == "slot":
-                try:
-                    # Items are positioned within jig; with jig at page origin
-                    # use their mm directly from page origin
-                    l, t, r, b = rect_from_mm(it.get("x_mm", 0.0), it.get("y_mm", 0.0), it.get("w_mm", 0.0), it.get("h_mm", 0.0))
-                    # outline only (no fill) for slots
-                    draw.rectangle([l, t, r - 1, b - 1], outline=(137, 137, 137), width=1)
-                    label = str(it.get("label", ""))
-                    if label and font_small is not None:
-                        cx = l + (r - l) // 2
-                        cy = t + (b - t) // 2
-                        try:
-                            tw, th = draw.textsize(label, font=font_small)
-                            draw.text((cx - tw // 2, cy - th // 2), label, fill=(200, 200, 200), font=font_small)
-                        except Exception:
-                            pass
-                except Exception:
-                    continue
+                # Items are positioned within jig; with jig at page origin
+                # use their mm directly from page origin
+                l, t, r, b = rect_from_mm(it.get("x_mm", 0.0), it.get("y_mm", 0.0), it.get("w_mm", 0.0), it.get("h_mm", 0.0))
+                # outline only (no fill) for slots
+                draw.rectangle([l, t, r - 1, b - 1], outline=(137, 137, 137), width=10)
+                label = str(it.get("label", ""))
+                if label and font_small is not None:
+                    cx = l + (r - l) // 2
+                    cy = t + (b - t) // 2
+                    bbox = draw.textbbox((0, 0), label, font=font_small)
+                    tw = bbox[2] - bbox[0]
+                    th = bbox[3] - bbox[1]
+                    draw.text((cx - tw // 2, cy - th // 2), label, fill=(200, 200, 200), font=font_small)
+
             elif t == "rect":
-                try:
-                    l, t, r, b = rect_from_mm(it.get("x_mm", 0.0), it.get("y_mm", 0.0), it.get("w_mm", 0.0), it.get("h_mm", 0.0))
-                    outline = str(it.get("outline", "#d0d0d0"))
-                    # parse outline color hex
-                    try:
-                        if outline.startswith("#") and len(outline) == 7:
-                            r_col = int(outline[1:3], 16); g_col = int(outline[3:5], 16); b_col = int(outline[5:7], 16)
-                            oc = (r_col, g_col, b_col)
+                l, t, r, b = rect_from_mm(
+                    it.get("x_mm", 0.0),
+                    it.get("y_mm", 0.0),
+                    it.get("w_mm", 0.0),
+                    it.get("h_mm", 0.0)
+                )
+
+                label = str(it.get("label", "")).strip()
+                if label:
+                    W = max(1, r - l)
+                    H = max(1, b - t)
+
+                    # подбор размера шрифта по области
+                    lo, hi = 1, H
+                    best_font = None
+                    best_bbox = None
+                    font_path = FONTS_PATH / "MyriadPro-Regular.ttf"
+                    while lo <= hi:
+                        mid = (lo + hi) // 2
+                        f = _PIL_Font.truetype(font_path, mid)
+                        bb = draw.textbbox((0, 0), label, font=f)
+                        tw = bb[2] - bb[0]
+                        th = bb[3] - bb[1]
+                        if tw <= W and th <= H:
+                            best_font, best_bbox = f, bb
+                            lo = mid + 1
                         else:
-                            oc = (208, 208, 208)
-                    except Exception:
-                        oc = (208, 208, 208)
-                    # fill same as UI for placeholders
-                    draw.rectangle([l, t, r - 1, b - 1], fill=(43, 43, 43), outline=oc, width=2)
-                    label = str(it.get("label", ""))
-                    if label and font_small is not None:
-                        try:
-                            tw, th = draw.textsize(label, font=font_small)
-                            cx = l + (r - l) // 2
-                            cy = t + (b - t) // 2
-                            draw.text((cx - tw // 2, cy - th // 2), label, fill=(255, 255, 255), font=font_small)
-                        except Exception:
-                            pass
-                except Exception:
-                    continue
+                            hi = mid - 1
+                    if best_font is None:
+                        best_font = _PIL_Font.truetype(font_path, H)
+                        best_bbox = draw.textbbox((0, 0), label, font=best_font)
+
+                    tw = best_bbox[2] - best_bbox[0]
+                    th = best_bbox[3] - best_bbox[1]
+
+                    cx = l + W // 2
+                    cy = t + H // 2
+
+                    # вертикальное центрирование по bbox
+                    x = cx - tw // 2
+                    y = cy - th // 2 - best_bbox[1]
+
+                    draw.text((x, y), label, font=best_font, fill=(0, 255, 0))
+
             elif t == "image":
-                try:
-                    path_img = str(it.get("path", ""))
-                    if not path_img:
-                        continue
-                    l, t, r, b = rect_from_mm(it.get("x_mm", 0.0), it.get("y_mm", 0.0), it.get("w_mm", 0.0), it.get("h_mm", 0.0))
-                    rw = max(1, r - l)
-                    rh = max(1, b - t)
-                    with _PIL_Image.open(path_img) as im:
-                        # Preserve alpha to avoid white background for PNGs
-                        im = im.convert("RGBA")
-                        im_resized = im.resize((int(rw), int(rh)), _PIL_Image.LANCZOS)
-                        # Split alpha as mask if present
-                        try:
-                            _r, _g, _b, _a = im_resized.split()
-                            mask = _a
-                        except Exception:
-                            mask = None
-                        if mask is not None:
-                            img.paste(im_resized.convert("RGB"), (int(l), int(t)), mask)
-                        else:
-                            img.paste(im_resized.convert("RGB"), (int(l), int(t)))
-                except Exception:
+                path_img = str(it.get("path", ""))
+                if not path_img:
                     continue
+                l, t, r, b = rect_from_mm(it.get("x_mm", 0.0), it.get("y_mm", 0.0), it.get("w_mm", 0.0), it.get("h_mm", 0.0))
+                rw = max(1, r - l)
+                rh = max(1, b - t)
+                with _PIL_Image.open(path_img) as im:
+                    # Preserve alpha to avoid white background for PNGs
+                    im = im.convert("RGBA")
+                    im_resized = im.resize((int(rw), int(rh)), _PIL_Image.LANCZOS)
+                    # Split alpha as mask if present
+                    _r, _g, _b, _a = im_resized.split()
+                    mask = _a
+                    if mask is not None:
+                        img.paste(im_resized.convert("RGB"), (int(l), int(t)), mask)
+                    else:
+                        img.paste(im_resized.convert("RGB"), (int(l), int(t)))
+                        
             elif t == "text":
-                try:
-                    txt = str(it.get("text", ""))
-                    fill = str(it.get("fill", "#17a24b"))
-                    # hex to rgb
-                    try:
-                        if fill.startswith("#") and len(fill) == 7:
-                            r = int(fill[1:3], 16); g = int(fill[3:5], 16); b = int(fill[5:7], 16)
-                            col = (r, g, b)
-                        else:
-                            col = (23, 162, 75)
-                    except Exception:
-                        col = (23, 162, 75)
-                    cx = jx0 + mm_to_px(it.get("x_mm", 0.0))
-                    cy = jy0 + mm_to_px(it.get("y_mm", 0.0))
-                    if font_small is not None and txt:
-                        try:
-                            tw, th = draw.textsize(txt, font=font_small)
-                            draw.text((int(cx - tw / 2), int(cy - th / 2)), txt, fill=col, font=font_small)
-                        except Exception:
-                            pass
-                except Exception:
-                    continue
+                txt = str(it.get("text", ""))
+                fill = str(it.get("fill", "#17a24b"))
+                # hex to rgb
+                if fill.startswith("#") and len(fill) == 7:
+                    r = int(fill[1:3], 16); g = int(fill[3:5], 16); b = int(fill[5:7], 16)
+                    col = (r, g, b)
+                else:
+                    col = (23, 162, 75)
+                cx = jx0 + mm_to_px(it.get("x_mm", 0.0))
+                cy = jy0 + mm_to_px(it.get("y_mm", 0.0))
+                if font_small is not None and txt:
+                    bbox = draw.textbbox((0, 0), txt, font=font_small)
+                    tw = bbox[2] - bbox[0]
+                    th = bbox[3] - bbox[1]
+                    draw.text((int(cx - tw / 2), int(cy - th / 2)), txt, fill=col, font=font_small)
 
         # Save as PDF
         img.save(path, "PDF", resolution=dpi)
