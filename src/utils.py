@@ -80,6 +80,7 @@ def create_entry(info: EntryInfo) -> Tuple[tk.Entry, tk.Canvas]:
     """
     if info.text_info is None:
         info.text_info = TextInfo(text="", color="", font_size=0)
+        
     font_obj = tkfont.Font(size=int(round(info.text_info.font_size)))
     w = max(info.width, int(font_obj.measure(info.text_info.text) + info.padding_x*2))
     h = max(info.height, int(font_obj.metrics("linespace") + info.padding_y*2))
@@ -252,8 +253,8 @@ def append_object_to_pill_label(
     pill_label: PillLabelInfo, 
     object_info: Union[EntryInfo, ButtonInfo, PillLabelInfo],
     pill_canvas: Optional[tk.Canvas] = None,
-    object_padding_x: int = 0,
-    object_padding_y: int = 0
+    object_padding_x: Union[int, Tuple[int, int]] = 0,
+    object_padding_y: Union[int, Tuple[int, int]] = 0
 ) -> Tuple[tk.Canvas, tk.Canvas, Optional[tk.Entry]]:
     """
     Attach a secondary component (entry, button, or pill label) to the right side of a pill label.
@@ -287,6 +288,11 @@ def append_object_to_pill_label(
     object_info.parent = canvas
     object_info.background_color = pill_label.fill
 
+    if isinstance(object_padding_x, (int, float)):
+        object_padding_x = (object_padding_x, object_padding_x)
+    if isinstance(object_padding_y, (int, float)):
+        object_padding_y = (object_padding_y, object_padding_y)
+
     obj = None
     if isinstance(object_info, EntryInfo):
         obj, obj_canvas = create_entry(object_info)
@@ -296,10 +302,10 @@ def append_object_to_pill_label(
         obj_canvas = create_pill_label(object_info)
     obj_canvas.pack_forget()
 
-    cx1 = canvas.winfo_width() - object_info.padding_x + object_padding_x
-    cx0 = cx1 - object_info.width
-    cy0 = (canvas.winfo_height() - object_info.height) // 2 + object_padding_y
-    cy1 = cy0 + object_info.height
+    cx1 = canvas.winfo_width() - object_info.padding_x + object_padding_x[0]
+    cx0 = cx1 - object_info.width + object_padding_x[1]
+    cy0 = (canvas.winfo_height() - object_info.height) // 2 + object_padding_y[0]
+    cy1 = cy0 + object_info.height + object_padding_y[1]
     canvas.create_window((cx0 + cx1)//2, (cy0 + cy1)//2,
                          window=obj_canvas, width=object_info.width, height=object_info.height)
 

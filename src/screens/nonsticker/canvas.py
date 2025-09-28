@@ -13,7 +13,7 @@ from tkinter import ttk, messagebox, filedialog
 from PIL import ImageDraw
 
 from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL, MM_TO_PX, IMAGES_PATH, TEMP_FOLDER
-from src.core.state import FONTS_PATH, PRODUCTS_PATH, state
+from src.core.state import ALL_PRODUCTS, FONTS_PATH, PRODUCTS_PATH, state
 from src.canvas import CanvasObject, CanvasSelection
 from .results_download import NStickerResultsDownloadScreen
 
@@ -407,6 +407,9 @@ class NStickerCanvasScreen(Screen):
         btn_next_canvas.bind("<ButtonPress-1>", _next_press)
         btn_next_canvas.bind("<ButtonRelease-1>", _next_release)
         btn_next_canvas.place(relx=1.0, rely=1.0, x=-12, y=-12, anchor="se")
+
+        # If coming from "Update existing product", restore saved scene
+        self.after(0, self._maybe_load_saved_product)
 
     # UI helpers
     def _snap_mm(self, value: float) -> int:
@@ -1457,6 +1460,7 @@ class NStickerCanvasScreen(Screen):
                         )
                         obj = {
                             "type": "text",
+                            "label": str(it.get("label", "")),
                             "x_mm": float(it.get("x_mm", 0.0)),
                             "y_mm": float(it.get("y_mm", 0.0)),
                             "w_mm": float(it.get("w_mm", 0.0)),
@@ -1503,6 +1507,7 @@ class NStickerCanvasScreen(Screen):
             }
             combined = {
                 "Sku": str(state.sku or ""),
+                "IsSticker": False,
                 "Scene": scene_top,
                 "Frontside": _compose_side(front_items),
                 "Backside": _compose_side(back_items),
@@ -1535,11 +1540,20 @@ class NStickerCanvasScreen(Screen):
                     with open(json_path, "w", encoding="utf-8") as _f:
                         _json.dump(combined, _f, ensure_ascii=False, indent=2)
                     logger.debug(f"Processing completed")
-                    state.processing_message = ""
+                    
                 except Exception as e:
                     state.is_failed = True
                     state.error_message = str(e)
                     logger.exception(f"Failed to write JSON file: {e}")
+
+                state.processing_message = ""
+                # Add new product to list if not already present
+                for p in ALL_PRODUCTS:
+                    if p == state.sku:
+                        break
+                else:
+                    ALL_PRODUCTS.append(state.sku)
+
             except MemoryError:
                 state.is_failed = True
                 state.error_message = "Not enough memory to render PDF"
@@ -1797,12 +1811,100 @@ class NStickerCanvasScreen(Screen):
                         meta["z"] = int(max_z + 1)
                         self._items[img_id] = meta
             elif t == "text":
-                self._create_text_at_mm(
-                    it.get("text", "Text"),
-                    float(it.get("x_mm", 0.0)),
-                    float(it.get("y_mm", 0.0)),
-                    str(it.get("fill", "white")),
+                # Two shapes are encoded as text in saved JSON:
+                # 1) Plain text labels: have a 'text' field and no size.
+                # 2) Text blocks (green rectangles): no 'text' field but have w_mm/h_mm.
+                if ("text" in it) and ("w_mm" not in it and "h_mm" not in it):
+                    self._create_text_at_mm(
+                        it.get("text", "Text"),
+                        float(it.get("x_mm", 0.0)),
+                        float(it.get("y_mm", 0.0)),
+                        str(it.get("fill", "white")),
+                    )
+                else:
+                    # Restore as the same rectangle block that was saved, using required fields
+                    self._create_rect_at_mm(
+                        "Text",
+                        float(it["w_mm"]),
+                        float(it["h_mm"]),
+                        float(it["x_mm"]),
+                        float(it["y_mm"]),
+                        outline="#17a24b",
+                        text_fill="#17a24b",
+                    )
+
+    def _maybe_load_saved_product(self):
+        # Load saved non-sticker scene when editing an existing product
+        prod = str(state.saved_product or "").strip()
+        if not prod:
+            return
+        path = PRODUCTS_PATH / f"{prod}.json"
+        if not path.exists():
+            return
+        import json as _json
+        with path.open("r", encoding="utf-8") as f:
+            data = _json.load(f)
+
+        if bool(data.get("IsSticker", False)):
+            return
+        sku_val = str(data.get("Sku") or prod)
+        if sku_val:
+            self.sku_var.set(sku_val)
+            state.sku = sku_val
+
+        scene = data.get("Scene") or {}
+        jig = scene.get("jig") or {}
+        step = scene.get("step") or {}
+        origin = scene.get("origin") or {}
+        slot_size = scene.get("slot_size") or {}
+
+        def _set_str(var, val):
+            var.set(str(int(round(float(val)))))
+
+        _set_str(self.jig_x, jig.get("width_mm", self.jig_x.get()))
+        _set_str(self.jig_y, jig.get("height_mm", self.jig_y.get()))
+        _set_str(self.step_x, step.get("x_mm", self.step_x.get()))
+        _set_str(self.step_y, step.get("y_mm", self.step_y.get()))
+        _set_str(self.origin_x, origin.get("x_mm", self.origin_x.get()))
+        _set_str(self.origin_y, origin.get("y_mm", self.origin_y.get()))
+        _set_str(self.slot_w, slot_size.get("width_mm", self.slot_w.get()))
+        _set_str(self.slot_h, slot_size.get("height_mm", self.slot_h.get()))
+
+        front = data.get("Frontside") or {}
+        back = data.get("Backside") or {}
+        front_slots = list(front.get("slots") or [])
+        back_slots = list(back.get("slots") or [])
+
+        # Flatten objects for each side (items carry absolute mm coords)
+        front_items = []
+        for sl in front_slots:
+            front_items.extend(list(sl.get("objects") or []))
+        back_items = []
+        for sl in back_slots:
+            back_items.extend(list(sl.get("objects") or []))
+
+        def _do_restore():
+            # Clear anything auto-created and recreate slots from JSON for exact positions
+            self._clear_scene(keep_slots=False)
+            for sl in front_slots:
+                self._create_slot_at_mm(
+                    str(sl.get("label", "")),
+                    float(sl.get("w_mm", 0.0)),
+                    float(sl.get("h_mm", 0.0)),
+                    float(sl.get("x_mm", 0.0)),
+                    float(sl.get("y_mm", 0.0)),
                 )
+            # Restore front items on canvas; stash back items for toggling
+            if front_items:
+                self._restore_scene(front_items)
+            self._scene_store["front"] = list(front_items)
+            self._scene_store["back"] = list(back_items)
+            self._redraw_jig(center=False)
+            self._raise_all_labels()
+            self.selection._reorder_by_z()
+
+        # Let variable traces run first, then restore
+        self.after(10, _do_restore)
 
     def _on_backside_toggle(self, *_):
         # Deselect any current selection before switching sides

@@ -12,7 +12,7 @@ from .state import MM_TO_PX, APP_TITLE
 COLOR_BG_SCREEN = "#878787"
 COLOR_BG_SCREEN_FOR_LABELS = "#737373"
 COLOR_BG_DARK = "#474747"
-COLOR_CARD = "#a6a6a6"
+COLOR_BG_LIGHT = "#a6a6a6"
 COLOR_TEXT = "#000000"
 COLOR_PILL = "#e6e6e6"
 
@@ -58,13 +58,13 @@ def apply_styles(root):
     # Global backgrounds per latest spec
     style.configure("Screen.TFrame", background=COLOR_BG_SCREEN)
     style.configure("Title.TFrame",  background=COLOR_BG_DARK)
-    style.configure("Card.TFrame",   background=COLOR_CARD)
+    style.configure("Card.TFrame",   background=COLOR_BG_LIGHT)
     style.configure("Brand.TLabel",  background=COLOR_BG_DARK, foreground=COLOR_TEXT, font=("Myriad Pro", 24))
     style.configure("H1.TLabel",     background="#4d4d4d", foreground="black", font=("Myriad Pro", 22))
-    style.configure("H2.TLabel",     background=COLOR_CARD, foreground="black", font=("Myriad Pro", 16))
-    style.configure("H3.TLabel",     background=COLOR_CARD, foreground="black", font=("Myriad Pro", 12))
-    style.configure("Label.TLabel",  background=COLOR_CARD, foreground="black", font=("Myriad Pro", 12))
-    style.configure("Muted.TLabel",  background=COLOR_CARD, foreground="#333")
+    style.configure("H2.TLabel",     background=COLOR_BG_LIGHT, foreground="black", font=("Myriad Pro", 16))
+    style.configure("H3.TLabel",     background=COLOR_BG_LIGHT, foreground="black", font=("Myriad Pro", 12))
+    style.configure("Label.TLabel",  background=COLOR_BG_LIGHT, foreground="black", font=("Myriad Pro", 12))
+    style.configure("Muted.TLabel",  background=COLOR_BG_LIGHT, foreground="#333")
     style.configure("Choice.TRadiobutton", background="#a6a6a6")
     # Combobox style for launcher
     style.configure(

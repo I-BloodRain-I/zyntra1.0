@@ -4,7 +4,6 @@ from tkinter import ttk, messagebox, filedialog
 
 from src.core.state import state
 from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_TEXT, scale_px, font_from_pt, UI_SCALE
-from src.screens.sticker import _write_minimal_pdf
 
 
 class ProcessOrdersScreen(Screen):
@@ -129,7 +128,7 @@ class ProcessOrdersScreen(Screen):
         if not fname:
             return
         try:
-            _write_minimal_pdf(fname)
+            # _write_minimal_pdf(fname)
             messagebox.showinfo("Saved", f"File saved to:\n{fname}")
         except Exception as e:
             messagebox.showerror("Error", f"Could not save file:\n{e}")

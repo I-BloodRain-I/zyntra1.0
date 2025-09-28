@@ -1,8 +1,9 @@
+import json
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import messagebox
 
-from src.core.state import state, ALL_PRODUCTS, APP_TITLE, IMAGES_PATH
+from src.core.state import PRODUCTS_PATH, state, ALL_PRODUCTS, APP_TITLE, IMAGES_PATH
 from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_PILL, COLOR_TEXT, scale_px, font_from_pt, UI_SCALE
 from .order_range import OrderRangeScreen
 from .product_type import ProductTypeScreen
@@ -575,7 +576,7 @@ class SelectProductScreen(Screen):
             except Exception:
                 inside = True
             if getattr(canvas, "_pressed", False) and inside:
-                canvas.after(10, lambda: None)  # no action bound for update yet
+                canvas.after(10, self._update_existing)
             canvas._pressed = False
         btn_update_canvas.bind("<ButtonPress-1>", _upd_press)
         btn_update_canvas.bind("<ButtonRelease-1>", _upd_release)
@@ -609,6 +610,25 @@ class SelectProductScreen(Screen):
         btn_proceed_canvas.bind("<ButtonPress-1>", _proc_press)
         btn_proceed_canvas.bind("<ButtonRelease-1>", _proc_release)
         btn_proceed_canvas.place(relx=1.0, rely=1.0, x=-scale_px(12), y=-scale_px(12), anchor="se")
+
+    def _update_existing(self):
+        product = self.product_var.get()
+        if not product:
+            messagebox.showerror("Error", "Please select a product")
+            return
+        if product not in ALL_PRODUCTS:
+            messagebox.showerror("Error", "Invalid product")
+            return
+        state.saved_product = product
+        
+        with open(PRODUCTS_PATH / f"{product}.json", "r", encoding="utf-8") as f:
+            product_info = json.load(f)
+        if product_info["IsSticker"]:
+            from src.screens.sticker import StickerBasicInfoScreen
+            self.app.show_screen(StickerBasicInfoScreen)
+        else:
+            from src.screens.nonsticker import NStickerCanvasScreen
+            self.app.show_screen(NStickerCanvasScreen)
 
     def _proceed(self):
         product = self.product_var.get()

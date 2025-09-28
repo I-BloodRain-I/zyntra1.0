@@ -1,0 +1,908 @@
+{
+  "Sku": "Kek",
+  "IsSticker": false,
+  "Scene": {
+    "jig": {
+      "width_mm": 296.0,
+      "height_mm": 415.0
+    },
+    "step": {
+      "x_mm": 48.0,
+      "y_mm": 48.0
+    },
+    "origin": {
+      "x_mm": 0.0,
+      "y_mm": 0.0
+    },
+    "slot_size": {
+      "width_mm": 48.0,
+      "height_mm": 48.0
+    },
+    "slot_count": 48,
+    "objects_count": {
+      "images": 0,
+      "text": 1
+    }
+  },
+  "Frontside": {
+    "slots": [
+      {
+        "label": "Slot 1",
+        "x_mm": 248.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -1,
+        "objects": [
+          {
+            "type": "text",
+            "x_mm": 252.0,
+            "y_mm": 371.0,
+            "w_mm": 40.0,
+            "h_mm": 40.0,
+            "z": 0
+          }
+        ]
+      },
+      {
+        "label": "Slot 2",
+        "x_mm": 200.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -2,
+        "objects": []
+      },
+      {
+        "label": "Slot 3",
+        "x_mm": 152.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -3,
+        "objects": []
+      },
+      {
+        "label": "Slot 4",
+        "x_mm": 104.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -4,
+        "objects": []
+      },
+      {
+        "label": "Slot 5",
+        "x_mm": 56.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -5,
+        "objects": []
+      },
+      {
+        "label": "Slot 6",
+        "x_mm": 8.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -6,
+        "objects": []
+      },
+      {
+        "label": "Slot 7",
+        "x_mm": 248.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -7,
+        "objects": []
+      },
+      {
+        "label": "Slot 8",
+        "x_mm": 200.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -8,
+        "objects": []
+      },
+      {
+        "label": "Slot 9",
+        "x_mm": 152.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -9,
+        "objects": []
+      },
+      {
+        "label": "Slot 10",
+        "x_mm": 104.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -10,
+        "objects": []
+      },
+      {
+        "label": "Slot 11",
+        "x_mm": 56.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -11,
+        "objects": []
+      },
+      {
+        "label": "Slot 12",
+        "x_mm": 8.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -12,
+        "objects": []
+      },
+      {
+        "label": "Slot 13",
+        "x_mm": 248.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -13,
+        "objects": []
+      },
+      {
+        "label": "Slot 14",
+        "x_mm": 200.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -14,
+        "objects": []
+      },
+      {
+        "label": "Slot 15",
+        "x_mm": 152.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -15,
+        "objects": []
+      },
+      {
+        "label": "Slot 16",
+        "x_mm": 104.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -16,
+        "objects": []
+      },
+      {
+        "label": "Slot 17",
+        "x_mm": 56.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -17,
+        "objects": []
+      },
+      {
+        "label": "Slot 18",
+        "x_mm": 8.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -18,
+        "objects": []
+      },
+      {
+        "label": "Slot 19",
+        "x_mm": 248.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -19,
+        "objects": []
+      },
+      {
+        "label": "Slot 20",
+        "x_mm": 200.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -20,
+        "objects": []
+      },
+      {
+        "label": "Slot 21",
+        "x_mm": 152.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -21,
+        "objects": []
+      },
+      {
+        "label": "Slot 22",
+        "x_mm": 104.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -22,
+        "objects": []
+      },
+      {
+        "label": "Slot 23",
+        "x_mm": 56.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -23,
+        "objects": []
+      },
+      {
+        "label": "Slot 24",
+        "x_mm": 8.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -24,
+        "objects": []
+      },
+      {
+        "label": "Slot 25",
+        "x_mm": 248.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -25,
+        "objects": []
+      },
+      {
+        "label": "Slot 26",
+        "x_mm": 200.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -26,
+        "objects": []
+      },
+      {
+        "label": "Slot 27",
+        "x_mm": 152.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -27,
+        "objects": []
+      },
+      {
+        "label": "Slot 28",
+        "x_mm": 104.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -28,
+        "objects": []
+      },
+      {
+        "label": "Slot 29",
+        "x_mm": 56.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -29,
+        "objects": []
+      },
+      {
+        "label": "Slot 30",
+        "x_mm": 8.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -30,
+        "objects": []
+      },
+      {
+        "label": "Slot 31",
+        "x_mm": 248.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -31,
+        "objects": []
+      },
+      {
+        "label": "Slot 32",
+        "x_mm": 200.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -32,
+        "objects": []
+      },
+      {
+        "label": "Slot 33",
+        "x_mm": 152.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -33,
+        "objects": []
+      },
+      {
+        "label": "Slot 34",
+        "x_mm": 104.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -34,
+        "objects": []
+      },
+      {
+        "label": "Slot 35",
+        "x_mm": 56.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -35,
+        "objects": []
+      },
+      {
+        "label": "Slot 36",
+        "x_mm": 8.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -36,
+        "objects": []
+      },
+      {
+        "label": "Slot 37",
+        "x_mm": 248.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -37,
+        "objects": []
+      },
+      {
+        "label": "Slot 38",
+        "x_mm": 200.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -38,
+        "objects": []
+      },
+      {
+        "label": "Slot 39",
+        "x_mm": 152.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -39,
+        "objects": []
+      },
+      {
+        "label": "Slot 40",
+        "x_mm": 104.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -40,
+        "objects": []
+      },
+      {
+        "label": "Slot 41",
+        "x_mm": 56.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -41,
+        "objects": []
+      },
+      {
+        "label": "Slot 42",
+        "x_mm": 8.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -42,
+        "objects": []
+      },
+      {
+        "label": "Slot 43",
+        "x_mm": 248.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -43,
+        "objects": []
+      },
+      {
+        "label": "Slot 44",
+        "x_mm": 200.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -44,
+        "objects": []
+      },
+      {
+        "label": "Slot 45",
+        "x_mm": 152.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -45,
+        "objects": []
+      },
+      {
+        "label": "Slot 46",
+        "x_mm": 104.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -46,
+        "objects": []
+      },
+      {
+        "label": "Slot 47",
+        "x_mm": 56.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -47,
+        "objects": []
+      },
+      {
+        "label": "Slot 48",
+        "x_mm": 8.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -48,
+        "objects": []
+      }
+    ]
+  },
+  "Backside": {
+    "slots": [
+      {
+        "label": "Slot 1",
+        "x_mm": 248.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -1,
+        "objects": []
+      },
+      {
+        "label": "Slot 2",
+        "x_mm": 200.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -2,
+        "objects": []
+      },
+      {
+        "label": "Slot 3",
+        "x_mm": 152.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -3,
+        "objects": []
+      },
+      {
+        "label": "Slot 4",
+        "x_mm": 104.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -4,
+        "objects": []
+      },
+      {
+        "label": "Slot 5",
+        "x_mm": 56.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -5,
+        "objects": []
+      },
+      {
+        "label": "Slot 6",
+        "x_mm": 8.0,
+        "y_mm": 367.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -6,
+        "objects": []
+      },
+      {
+        "label": "Slot 7",
+        "x_mm": 248.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -7,
+        "objects": []
+      },
+      {
+        "label": "Slot 8",
+        "x_mm": 200.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -8,
+        "objects": []
+      },
+      {
+        "label": "Slot 9",
+        "x_mm": 152.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -9,
+        "objects": []
+      },
+      {
+        "label": "Slot 10",
+        "x_mm": 104.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -10,
+        "objects": []
+      },
+      {
+        "label": "Slot 11",
+        "x_mm": 56.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -11,
+        "objects": []
+      },
+      {
+        "label": "Slot 12",
+        "x_mm": 8.0,
+        "y_mm": 319.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -12,
+        "objects": []
+      },
+      {
+        "label": "Slot 13",
+        "x_mm": 248.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -13,
+        "objects": []
+      },
+      {
+        "label": "Slot 14",
+        "x_mm": 200.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -14,
+        "objects": []
+      },
+      {
+        "label": "Slot 15",
+        "x_mm": 152.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -15,
+        "objects": []
+      },
+      {
+        "label": "Slot 16",
+        "x_mm": 104.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -16,
+        "objects": []
+      },
+      {
+        "label": "Slot 17",
+        "x_mm": 56.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -17,
+        "objects": []
+      },
+      {
+        "label": "Slot 18",
+        "x_mm": 8.0,
+        "y_mm": 271.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -18,
+        "objects": []
+      },
+      {
+        "label": "Slot 19",
+        "x_mm": 248.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -19,
+        "objects": []
+      },
+      {
+        "label": "Slot 20",
+        "x_mm": 200.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -20,
+        "objects": []
+      },
+      {
+        "label": "Slot 21",
+        "x_mm": 152.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -21,
+        "objects": []
+      },
+      {
+        "label": "Slot 22",
+        "x_mm": 104.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -22,
+        "objects": []
+      },
+      {
+        "label": "Slot 23",
+        "x_mm": 56.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -23,
+        "objects": []
+      },
+      {
+        "label": "Slot 24",
+        "x_mm": 8.0,
+        "y_mm": 223.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -24,
+        "objects": []
+      },
+      {
+        "label": "Slot 25",
+        "x_mm": 248.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -25,
+        "objects": []
+      },
+      {
+        "label": "Slot 26",
+        "x_mm": 200.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -26,
+        "objects": []
+      },
+      {
+        "label": "Slot 27",
+        "x_mm": 152.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -27,
+        "objects": []
+      },
+      {
+        "label": "Slot 28",
+        "x_mm": 104.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -28,
+        "objects": []
+      },
+      {
+        "label": "Slot 29",
+        "x_mm": 56.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -29,
+        "objects": []
+      },
+      {
+        "label": "Slot 30",
+        "x_mm": 8.0,
+        "y_mm": 175.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -30,
+        "objects": []
+      },
+      {
+        "label": "Slot 31",
+        "x_mm": 248.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -31,
+        "objects": []
+      },
+      {
+        "label": "Slot 32",
+        "x_mm": 200.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -32,
+        "objects": []
+      },
+      {
+        "label": "Slot 33",
+        "x_mm": 152.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -33,
+        "objects": []
+      },
+      {
+        "label": "Slot 34",
+        "x_mm": 104.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -34,
+        "objects": []
+      },
+      {
+        "label": "Slot 35",
+        "x_mm": 56.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -35,
+        "objects": []
+      },
+      {
+        "label": "Slot 36",
+        "x_mm": 8.0,
+        "y_mm": 127.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -36,
+        "objects": []
+      },
+      {
+        "label": "Slot 37",
+        "x_mm": 248.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -37,
+        "objects": []
+      },
+      {
+        "label": "Slot 38",
+        "x_mm": 200.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -38,
+        "objects": []
+      },
+      {
+        "label": "Slot 39",
+        "x_mm": 152.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -39,
+        "objects": []
+      },
+      {
+        "label": "Slot 40",
+        "x_mm": 104.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -40,
+        "objects": []
+      },
+      {
+        "label": "Slot 41",
+        "x_mm": 56.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -41,
+        "objects": []
+      },
+      {
+        "label": "Slot 42",
+        "x_mm": 8.0,
+        "y_mm": 79.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -42,
+        "objects": []
+      },
+      {
+        "label": "Slot 43",
+        "x_mm": 248.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -43,
+        "objects": []
+      },
+      {
+        "label": "Slot 44",
+        "x_mm": 200.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -44,
+        "objects": []
+      },
+      {
+        "label": "Slot 45",
+        "x_mm": 152.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -45,
+        "objects": []
+      },
+      {
+        "label": "Slot 46",
+        "x_mm": 104.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -46,
+        "objects": []
+      },
+      {
+        "label": "Slot 47",
+        "x_mm": 56.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -47,
+        "objects": []
+      },
+      {
+        "label": "Slot 48",
+        "x_mm": 8.0,
+        "y_mm": 31.0,
+        "w_mm": 48.0,
+        "h_mm": 48.0,
+        "z": -48,
+        "objects": []
+      }
+    ]
+  }
+}

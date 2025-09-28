@@ -8,33 +8,6 @@ from src.core import Screen, COLOR_BG_DARK, COLOR_TEXT, COLOR_PILL, COLOR_BG_SCR
 from src.core.app import TEMP_FOLDER
 from src.core.state import state
 
-# ---- tiny helper: write a minimal PDF so Download has content ----
-def _write_minimal_pdf(path: str):
-    pdf = b"""%PDF-1.4
-1 0 obj<</Type /Catalog /Pages 2 0 R>>endobj
-2 0 obj<</Type /Pages /Kids [3 0 R] /Count 1>>endobj
-3 0 obj<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources<</Font<</F1 5 0 R>>>>>>endobj
-4 0 obj<</Length 44>>stream
-BT /F1 24 Tf 72 720 Td (Zyntra Test File) Tj ET
-endstream
-endobj
-5 0 obj<</Type /Font /Subtype /Type1 /BaseFont /Helvetica>>endobj
-xref
-0 6
-0000000000 65535 f 
-0000000015 00000 n 
-0000000062 00000 n 
-0000000119 00000 n 
-0000000263 00000 n 
-0000000404 00000 n 
-trailer<</Root 1 0 R /Size 6>>
-startxref
-517
-%%EOF
-"""
-    with open(path, "wb") as f:
-        f.write(pdf)
-
 
 class NStickerResultsDownloadScreen(Screen):
     """Non-sticker results screen exactly like the screenshot."""
@@ -76,9 +49,9 @@ class NStickerResultsDownloadScreen(Screen):
         self._chip_h = int(chip_font.metrics("linespace") + 20)
 
         # Three file rows with pill-style Download buttons
-        self._file_row(content, "Co2 laser cut Jig", lambda: self._download_pdf(True, "jig")).pack(pady=(10, 8))
-        self._file_row(content, "Test File .pdf", lambda: self._download_pdf(True, "front")).pack(pady=(8, 8))
-        self._file_row(content, "Test File Backside .pdf", lambda: self._download_pdf(True, "back")).pack(pady=(8, 8))
+        self._file_row(content, "Co2 laser cut Jig", lambda: self._download_pdf("jig")).pack(pady=(10, 8))
+        self._file_row(content, "Test File .pdf", lambda: self._download_pdf("front")).pack(pady=(8, 8))
+        self._file_row(content, "Test File Backside .pdf", lambda: self._download_pdf("back")).pack(pady=(8, 8))
 
         # Report row: left strip for "Report:", then dynamic status label
         report_row = tk.Frame(content, bg=COLOR_BG_SCREEN)
@@ -117,6 +90,8 @@ class NStickerResultsDownloadScreen(Screen):
         nx_left = 8
         ny_center = next_height_px // 2
         next_text_id = btn_next_canvas.create_text(nx_left, ny_center, text=next_text, font=("Myriad Pro", 14), fill=COLOR_TEXT, anchor="w")
+        state.saved_product = ""
+
         def _next_press(_e, canvas=btn_next_canvas, tid=next_text_id):
             canvas.configure(bg="#3f3f3f"); canvas.move(tid, 1, 1); canvas._pressed = True
         def _next_release(e, canvas=btn_next_canvas, tid=next_text_id):
@@ -128,6 +103,7 @@ class NStickerResultsDownloadScreen(Screen):
             if getattr(canvas, "_pressed", False) and inside:
                 canvas.after(10, self._back_home)
             canvas._pressed = False
+            
         btn_next_canvas.bind("<ButtonPress-1>", _next_press)
         btn_next_canvas.bind("<ButtonRelease-1>", _next_release)
         btn_next_canvas.place(relx=1.0, rely=1.0, x=-scale_px(12), y=-scale_px(12), anchor="se")
@@ -242,7 +218,7 @@ class NStickerResultsDownloadScreen(Screen):
         return row
 
     # ---------- actions ----------
-    def _download_pdf(self, single: bool, type: str):
+    def _download_pdf(self, type: str):
         filename = ""
         if type == "jig":
             filename = "Jig_file.pdf"
@@ -250,34 +226,21 @@ class NStickerResultsDownloadScreen(Screen):
             filename = "Test_file.pdf"
         elif type == "back":
             filename = "Test_file_backside.pdf"
-        if single:
-            fname = filedialog.asksaveasfilename(
-                title="Save PDF File",
-                defaultextension=".pdf",
-                filetypes=[("PDF files", "*.pdf")],
-                initialfile=filename
-            )
-            if not fname:
-                return
-            try:
-                shutil.copy(os.path.join(TEMP_FOLDER, filename), fname)
-                messagebox.showinfo("Saved", f"File saved to:\n{fname}")
-            except Exception as e:
-                messagebox.showerror("Error", f"Could not save file:\n{e}")
-            return
 
-        folder = filedialog.askdirectory(title="Select folder to save 2 files")
-        if not folder:
+        fname = filedialog.asksaveasfilename(
+            title="Save PDF File",
+            defaultextension=".pdf",
+            filetypes=[("PDF files", "*.pdf")],
+            initialfile=filename
+        )
+        if not fname:
             return
         try:
-            import os as _os
-            p1 = _os.path.join(folder, "test_front.pdf")
-            p2 = _os.path.join(folder, "test_back.pdf")
-            _write_minimal_pdf(p1)
-            _write_minimal_pdf(p2)
-            messagebox.showinfo("Saved", f"Saved 2 files to:\n{folder}")
+            shutil.copy(os.path.join(TEMP_FOLDER, filename), fname)
+            messagebox.showinfo("Saved", f"File saved to:\n{fname}")
         except Exception as e:
-            messagebox.showerror("Error", f"Could not save files:\n{e}")
+            messagebox.showerror("Error", f"Could not save file:\n{e}")
+        return
 
     # ----- processing state management -----
     def _set_buttons_enabled(self, enabled: bool) -> None:
