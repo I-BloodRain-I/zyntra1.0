@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+from src.utils import *
 
 from src.core import Screen, vcmd_int, vcmd_float, warn, COLOR_BG_DARK, COLOR_TEXT
 from src.core.state import state
@@ -86,7 +87,42 @@ class Screen2(Screen):
         ttk.Spinbox(fonts_card, from_=1, to=200, textvariable=self.font_total, width=6,
                     validate="key", validatecommand=(vcmd_int(self), "%P")).pack(side="left", padx=10)
 
-        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.next)
+        # Back button via custom style; suppress default nav buttons
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=None, next_text=None, back_text=None)
+        back_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Go Back",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.app.go_back,
+            )
+        )
+        back_btn.place(relx=0.005, rely=0.99, anchor="sw")
+        proceed_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Proceed",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.next,
+            )
+        )
+        proceed_btn.place(relx=0.995, rely=0.99, anchor="se")
 
     def _rebuild_variation_rows(self):
         for w in self.variations_frame.winfo_children():
@@ -126,7 +162,7 @@ class Screen2(Screen):
         state.variation_design_counts = [int(v.get()) for v in self.design_vars]
         state.font_variations_total = int(self.font_total.get())
 
-        state.font_names = ["" for _ in range(state.font_variations_total)]
+        state.uploaded_fonts = ["" for _ in range(state.font_variations_total)]
         state.font_uploaded = [False for _ in range(state.font_variations_total)]
 
         self.app.show_screen(Screen3)
@@ -147,12 +183,46 @@ class Screen3(Screen):
         self.upload_labels: list[ttk.Label] = []
 
         self._build_rows()
-        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.next)
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=None, next_text=None, back_text=None)
+        back_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Go Back",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.app.go_back,
+            )
+        )
+        back_btn.place(relx=0.005, rely=0.99, anchor="sw")
+        proceed_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Proceed",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.next,
+            )
+        )
+        proceed_btn.place(relx=0.995, rely=0.99, anchor="se")
 
     def _upload(self, idx):
         state.font_uploaded[idx] = True
         self.upload_labels[idx].configure(text="✔ Uploaded")
-        state.font_names[idx] = self.name_vars[idx].get().strip()
+        state.uploaded_fonts[idx] = self.name_vars[idx].get().strip()
 
     def _build_rows(self):
         for w in self.rows.winfo_children():
@@ -166,7 +236,7 @@ class Screen3(Screen):
             card.pack(fill="x", padx=10, pady=6)
             ttk.Label(card, text=f"Font {i+1}", width=10).grid(row=0, column=0, sticky="w", padx=(4, 8))
             ttk.Label(card, text="Name (Same as Amazon)").grid(row=0, column=1, sticky="w")
-            var = tk.StringVar(value=state.font_names[i] if i < len(state.font_names) else "")
+            var = tk.StringVar(value=state.uploaded_fonts[i] if i < len(state.uploaded_fonts) else "")
             ttk.Entry(card, textvariable=var, width=28).grid(row=0, column=2, padx=8)
             self.name_vars.append(var)
 
@@ -202,7 +272,41 @@ class Screen4(Screen):
         self.vector_labels: list[ttk.Label] = []
 
         self._build_rows()
-        self.bottom_nav(self, on_back=self.app.go_back, on_next=self.next)
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=None, next_text=None, back_text=None)
+        back_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Go Back",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.app.go_back,
+            )
+        )
+        back_btn.place(relx=0.005, rely=0.99, anchor="sw")
+        proceed_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Proceed",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.next,
+            )
+        )
+        proceed_btn.place(relx=0.995, rely=0.99, anchor="se")
 
     def _import_vec(self, idx):
         # здесь могла бы быть логика открытия файла
@@ -287,10 +391,41 @@ class Screen5(Screen):
         canvas_card.pack(expand=True, fill="both", padx=10, pady=10)
         ttk.Label(canvas_card, text="(Artwork preview)\nDefine text space →", style="Muted.TLabel").pack(expand=True)
 
-        self.bottom_nav(self,
-                        on_back=self.app.go_back,
-                        on_next=lambda: self.app.show_screen(Screen6),
-                        next_text="Proceed!")
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=None, next_text=None, back_text=None)
+        back_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Go Back",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.app.go_back,
+            )
+        )
+        back_btn.place(relx=0.005, rely=0.99, anchor="sw")
+        proceed_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Proceed",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=lambda: self.app.show_screen(Screen6),
+            )
+        )
+        proceed_btn.place(relx=0.995, rely=0.99, anchor="se")
 
 
 # ================================================
@@ -337,7 +472,41 @@ class Screen6(Screen):
         self.ai_arrange = tk.BooleanVar(value=True)
         ttk.Checkbutton(ai_card, text="AiArrange", variable=self.ai_arrange).pack()
 
-        self.bottom_nav(self, on_back=self.app.go_back, on_next=self._finish, next_text="Proceed!")
+        self.bottom_nav(self, on_back=self.app.go_back, on_next=None, next_text=None, back_text=None)
+        back_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Go Back",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.app.go_back,
+            )
+        )
+        back_btn.place(relx=0.005, rely=0.99, anchor="sw")
+        proceed_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Proceed",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self._finish,
+            )
+        )
+        proceed_btn.place(relx=0.995, rely=0.99, anchor="se")
 
     def _finish(self):
         total = self.total_var.get()

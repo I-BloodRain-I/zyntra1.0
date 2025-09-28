@@ -36,9 +36,9 @@ class AppState:
     pkg_y: str = ""
     major_variations: int = 0
     variation_design_counts: List[int] = field(default_factory=list)
-    font_variations_total: int = 0
-    font_names: List[str] = field(default_factory=list)
-    font_uploaded: List[bool] = field(default_factory=list)
+    font_variations_total: int = 2
+    # (font_name, file_path)
+    uploaded_fonts: List[Tuple[str, str]] = field(default_factory=list)
     major_sizes: List[Tuple[str, str]] = field(default_factory=list)
 
     # Sheet summary / layout

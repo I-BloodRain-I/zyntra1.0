@@ -3,6 +3,7 @@ import tkinter.font as tkfont
 from tkinter import ttk
 
 from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_PILL, COLOR_TEXT, scale_px, font_from_pt, UI_SCALE
+from src.utils import *
 from src.core.state import state
 from src.screens.sticker import StickerBasicInfoScreen
 from src.screens.nonsticker import NStickerCanvasScreen
@@ -113,35 +114,24 @@ class ProductTypeScreen(Screen):
         btn_yes.grid(row=0, column=0, padx=scale_px(25), pady=scale_px(4))
         btn_no.grid(row=0, column=1, padx=scale_px(25), pady=scale_px(4))
 
-        # Bottom-left Go Back (style like OrderRangeScreen)
-        back_text = "Go Back"
-        back_font_obj = font_from_pt(14.4)
-        back_font = tkfont.Font(font=back_font_obj)
-        back_width_px = int(back_font.measure(back_text) + scale_px(16))
-        back_height_px = int(back_font.metrics("linespace") + scale_px(20))
-        btn_back_canvas = tk.Canvas(self, width=back_width_px, height=back_height_px, bg=COLOR_BG_DARK,
-                                    highlightthickness=0, bd=0, cursor="hand2")
-        bx_left = 8
-        by_center = back_height_px // 2
-        back_text_id = btn_back_canvas.create_text(bx_left, by_center, text=back_text, font=back_font_obj, fill=COLOR_TEXT, anchor="w")
-        def _back_press(_e, canvas=btn_back_canvas, tid=back_text_id):
-            canvas.configure(bg="#3f3f3f")
-            canvas.move(tid, 1, 1)
-            canvas._pressed = True
-        def _back_release(e, canvas=btn_back_canvas, tid=back_text_id):
-            canvas.configure(bg=COLOR_BG_DARK)
-            canvas.move(tid, -1, -1)
-            try:
-                w = canvas.winfo_width(); h = canvas.winfo_height()
-                inside = 0 <= e.x <= w and 0 <= e.y <= h
-            except Exception:
-                inside = True
-            if getattr(canvas, "_pressed", False) and inside:
-                canvas.after(10, self.app.go_back)
-            canvas._pressed = False
-        btn_back_canvas.bind("<ButtonPress-1>", _back_press)
-        btn_back_canvas.bind("<ButtonRelease-1>", _back_release)
-        btn_back_canvas.place(relx=0.0, rely=1.0, x=scale_px(12), y=-scale_px(12), anchor="sw")
+        # Bottom-left Go Back (styled like font_info)
+        back_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Go Back",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.app.go_back,
+            )
+        )
+        back_btn.place(relx=0.005, rely=0.99, anchor="sw")
 
         # Hotkeys (accept optional event)
         self.app.bind("<Escape>", lambda _e=None: self.app.go_back())

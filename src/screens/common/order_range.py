@@ -4,6 +4,7 @@ from tkinter import ttk, messagebox
 
 from src.core.state import state
 from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_TEXT, scale_px, font_from_pt, UI_SCALE
+from src.utils import *
 from .process_orders import ProcessOrdersScreen
 
 
@@ -64,65 +65,43 @@ class OrderRangeScreen(Screen):
         tk.Entry(row_inputs, textvariable=self.to_var, width=8, justify="center",
                  font=ent_font, bg="#ffffff", relief="flat").pack(side="left")
 
-        # Bottom-right Start button (single)
-        start_text = "Start"
-        start_font_obj = font_from_pt(14.4)
-        start_font = tkfont.Font(font=start_font_obj)
-        start_width_px = int(start_font.measure(start_text) + scale_px(16))
-        start_height_px = int(start_font.metrics("linespace") + scale_px(20))
-        btn_start_canvas = tk.Canvas(self, width=start_width_px, height=start_height_px, bg=COLOR_BG_DARK,
-                                     highlightthickness=0, bd=0, cursor="hand2")
-        sx_left = 8
-        sy_center = start_height_px // 2
-        start_text_id = btn_start_canvas.create_text(sx_left, sy_center, text=start_text, font=start_font_obj, fill=COLOR_TEXT, anchor="w")
-        def _start_press(_e, canvas=btn_start_canvas, tid=start_text_id):
-            canvas.configure(bg="#3f3f3f")
-            canvas.move(tid, 1, 1)
-            canvas._pressed = True
-        def _start_release(e, canvas=btn_start_canvas, tid=start_text_id):
-            canvas.configure(bg=COLOR_BG_DARK)
-            canvas.move(tid, -1, -1)
-            try:
-                w = canvas.winfo_width(); h = canvas.winfo_height()
-                inside = 0 <= e.x <= w and 0 <= e.y <= h
-            except Exception:
-                inside = True
-            if getattr(canvas, "_pressed", False) and inside:
-                canvas.after(10, self._start)
-            canvas._pressed = False
-        btn_start_canvas.bind("<ButtonPress-1>", _start_press)
-        btn_start_canvas.bind("<ButtonRelease-1>", _start_release)
-        btn_start_canvas.place(relx=1.0, rely=1.0, x=-scale_px(12), y=-scale_px(12), anchor="se")
+        # Bottom-right Start button (styled like font_info)
+        start_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Start",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self._start,
+            )
+        )
+        start_btn.place(relx=0.995, rely=0.99, anchor="se")
 
-        # Bottom-left Go Back button (styled like Start)
-        back_text = "Go Back"
-        back_font_obj = font_from_pt(14.4)
-        back_font = tkfont.Font(font=back_font_obj)
-        back_width_px = int(back_font.measure(back_text) + scale_px(16))
-        back_height_px = int(back_font.metrics("linespace") + scale_px(20))
-        btn_back_canvas = tk.Canvas(self, width=back_width_px, height=back_height_px, bg=COLOR_BG_DARK,
-                                    highlightthickness=0, bd=0, cursor="hand2")
-        bx_left = 8
-        by_center = back_height_px // 2
-        back_text_id = btn_back_canvas.create_text(bx_left, by_center, text=back_text, font=back_font_obj, fill=COLOR_TEXT, anchor="w")
-        def _back_press(_e, canvas=btn_back_canvas, tid=back_text_id):
-            canvas.configure(bg="#3f3f3f")
-            canvas.move(tid, 1, 1)
-            canvas._pressed = True
-        def _back_release(e, canvas=btn_back_canvas, tid=back_text_id):
-            canvas.configure(bg=COLOR_BG_DARK)
-            canvas.move(tid, -1, -1)
-            try:
-                w = canvas.winfo_width(); h = canvas.winfo_height()
-                inside = 0 <= e.x <= w and 0 <= e.y <= h
-            except Exception:
-                inside = True
-            if getattr(canvas, "_pressed", False) and inside:
-                canvas.after(10, self.app.go_back)
-            canvas._pressed = False
-        btn_back_canvas.bind("<ButtonPress-1>", _back_press)
-        btn_back_canvas.bind("<ButtonRelease-1>", _back_release)
-        btn_back_canvas.place(relx=0.0, rely=1.0, x=scale_px(12), y=-scale_px(12), anchor="sw")
+        # Bottom-left Go Back button (styled like font_info)
+        back_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Go Back",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.app.go_back,
+            )
+        )
+        back_btn.place(relx=0.005, rely=0.99, anchor="sw")
 
         # Hotkeys: Enter → Start, Escape → Back (accept optional event)
         self.app.bind("<Return>", lambda _e=None: self._start())

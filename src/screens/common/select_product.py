@@ -5,6 +5,7 @@ from tkinter import messagebox
 
 from src.core.state import PRODUCTS_PATH, state, ALL_PRODUCTS, APP_TITLE, IMAGES_PATH
 from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_PILL, COLOR_TEXT, scale_px, font_from_pt, UI_SCALE
+from src.utils import *
 from .order_range import OrderRangeScreen
 from .product_type import ProductTypeScreen
 
@@ -582,34 +583,24 @@ class SelectProductScreen(Screen):
         btn_update_canvas.bind("<ButtonRelease-1>", _upd_release)
         btn_update_canvas.place(relx=0.0, rely=1.0, x=scale_px(12), y=-(scale_px(12) + add_height_px + gap_px), anchor="sw")
 
-        proceed_text = "Proceed"
-        proceed_font_obj = font_from_pt(14.4)
-        proceed_font = tkfont.Font(font=proceed_font_obj)
-        proceed_width_px = int(proceed_font.measure(proceed_text) + scale_px(16))
-        proceed_height_px = int(proceed_font.metrics("linespace") + scale_px(20))
-        btn_proceed_canvas = tk.Canvas(self, width=proceed_width_px, height=proceed_height_px, bg=COLOR_BG_DARK,
-                                       highlightthickness=0, bd=0, cursor="hand2")
-        px_left = 8
-        py_center = proceed_height_px // 2
-        proc_text_id = btn_proceed_canvas.create_text(px_left, py_center, text=proceed_text, font=proceed_font_obj, fill=COLOR_TEXT, anchor="w")
-        def _proc_press(_e, canvas=btn_proceed_canvas, tid=proc_text_id):
-            canvas.configure(bg="#3f3f3f")
-            canvas.move(tid, 1, 1)
-            canvas._pressed = True
-        def _proc_release(e, canvas=btn_proceed_canvas, tid=proc_text_id):
-            canvas.configure(bg=COLOR_BG_DARK)
-            canvas.move(tid, -1, -1)
-            try:
-                w = canvas.winfo_width(); h = canvas.winfo_height()
-                inside = 0 <= e.x <= w and 0 <= e.y <= h
-            except Exception:
-                inside = True
-            if getattr(canvas, "_pressed", False) and inside:
-                canvas.after(10, self._proceed)
-            canvas._pressed = False
-        btn_proceed_canvas.bind("<ButtonPress-1>", _proc_press)
-        btn_proceed_canvas.bind("<ButtonRelease-1>", _proc_release)
-        btn_proceed_canvas.place(relx=1.0, rely=1.0, x=-scale_px(12), y=-scale_px(12), anchor="se")
+        # Proceed (styled like font_info)
+        proceed_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Proceed",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self._proceed,
+            )
+        )
+        proceed_btn.place(relx=0.995, rely=0.99, anchor="se")
 
     def _update_existing(self):
         product = self.product_var.get()

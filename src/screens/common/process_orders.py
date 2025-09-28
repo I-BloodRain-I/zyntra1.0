@@ -4,6 +4,7 @@ from tkinter import ttk, messagebox, filedialog
 
 from src.core.state import state
 from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_TEXT, scale_px, font_from_pt, UI_SCALE
+from src.utils import *
 
 
 class ProcessOrdersScreen(Screen):
@@ -89,35 +90,24 @@ class ProcessOrdersScreen(Screen):
         btn.bind("<ButtonRelease-1>", _release)
         btn.pack(pady=(scale_px(24), 0))
 
-        # Bottom-left Cancel button (style like "Go Back")
-        cancel_text = "Cancel"
-        cancel_font_obj = font_from_pt(14.4)
-        cancel_font = tkfont.Font(font=cancel_font_obj)
-        cancel_width_px = int(cancel_font.measure(cancel_text) + scale_px(16))
-        cancel_height_px = int(cancel_font.metrics("linespace") + scale_px(20))
-        btn_cancel_canvas = tk.Canvas(self, width=cancel_width_px, height=cancel_height_px, bg=COLOR_BG_DARK,
-                                      highlightthickness=0, bd=0, cursor="hand2")
-        cx_left = 8
-        cy_center = cancel_height_px // 2
-        cancel_text_id = btn_cancel_canvas.create_text(cx_left, cy_center, text=cancel_text, font=cancel_font_obj, fill=COLOR_TEXT, anchor="w")
-        def _cancel_press(_e, canvas=btn_cancel_canvas, tid=cancel_text_id):
-            canvas.configure(bg="#3f3f3f")
-            canvas.move(tid, 1, 1)
-            canvas._pressed = True
-        def _cancel_release(e, canvas=btn_cancel_canvas, tid=cancel_text_id):
-            canvas.configure(bg=COLOR_BG_DARK)
-            canvas.move(tid, -1, -1)
-            try:
-                w = canvas.winfo_width(); h = canvas.winfo_height()
-                inside = 0 <= e.x <= w and 0 <= e.y <= h
-            except Exception:
-                inside = True
-            if getattr(canvas, "_pressed", False) and inside:
-                canvas.after(10, self.app.go_back)
-            canvas._pressed = False
-        btn_cancel_canvas.bind("<ButtonPress-1>", _cancel_press)
-        btn_cancel_canvas.bind("<ButtonRelease-1>", _cancel_release)
-        btn_cancel_canvas.place(relx=0.0, rely=1.0, x=scale_px(12), y=-scale_px(12), anchor="sw")
+        # Bottom-left Cancel button (styled like font_info)
+        cancel_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Cancel",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.app.go_back,
+            )
+        )
+        cancel_btn.place(relx=0.005, rely=0.99, anchor="sw")
 
     def _download(self):
         fname = filedialog.asksaveasfilename(

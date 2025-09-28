@@ -165,13 +165,16 @@ class Screen(ttk.Frame):
         self.brand_bar(parent)
         ttk.Label(parent, text=title_text, style="H1.TLabel").pack(pady=(18, 8))
 
-    def bottom_nav(self, parent, on_back=None, on_next=None, next_text="Proceed"):
+    def bottom_nav(self, parent, on_back=None, on_next=None, next_text="Proceed", back_text="Go Back"):
         row = ttk.Frame(parent, style="Screen.TFrame")
         row.pack(fill="x", side="bottom", pady=12)
         if on_back is None:
             on_back = self.app.go_back
-        ttk.Button(row, text="Go Back", command=on_back).pack(side="left", padx=12)
-        ttk.Button(row, text=next_text, command=on_next).pack(side="right", padx=12)
+        if back_text:
+            ttk.Button(row, text=back_text, command=on_back).pack(side="left", padx=12)
+        # Only create the default Next button if both handler and label are provided
+        if on_next is not None and next_text:
+            ttk.Button(row, text=next_text, command=on_next).pack(side="right", padx=12)
         # Default hotkeys: Escape → back/quit
         if on_back:
             self.app.bind("<Escape>", lambda _e: on_back())

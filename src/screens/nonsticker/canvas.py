@@ -13,6 +13,7 @@ from tkinter import ttk, messagebox, filedialog
 from PIL import ImageDraw
 
 from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL, MM_TO_PX, IMAGES_PATH, TEMP_FOLDER
+from src.utils import *
 from src.core.state import ALL_PRODUCTS, FONTS_PATH, PRODUCTS_PATH, state
 from src.canvas import CanvasObject, CanvasSelection
 from .results_download import NStickerResultsDownloadScreen
@@ -356,57 +357,44 @@ class NStickerCanvasScreen(Screen):
         for seq in ("<KeyPress-minus>", "<KeyPress-KP_Subtract>"):
             self.app.bind(seq, lambda _e: self._zoom_step(-1))
 
-        # Bottom buttons styled exactly like ProductTypeScreen
+        # Bottom buttons styled like font_info
         from tkinter import font as tkfont
-        # Go Back
-        back_text = "Go Back"
-        back_font_obj = tkfont.Font(font=("Myriad Pro", 14))
-        back_width_px = int(back_font_obj.measure(back_text) + 16)
-        back_height_px = int(back_font_obj.metrics("linespace") + 20)
-        btn_back_canvas = tk.Canvas(self, width=back_width_px, height=back_height_px, bg=COLOR_BG_DARK,
-                                    highlightthickness=0, bd=0, cursor="hand2")
-        bx_left = 8
-        by_center = back_height_px // 2
-        back_text_id = btn_back_canvas.create_text(bx_left, by_center, text=back_text, font=("Myriad Pro", 14), fill=COLOR_TEXT, anchor="w")
-        def _back_press(_e, canvas=btn_back_canvas, tid=back_text_id):
-            canvas.configure(bg="#3f3f3f"); canvas.move(tid, 1, 1); canvas._pressed = True
-        def _back_release(e, canvas=btn_back_canvas, tid=back_text_id):
-            canvas.configure(bg=COLOR_BG_DARK); canvas.move(tid, -1, -1)
-            try:
-                w = canvas.winfo_width(); h = canvas.winfo_height(); inside = 0 <= e.x <= w and 0 <= e.y <= h
-            except Exception:
-                inside = True
-            if getattr(canvas, "_pressed", False) and inside:
-                canvas.after(10, self.app.go_back)
-            canvas._pressed = False
-        btn_back_canvas.bind("<ButtonPress-1>", _back_press)
-        btn_back_canvas.bind("<ButtonRelease-1>", _back_release)
-        btn_back_canvas.place(relx=0.0, rely=1.0, x=12, y=-12, anchor="sw")
+        back_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Go Back",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self.app.go_back,
+            )
+        )
+        back_btn.place(relx=0.005, rely=0.99, anchor="sw")
 
-        # Proceed
-        next_text = "Proceed!"
-        next_font_obj = tkfont.Font(font=("Myriad Pro", 14))
-        next_width_px = int(next_font_obj.measure(next_text) + 16)
-        next_height_px = int(next_font_obj.metrics("linespace") + 20)
-        btn_next_canvas = tk.Canvas(self, width=next_width_px, height=next_height_px, bg=COLOR_BG_DARK,
-                                    highlightthickness=0, bd=0, cursor="hand2")
-        nx_left = 8
-        ny_center = next_height_px // 2
-        next_text_id = btn_next_canvas.create_text(nx_left, ny_center, text=next_text, font=("Myriad Pro", 14), fill=COLOR_TEXT, anchor="w")
-        def _next_press(_e, canvas=btn_next_canvas, tid=next_text_id):
-            canvas.configure(bg="#3f3f3f"); canvas.move(tid, 1, 1); canvas._pressed = True
-        def _next_release(e, canvas=btn_next_canvas, tid=next_text_id):
-            canvas.configure(bg=COLOR_BG_DARK); canvas.move(tid, -1, -1)
-            try:
-                w = canvas.winfo_width(); h = canvas.winfo_height(); inside = 0 <= e.x <= w and 0 <= e.y <= h
-            except Exception:
-                inside = True
-            if getattr(canvas, "_pressed", False) and inside:
-                canvas.after(10, self._proceed)
-            canvas._pressed = False
-        btn_next_canvas.bind("<ButtonPress-1>", _next_press)
-        btn_next_canvas.bind("<ButtonRelease-1>", _next_release)
-        btn_next_canvas.place(relx=1.0, rely=1.0, x=-12, y=-12, anchor="se")
+        # Proceed (styled like font_info)
+        proceed_btn = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="Proceed",
+                    color=COLOR_TEXT,
+                    font_size=22,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color="#3f3f3f",
+                active_color=COLOR_BG_DARK,
+                padding_x=20,
+                padding_y=12,
+                command=self._proceed,
+            )
+        )
+        proceed_btn.place(relx=0.995, rely=0.99, anchor="se")
 
         # If coming from "Update existing product", restore saved scene
         self.after(0, self._maybe_load_saved_product)
@@ -506,8 +494,7 @@ class NStickerCanvasScreen(Screen):
         paths = filedialog.askopenfilenames(
             title="Import Images",
             filetypes=[
-                (".jpg, .png, .svg", ("*.jpg", "*.jpeg", "*.png", "*.svg")),
-                ("All files", "*.*"),
+                ("Image Files", "*.jpg *.jpeg *.png *.svg")
             ],
         )
         if not paths:

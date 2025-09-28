@@ -6,7 +6,7 @@ from src.core import Screen, vcmd_int, vcmd_float, warn, COLOR_PILL, COLOR_BG_SC
 from src.core.app import COLOR_BG_LIGHT, UI_SCALE
 from src.core.state import state
 from src.utils import *
-from .font_info import FontInfoScreen
+from .font_info import StickerFontInfoScreen
 
 
 logger = logging.getLogger(__name__)
@@ -257,6 +257,32 @@ class StickerBasicInfoScreen(Screen):
             for w in (self.variations_canvas, self.variations_inner, self.variations_container):
                 w.bind("<MouseWheel>", _on_mousewheel)
 
+            # Global handler to capture scroll over child widgets
+            def _on_global_mousewheel(e):
+                try:
+                    x_root, y_root = self.winfo_pointerx(), self.winfo_pointery()
+                    widget = self.winfo_containing(x_root, y_root)
+                except Exception:
+                    widget = None
+                # Determine if pointer is over the variations container or its descendants
+                cur = widget
+                is_inside = False
+                while cur is not None:
+                    if cur is self.variations_container or cur is self.variations_canvas or cur is self.variations_inner:
+                        is_inside = True
+                        break
+                    try:
+                        cur = cur.master
+                    except Exception:
+                        cur = None
+                if not is_inside:
+                    return
+                return _on_mousewheel(e)
+            try:
+                self.app.bind_all("<MouseWheel>", _on_global_mousewheel, add=True)
+            except Exception:
+                pass
+
         def _render_variations(count: int):
             _ensure_variations_scroll_area()
             count = int(count) if isinstance(count, (int,)) else 1
@@ -450,7 +476,7 @@ class StickerBasicInfoScreen(Screen):
                         font_size=22,
                     ),
                     button_color=COLOR_BG_DARK,
-                    hover_color=COLOR_BG_LIGHT,
+                    hover_color="#3f3f3f",
                     active_color=COLOR_BG_DARK,
                     padding_x=20,
                     padding_y=12,
@@ -543,4 +569,4 @@ class StickerBasicInfoScreen(Screen):
         state.font_variations_total = int(fonts_total)
 
         # Proceed
-        self.app.show_screen(FontInfoScreen)
+        self.app.show_screen(StickerFontInfoScreen)

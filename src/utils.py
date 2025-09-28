@@ -152,20 +152,45 @@ def create_button(info: ButtonInfo) -> tk.Canvas:
     if info.text_info is None:
         info.text_info = TextInfo(text="", color="", font_size=0)
     font_obj = tkfont.Font(size=int(round(info.text_info.font_size)))
-    w = max(info.width, int(font_obj.measure(info.text_info.text) + info.padding_x))
-    h = max(info.height, int(font_obj.metrics("linespace") + info.padding_y))
+    text_w = font_obj.measure(info.text_info.text)
+    text_h = font_obj.metrics("linespace")
 
-    canvas = tk.Canvas(info.parent, width=w, height=h, highlightthickness=0, bd=0, cursor="hand2")
+    w = max(info.width, int(text_w + 2 * info.padding_x))
+    h = max(info.height, int(text_h + 2 * info.padding_y))
+
+    canvas = tk.Canvas(
+        info.parent, 
+        width=w, 
+        height=h, 
+        highlightthickness=0, 
+        bd=0, 
+        bg=info.background_color, 
+        cursor="hand2"
+    )
     canvas.pack()
 
     hover = info.hover_color if info.hover_color else _shade(info.button_color, +12)
     active = info.active_color if info.active_color else _shade(info.button_color, -18)
 
-    _rounded_rect(canvas, 0, 0, w, h, info.radius, fill=info.button_color, outline="", tag=info.tag)
+    _rounded_rect(canvas, 0, 0, w, h, info.radius, fill=info.button_color, outline="", tag="btnbg")
 
-    px_left = 8
+    if info.text_info.justify == "left":
+        px_left = info.padding_x
+    elif info.text_info.justify == "right":
+        px_left = w - info.padding_x - text_w
+    else:
+        px_left = w // 2 - text_w // 2
+
     py_center = h // 2
-    text_id = canvas.create_text(px_left, py_center, text=info.text_info.text, font=font_obj, fill=info.text_info.color, anchor="w", tags=("btntxt",))
+    text_id = canvas.create_text(
+        px_left,
+        py_center,
+        text=info.text_info.text,
+        font=font_obj,
+        fill=info.text_info.color,
+        anchor="w",
+        tags=("btntxt",)
+    )
 
     state = {"pressed": False, "inside": False}
 
