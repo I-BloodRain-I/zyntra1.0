@@ -61,6 +61,15 @@ class CanvasSelection:
                         if meta.get("type") != "slot":
                             target = rid
                             break
+                # Also allow clicking the rotated overlay polygon to select the rect
+                if not target:
+                    for rid, meta in self.s._items.items():
+                        try:
+                            if int(meta.get("rot_id", 0) or 0) == cid and meta.get("type") == "rect":
+                                target = rid
+                                break
+                        except Exception:
+                            pass
         self.select(target)
         if target:
             meta = self.s._items.get(target, {})
@@ -82,17 +91,33 @@ class CanvasSelection:
             return
         meta = self.s._items.get(self._selected, {})
         if self._drag_kind == "rect":
+            # Always drag by the same visual top-left used for drawing the object
+            # For images we stored _drag_off against the current bbox at mouse-down,
+            # so compute target top-left and then derive anchor placement.
             x1 = e.x - self._drag_off[0]
             y1 = e.y - self._drag_off[1]
             # constrain to inner jig bounds
             jx0, jy0, jx1, jy1 = self.s._jig_inner_rect_px()
             obj = self.s._items[self._selected]
-            w, h = obj["w_mm"] * self.s._zoom, obj["h_mm"] * self.s._zoom
+            # base size in px
+            w = float(obj.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom
+            h = float(obj.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom
+            # effective bbox size considering rotation
+            try:
+                ang = float(obj.get("angle", 0.0) or 0.0)
+            except Exception:
+                ang = 0.0
+            if obj.get("type") == "image":
+                bw, bh = self.s._rotated_bounds_px(int(round(w)), int(round(h)), ang)
+            elif obj.get("type") == "rect" and int(abs(ang)) % 180 == 90:
+                bw, bh = h, w
+            else:
+                bw, bh = w, h
             # clamp to inner jig bounds; allow rects/images/slots to touch jig edge
             ox = 0.0
             oy = 0.0
-            x1 = max(jx0 + ox, min(x1, jx1 - ox - w))
-            y1 = max(jy0 + oy, min(y1, jy1 - oy - h))
+            x1 = max(jx0 + ox, min(x1, jx1 - ox - bw))
+            y1 = max(jy0 + oy, min(y1, jy1 - oy - bh))
             # compute raw mm from clamped px, then snap to nearest 1mm
             raw_x_mm = (x1 - (jx0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             raw_y_mm = (y1 - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
@@ -100,9 +125,9 @@ class CanvasSelection:
             sy_mm = self.s._snap_mm(raw_y_mm)
             # clamp snapped mm to allowed integer range
             min_mm_x = (jx0 + ox - (jx0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
-            max_mm_x = (jx1 - ox - w - (jx0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
+            max_mm_x = (jx1 - ox - bw - (jx0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             min_mm_y = (jy0 + oy - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
-            max_mm_y = (jy1 - oy - h - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
+            max_mm_y = (jy1 - oy - bh - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             sx_mm = int(max(min_mm_x, min(sx_mm, max_mm_x)))
             sy_mm = int(max(min_mm_y, min(sy_mm, max_mm_y)))
             # if snapped mm didn't change, skip redundant updates for smoother feel
@@ -119,12 +144,17 @@ class CanvasSelection:
                 if meta.get("label_id"):
                     self.s.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
                     self.s._raise_all_labels()
+                try:
+                    self.s._update_rect_overlay(self._selected, meta, new_left, new_top, w, h)
+                except Exception:
+                    pass
             elif meta.get("type") == "image":
+                # place using rotated bounds (visual top-left == new_left/new_top)
                 self.s.canvas.coords(self._selected, new_left, new_top)
                 # move selection border if present
                 bid = meta.get("border_id")
                 if bid:
-                    self.s.canvas.coords(bid, new_left, new_top, new_left + w, new_top + h)
+                    self.s.canvas.coords(bid, new_left, new_top, new_left + bw, new_top + bh)
             # update integer position fields and persist
             try:
                 self._suppress_pos_trace = True
@@ -221,6 +251,17 @@ class CanvasSelection:
                 self.s.canvas.delete(bid)
         except Exception:
             pass
+        # delete rotation overlay polygon if any
+        try:
+            rid = int(meta.get("rot_id", 0) or 0)
+        except Exception:
+            rid = 0
+        if rid:
+            try:
+                self.s.canvas.delete(rid)
+            except Exception:
+                pass
+            meta["rot_id"] = None
         try:
             lbl_id = meta.get("label_id")
             if lbl_id:
@@ -279,6 +320,16 @@ class CanvasSelection:
                 if bid:
                     try:
                         self.s.canvas.tag_raise(bid)
+                    except Exception:
+                        pass
+                # Ensure rotated overlay (if any) for selected rect stays on top
+                try:
+                    rid = int(meta.get("rot_id", 0) or 0)
+                except Exception:
+                    rid = 0
+                if rid:
+                    try:
+                        self.s.canvas.tag_raise(rid)
                     except Exception:
                         pass
             # Ensure labels/text squares stay above
@@ -515,9 +566,17 @@ class CanvasSelection:
         if getattr(self, "_selected", None) and self._selected in self.s._items:
             prev_meta = self.s._items.get(self._selected, {})
             if prev_meta.get("type") == "rect":
-                # restore prior outline color for rect on deselect
+                # For rects, keep base rect invisible and recolor overlay to normal outline
                 outline_col = prev_meta.get("outline", "#d0d0d0")
-                self.s.canvas.itemconfig(self._selected, outline=outline_col, width=2)
+                try:
+                    rid = int(prev_meta.get("rot_id", 0) or 0)
+                except Exception:
+                    rid = 0
+                if rid:
+                    try:
+                        self.s.canvas.itemconfig(rid, outline=outline_col, width=2)
+                    except Exception:
+                        pass
             elif prev_meta.get("type") == "text":
                 # restore default text color when deselected
                 self.s.canvas.itemconfig(self._selected, fill=prev_meta.get("default_fill", "white"))
@@ -540,18 +599,43 @@ class CanvasSelection:
                 self.s.sel_h.set("")
                 self.s.sel_x.set("")
                 self.s.sel_y.set("")
+                try:
+                    self.s.sel_angle.set("")
+                except Exception:
+                    pass
             finally:
                 self._suppress_pos_trace = False
                 self._suppress_size_trace = False
             return
         meta = self.s._items.get(cid, {})
-        if meta.get("type") in ("rect", "slot"):
+        if meta.get("type") == "slot":
+            # slots: use base rectangle selection outline
             self.s.canvas.itemconfig(cid, outline="#6ec8ff", width=3)
+        elif meta.get("type") == "rect":
+            # rects: keep base invisible; use overlay polygon as selection border
+            try:
+                rid = int(meta.get("rot_id", 0) or 0)
+            except Exception:
+                rid = 0
+            if rid:
+                try:
+                    # Force overlay to reflect selection style now
+                    x1, y1, x2, y2 = self.s.canvas.bbox(cid)
+                    self.s._update_rect_overlay(cid, meta, x1, y1, x2 - x1, y2 - y1)
+                    self.s.canvas.itemconfig(rid, outline="#6ec8ff", width=3)
+                    self.s.canvas.tag_raise(rid)
+                except Exception:
+                    pass
             # set size fields without triggering live resize
             try:
                 self._suppress_size_trace = True
                 self.s.sel_w.set(str(int(round(float(meta["w_mm"] or 0)))))
                 self.s.sel_h.set(str(int(round(float(meta["h_mm"] or 0)))))
+                # angle (if available in UI)
+                try:
+                    self.s.sel_angle.set(str(int(round(float(meta.get("angle", 0.0) or 0.0)))))
+                except Exception:
+                    self.s.sel_angle.set("0")
             finally:
                 self._suppress_size_trace = False
             # set position from stored mm without triggering move
@@ -573,6 +657,10 @@ class CanvasSelection:
                 self._suppress_size_trace = True
                 self.s.sel_w.set(str(int(round(float(meta["w_mm"] or 0)))))
                 self.s.sel_h.set(str(int(round(float(meta["h_mm"] or 0)))))
+                try:
+                    self.s.sel_angle.set(str(int(round(float(meta.get("angle", 0.0) or 0.0)))))
+                except Exception:
+                    self.s.sel_angle.set("0")
             finally:
                 self._suppress_size_trace = False
             try:
@@ -608,20 +696,34 @@ class CanvasSelection:
         w = int(round(w_mm * MM_TO_PX * self.s._zoom))
         h = int(round(h_mm * MM_TO_PX * self.s._zoom))
         if meta.get("type") in ("rect", "slot"):
-            self.s.canvas.coords(self._selected, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+            # account for rotation of rect: 90/270 swap
+            try:
+                ang = float(meta.get("angle", 0.0) or 0.0)
+            except Exception:
+                ang = 0.0
+            rw, rh = w, h
+            if int(abs(ang)) % 180 == 90:
+                rw, rh = h, w
+            self.s.canvas.coords(self._selected, cx - rw / 2, cy - rh / 2, cx + rw / 2, cy + rh / 2)
             if meta.get("label_id"):
                 self.s.canvas.coords(meta["label_id"], cx, cy)
                 self.s._raise_all_labels()
+            # If overlay polygon exists for rotated rects, keep it in sync
+            try:
+                self.s._update_rect_overlay(self._selected, meta, cx - rw / 2, cy - rh / 2, rw, rh)
+            except Exception:
+                pass
         elif meta.get("type") == "image":
             # re-render image at new size and keep center
             photo = self.s._render_photo(meta, max(1, int(w)), max(1, int(h)))
             if photo is not None:
-                # move to top-left to keep same center
-                self.s.canvas.coords(self._selected, cx - w / 2, cy - h / 2)
+                # compute rotated bounds for placement
+                bw, bh = self.s._rotated_bounds_px(int(round(w)), int(round(h)), float(meta.get("angle", 0.0) or 0.0))
+                self.s.canvas.coords(self._selected, cx - bw / 2, cy - bh / 2)
                 self.s.canvas.itemconfig(self._selected, image=photo)
                 bid = meta.get("border_id")
                 if bid:
-                    self.s.canvas.coords(bid, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+                    self.s.canvas.coords(bid, cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2)
         self.s._update_scrollregion()
         # update position fields to new top-left after resize
         try:
@@ -679,17 +781,22 @@ class CanvasSelection:
                 self.s.canvas.coords(meta["label_id"], cx, cy)
                 self.s._raise_all_labels()
         else:
-            # image: re-render at new size and keep center
+            # image: re-render at new size and keep center, honoring rotation for border and anchor
             w_px = max(1, int(round(w_mm * MM_TO_PX * self.s._zoom)))
             h_px = max(1, int(round(h_mm * MM_TO_PX * self.s._zoom)))
             photo = self.s._render_photo(meta, w_px, h_px)
             if photo is not None:
                 self.s.canvas.itemconfig(self._selected, image=photo)
-            # move image so center remains the same
-            self.s.canvas.coords(self._selected, cx - w_px / 2, cy - h_px / 2)
+            # compute rotated bounds for placement and border
+            try:
+                ang = float(meta.get("angle", 0.0) or 0.0)
+            except Exception:
+                ang = 0.0
+            bw, bh = self.s._rotated_bounds_px(int(w_px), int(h_px), ang)
+            self.s.canvas.coords(self._selected, cx - bw / 2, cy - bh / 2)
             bid = meta.get("border_id")
             if bid:
-                self.s.canvas.coords(bid, cx - w_px / 2, cy - h_px / 2, cx + w_px / 2, cy + h_px / 2)
+                self.s.canvas.coords(bid, cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2)
         self.s._update_scrollregion()
         # update position fields to new top-left after resize
         try:
@@ -755,13 +862,72 @@ class CanvasSelection:
             if meta.get("label_id"):
                 self.s.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
                 self.s._raise_all_labels()
+            try:
+                self.s._update_rect_overlay(self._selected, meta, new_left, new_top, w, h)
+            except Exception:
+                pass
         elif meta.get("type") == "image":
-            self.s.canvas.coords(self._selected, new_left, new_top)
+            bw, bh = self.s._rotated_bounds_px(int(round(w)), int(round(h)), float(meta.get("angle", 0.0) or 0.0))
+            place_left = new_left + (w - bw) / 2.0
+            place_top = new_top + (h - bh) / 2.0
+            self.s.canvas.coords(self._selected, place_left, place_top)
             bid = meta.get("border_id")
             if bid:
-                self.s.canvas.coords(bid, new_left, new_top, new_left + w, new_top + h)
+                self.s.canvas.coords(bid, place_left, place_top, place_left + bw, place_top + bh)
         # persist mm
         meta["x_mm"], meta["y_mm"] = float(int(x_mm)), float(int(y_mm))
         self.s._update_scrollregion()
 
 
+
+    def on_angle_change(self, *_):
+        # Apply angle changes to current selection (rect or image)
+        if not self._selected:
+            return
+        meta = self.s._items.get(self._selected, {})
+        if meta.get("type") not in ("rect", "image"):
+            return
+        # Parse angle
+        raw_a = (self.s.sel_angle.get() or "").strip()
+        try:
+            angle = 0.0 if raw_a == "" else float(raw_a)
+        except ValueError:
+            return
+        meta["angle"] = float(angle)
+        # Keep center point, update drawing
+        try:
+            x1, y1, x2, y2 = self.s.canvas.bbox(self._selected)
+            cx = (x1 + x2) / 2
+            cy = (y1 + y2) / 2
+        except Exception:
+            return
+        if meta.get("type") == "rect":
+            w = float(meta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom
+            h = float(meta.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom
+            if int(abs(angle)) % 180 == 90:
+                w, h = h, w
+            self.s.canvas.coords(self._selected, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+            if meta.get("label_id"):
+                self.s.canvas.coords(meta.get("label_id"), cx, cy)
+                self.s._raise_all_labels()
+            try:
+                self.s._update_rect_overlay(self._selected, meta, cx - w / 2, cy - h / 2, w, h)
+            except Exception:
+                pass
+        else:
+            w_px = int(round(float(meta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom))
+            h_px = int(round(float(meta.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom))
+            # preserve current visual top-left
+            try:
+                tlx, tly, brx, bry = self.s.canvas.bbox(self._selected)
+            except Exception:
+                tlx, tly = cx, cy
+            photo = self.s._render_photo(meta, max(1, int(w_px)), max(1, int(h_px)))
+            if photo is not None:
+                self.s.canvas.itemconfig(self._selected, image=photo)
+            bw, bh = self.s._rotated_bounds_px(w_px, h_px, angle)
+            self.s.canvas.coords(self._selected, tlx, tly)
+            bid = meta.get("border_id")
+            if bid:
+                self.s.canvas.coords(bid, tlx, tly, tlx + bw, tly + bh)
+        self.s._update_scrollregion()

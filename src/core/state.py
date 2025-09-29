@@ -34,12 +34,13 @@ class AppState:
     sku: str = ""
     pkg_x: str = ""
     pkg_y: str = ""
-    major_variations: int = 0
+    major_variations: int = 1
     variation_design_counts: List[int] = field(default_factory=list)
     font_variations_total: int = 2
     # (font_name, file_path)
     uploaded_fonts: List[Tuple[str, str]] = field(default_factory=list)
-    major_sizes: List[Tuple[str, str]] = field(default_factory=list)
+    # (x, y, file_path)
+    major_sizes: List[Tuple[str, str, str]] = field(default_factory=list)
 
     # Sheet summary / layout
     sheet_total: int = 0

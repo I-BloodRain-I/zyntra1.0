@@ -4,7 +4,8 @@ from tkinter import messagebox, filedialog
 from src.core import Screen, warn, COLOR_TEXT, COLOR_BG_LIGHT, COLOR_BG_SCREEN, COLOR_BG_DARK, COLOR_PILL, UI_SCALE, scale_px
 from src.core.state import state
 from src.utils import *
-from .sticker_copy import Screen4
+from .major_sizes import StickerMajorSizesScreen
+
 
 class StickerFontInfoScreen(Screen):
     def __init__(self, master, app):
@@ -58,7 +59,7 @@ class StickerFontInfoScreen(Screen):
                     missing = [str(i + 1) for i, ok in enumerate(state.uploaded_fonts) if not ok]
                     messagebox.showwarning("Upload required", f"Please upload all fonts: {', '.join(missing)}")
                     return
-                self.app.show_screen(Screen4)
+                self.app.show_screen(StickerMajorSizesScreen)
 
             button = create_button(
                 ButtonInfo(

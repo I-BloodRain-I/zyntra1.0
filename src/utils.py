@@ -2,6 +2,10 @@ from typing import Tuple, Optional, Union
 
 import tkinter as tk
 import tkinter.font as tkfont
+from PIL import Image
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtGui import QImage, QPainter
+from PySide6.QtCore import QRectF, Qt
 
 from src.core import EntryInfo, ButtonInfo, PillLabelInfo, TextInfo
 
@@ -335,3 +339,55 @@ def append_object_to_pill_label(
                          window=obj_canvas, width=object_info.width, height=object_info.height)
 
     return canvas, obj_canvas, obj
+
+
+def _qimage_to_pil(qimage: QImage) -> Image.Image:
+    """
+    Convert QImage to PIL Image.
+    """
+    qimage = qimage.convertToFormat(QImage.Format_RGBA8888)
+    width = qimage.width()
+    height = qimage.height()
+
+    ptr = qimage.bits()
+    arr = ptr.tobytes()
+    
+    pil_img = Image.frombuffer("RGBA", (width, height), arr, "raw", "RGBA", 0, 1)
+    return pil_img
+
+
+def svg_to_png(svg_path: str, width: int = None, height: int = None, device_pixel_ratio: float = 1.0) -> Image.Image:
+    """
+    Convert SVG to PNG. 
+
+    Args:
+        svg_path: Path to SVG file.
+        png_path: Path to PNG file.
+        width: Width of PNG file.
+        height: Height of PNG file.
+        device_pixel_ratio: Device pixel ratio.
+
+    Returns:
+        PIL Image.
+    """
+    renderer = QSvgRenderer(svg_path)
+    # Определим естественный размер SVG
+    default_size = renderer.defaultSize()  # QSize
+    w = width or default_size.width()
+    h = height or default_size.height()
+    w = max(1, int(w * device_pixel_ratio))
+    h = max(1, int(h * device_pixel_ratio))
+
+    image = QImage(w, h, QImage.Format_ARGB32_Premultiplied)
+    image.fill(Qt.transparent)
+
+    painter = QPainter(image)
+    try:
+        renderer.render(painter, QRectF(0, 0, w, h))
+    finally:
+        painter.end()
+
+    if device_pixel_ratio != 1.0:
+        image.setDevicePixelRatio(device_pixel_ratio)
+
+    return _qimage_to_pil(image)

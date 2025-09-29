@@ -27,6 +27,8 @@ except Exception:  # pragma: no cover - PIL might not be available in some envs
     Image = None  # type: ignore
     ImageTk = None  # type: ignore
 
+ 
+
 class NStickerCanvasScreen(Screen):
     """Non-sticker designer: SKU, jig, import, place, size."""
     def __init__(self, master, app):
@@ -284,6 +286,10 @@ class NStickerCanvasScreen(Screen):
         tk.Label(_wb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         _hb = self._chip(row2, "Height:", self.sel_h, width=8)
         tk.Label(_hb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
+        # Angle control (degrees)
+        self.sel_angle = tk.StringVar(value="0")
+        _ab = self._chip(row2, "Angle:", self.sel_angle, width=6)
+        tk.Label(_ab, text="deg", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
 
         # Selection controller (must be created before traces/bindings)
         self._zoom: float = 1.5
@@ -294,6 +300,7 @@ class NStickerCanvasScreen(Screen):
         self.sel_y.trace_add("write", self.selection.on_pos_change)
         self.sel_w.trace_add("write", self.selection.on_size_change)
         self.sel_h.trace_add("write", self.selection.on_size_change)
+        self.sel_angle.trace_add("write", self.selection.on_angle_change)
 
         right = tk.Frame(row2, bg="black")
         right.pack(side="right", padx=10)
@@ -436,6 +443,56 @@ class NStickerCanvasScreen(Screen):
         tk.Entry(box, textvariable=var, width=width, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         return box
+    def _update_rect_overlay(self, cid: int, meta: CanvasObject, left: float, top: float, bbox_w: float, bbox_h: float) -> None:
+        try:
+            ang = float(meta.get("angle", 0.0) or 0.0)
+        except Exception:
+            ang = 0.0
+        # Source (unrotated) size in px from stored mm
+        try:
+            w_src = float(meta.get("w_mm", 0.0)) * MM_TO_PX * self._zoom
+            h_src = float(meta.get("h_mm", 0.0)) * MM_TO_PX * self._zoom
+        except Exception:
+            w_src = bbox_w
+            h_src = bbox_h
+        cx = left + bbox_w / 2.0
+        cy = top + bbox_h / 2.0
+        # Compute rotated rectangle polygon (clockwise degrees)
+        a = -math.radians(ang)
+        ca = math.cos(a); sa = math.sin(a)
+        hw = w_src / 2.0; hh = h_src / 2.0
+        pts = [(-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)]
+        rot = []
+        for x, y in pts:
+            rx = x * ca - y * sa
+            ry = x * sa + y * ca
+            rot.extend([cx + rx, cy + ry])
+        # Create or update polygon
+        rid = int(meta.get("rot_id", 0) or 0)
+        fill_col = "#2b2b2b"
+        # If this rect is currently selected, use blue selection color and thicker stroke
+        try:
+            sel_id = getattr(self.selection, "_selected", None)
+        except Exception:
+            sel_id = None
+        is_selected = bool(sel_id and sel_id == cid)
+        outline_col = "#6ec8ff" if is_selected else str(meta.get("outline", "#d0d0d0"))
+        stroke_w = 3 if is_selected else 2
+        try:
+            if rid and self.canvas.type(rid):
+                self.canvas.coords(rid, *rot)
+                self.canvas.itemconfig(rid, fill=fill_col, outline=outline_col, width=stroke_w)
+            else:
+                rid = self.canvas.create_polygon(*rot, fill=fill_col, outline=outline_col, width=stroke_w,
+                                                 tags=("text_item",) if outline_col == "#17a24b" else None)
+                meta["rot_id"] = rid
+        except Exception as e:
+            logger.exception(f"Failed to update rect overlay polygon: {e}")
+        # Keep overlay above base rect
+        try:
+            self.canvas.tag_raise(rid, cid)
+        except Exception as e:
+            logger.exception(f"Failed to raise rect overlay above base: {e}")
 
     
 
@@ -510,16 +567,11 @@ class NStickerCanvasScreen(Screen):
                 if not path or not os.path.exists(path):
                     continue
                 size = self._compute_import_size_mm(path) or default_size
-                ext = str(Path(path).suffix).lower()
-                if ext == ".svg":
-                    # Keep placeholder for SVGs
-                    self.create_placeholder(os.path.basename(path), size[0], size[1])
-                else:
-                    # Raster images: draw actual content
-                    self.create_image_item(path, size[0], size[1])
+                # Create actual image items for all supported formats, including SVG
+                self.create_image_item(path, size[0], size[1])
             except Exception as e:
                 # Ignore failures per-file to allow batch import to proceed
-                logger.debug(f"Failed to import image {path}: {e}")
+                logger.exception(f"Failed to import image {path}: {e}")
                 continue
         # Refresh ordering/labels after batch import
         self._update_scrollregion()
@@ -673,7 +725,7 @@ class NStickerCanvasScreen(Screen):
                 try:
                     x1, y1, x2, y2 = self.canvas.bbox(cid)
                 except Exception as e:
-                    logger.debug(f"Failed to get bbox for slot {cid}: {e}")
+                    logger.exception(f"Failed to get bbox for slot {cid}: {e}")
                     continue
                 slots.append((float(x1), float(y1), cid, meta.get("label_id")))
         # Sort rows first: bottom-to-top (y desc), then within row right-to-left (x desc)
@@ -712,9 +764,10 @@ class NStickerCanvasScreen(Screen):
         # Ensure top-left sits just inside jig accounting for our item outline
         ox = self._item_outline_half_px()
         oy = self._item_outline_half_px()
+        # Base rect is invisible; overlay polygon handles visuals and rotation
         rect = self.canvas.create_rectangle(
             cx - scaled_w / 2 + ox, cy - scaled_h / 2 + oy, cx + scaled_w / 2 - ox, cy + scaled_h / 2 - oy,
-            fill="#2b2b2b", outline=outline, width=2, tags=("text_item",) if outline == "#17a24b" else None
+            fill="", outline="", width=0
         )
         txt = self.canvas.create_text(cx, cy, text=label, fill=text_fill, font=("Myriad Pro", self._scaled_pt(10)), tags=("label",))
         # Persist position in mm relative to jig for stability on jig resize
@@ -744,6 +797,11 @@ class NStickerCanvasScreen(Screen):
             canvas_id=rect,
             z=int(max_z + 1),
         )
+        # Create initial overlay polygon to visualize rotation/selection consistently
+        try:
+            self._update_rect_overlay(rect, self._items[rect], new_left, new_top, scaled_w, scaled_h)
+        except Exception:
+            pass
         self.selection.select(rect)
         self._update_scrollregion()
         self._raise_all_labels()
@@ -764,19 +822,58 @@ class NStickerCanvasScreen(Screen):
         path = meta.get("path")
         if not path or not os.path.exists(path):
             return None
-        # Try high-quality resize via PIL
+        # SVG handling via svg_to_png (PySide6) → temp PNG → PIL → ImageTk
+        try:
+            ext = os.path.splitext(str(path))[1].lower()
+        except Exception:
+            ext = ""
+        if ext == ".svg" and Image is not None and ImageTk is not None:
+            try:
+                pil = svg_to_png(str(path), width=int(w_px), height=int(h_px), device_pixel_ratio=1.0)
+                try:
+                    pil = pil.convert("RGBA")
+                except Exception as e:
+                    logger.exception(f"Failed to convert SVG image to RGBA: {e}")
+                try:
+                    angle = float(meta.get("angle", 0.0) or 0.0)
+                except Exception:
+                    angle = 0.0
+                if abs(angle) > 1e-6:
+                    pil = pil.rotate(-angle, expand=True, resample=Image.BICUBIC)
+                photo = ImageTk.PhotoImage(pil)
+                meta["photo"] = photo
+                return photo
+            except Exception as e:
+                logger.exception(f"Failed to rasterize SVG with svg_to_png: {e}")
+        # Try high-quality resize via PIL for raster formats
         try:
             if Image is not None and ImageTk is not None:
                 pil = meta.get("pil")
                 if pil is None:
                     pil = Image.open(path)
                     meta["pil"] = pil
+                # Ensure RGBA to preserve transparency during rotation
+                try:
+                    pil = pil.convert("RGBA")
+                except Exception as e:
+                    logger.exception(f"Failed to convert raster image to RGBA: {e}")
                 resized = pil.resize((int(w_px), int(h_px)), Image.LANCZOS)
+                # Apply rotation if any (clockwise degrees)
+                angle = 0.0
+                try:
+                    angle = float(meta.get("angle", 0.0) or 0.0)
+                except Exception:
+                    angle = 0.0
+                if abs(angle) > 1e-6:
+                    # PIL rotates counterclockwise; invert to get clockwise
+                    # preserve transparent corners with fillcolor
+                    rotated = resized.rotate(-angle, expand=True, resample=Image.BICUBIC, fillcolor=(0,0,0,0))
+                    resized = rotated
                 photo = ImageTk.PhotoImage(resized)
                 meta["photo"] = photo
                 return photo
         except Exception as e:
-            logger.debug(f"Failed to render photo with PIL: {e}")
+            logger.exception(f"Failed to render photo with PIL: {e}")
         # Fallback to tk.PhotoImage (best-effort; may not scale exactly)
         try:
             photo = tk.PhotoImage(file=path)
@@ -784,6 +881,28 @@ class NStickerCanvasScreen(Screen):
             return photo
         except Exception:
             return None
+
+    def _rotated_bounds_px(self, w_px: int, h_px: int, angle_deg: float) -> tuple[int, int]:
+        try:
+            a = math.radians(float(angle_deg) % 360.0)
+            ca = abs(math.cos(a))
+            sa = abs(math.sin(a))
+            bw = int(round(w_px * ca + h_px * sa))
+            bh = int(round(w_px * sa + h_px * ca))
+            return max(1, bw), max(1, bh)
+        except Exception:
+            return max(1, int(w_px)), max(1, int(h_px))
+
+    def _rotated_bounds_mm(self, w_mm: float, h_mm: float, angle_deg: float) -> tuple[float, float]:
+        try:
+            a = math.radians(float(angle_deg) % 360.0)
+            ca = abs(math.cos(a))
+            sa = abs(math.sin(a))
+            bw = (w_mm * ca) + (h_mm * sa)
+            bh = (w_mm * sa) + (h_mm * ca)
+            return float(max(0.0, bw)), float(max(0.0, bh))
+        except Exception:
+            return float(max(0.0, w_mm)), float(max(0.0, h_mm))
 
     def create_image_item(self, path: str, w_mm: float, h_mm: float, x_mm: Optional[float] = None, y_mm: Optional[float] = None) -> None:
         # place at the center of current viewport similar to placeholders
@@ -824,7 +943,16 @@ class NStickerCanvasScreen(Screen):
             # fallback to placeholder if render failed
             self.create_placeholder(os.path.basename(path), qw_mm, qh_mm)
             return
-        img_id = self.canvas.create_image(new_left, new_top, image=photo, anchor="nw")
+        # For rotation, use visual top-left of rotated bounds
+        angle = 0.0
+        try:
+            angle = float(meta.get("angle", 0.0) or 0.0)
+        except Exception:
+            angle = 0.0
+        bw, bh = self._rotated_bounds_px(scaled_w, scaled_h, angle)
+        place_left = new_left
+        place_top = new_top
+        img_id = self.canvas.create_image(place_left, place_top, image=photo, anchor="nw")
         meta.canvas_id = img_id
         # assign next z
         max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
@@ -847,7 +975,7 @@ class NStickerCanvasScreen(Screen):
             try:
                 bx = self.canvas.bbox(scid)
             except Exception as e:
-                logger.debug(f"Failed to get bbox for slot: {e}")
+                logger.exception(f"Failed to get bbox for slot: {e}")
                 bx = None
             if not bx:
                 continue
@@ -867,7 +995,7 @@ class NStickerCanvasScreen(Screen):
             try:
                 bx = self.canvas.bbox(cid)
             except Exception as e:
-                logger.debug(f"Failed to get bbox for item {cid}: {e}")
+                logger.exception(f"Failed to get bbox for item {cid}: {e}")
                 bx = None
             if not bx:
                 # For images sometimes bbox can be None until drawn; use coords as fallback
@@ -875,7 +1003,7 @@ class NStickerCanvasScreen(Screen):
                     cx, cy = self.canvas.coords(cid)
                     bx = (float(cx), float(cy), float(cx), float(cy))
                 except Exception as e:
-                    logger.debug(f"Failed to get coords for item {cid}: {e}")
+                    logger.exception(f"Failed to get coords for item {cid}: {e}")
                     continue
             ix, iy, _ix2, _iy2 = bx
             item_entries.append((float(ix), float(iy), cid, meta))
@@ -898,64 +1026,88 @@ class NStickerCanvasScreen(Screen):
             slot_w_mm = float(slot_meta.get("w_mm", 0.0))
             slot_h_mm = float(slot_meta.get("h_mm", 0.0))
             
-            # Check if item is larger than slot and resize if necessary
-            if item_w_mm > slot_w_mm or item_h_mm > slot_h_mm:
-                # Calculate scaling factor to fit within slot while maintaining aspect ratio
-                scale_w = slot_w_mm / item_w_mm if item_w_mm > 0 else 1.0
-                scale_h = slot_h_mm / item_h_mm if item_h_mm > 0 else 1.0
-                scale = min(scale_w, scale_h)  # Use the smaller scale to fit both dimensions
-                
-                # Update item dimensions
-                new_w_mm = item_w_mm * scale
-                new_h_mm = item_h_mm * scale
-                meta["w_mm"] = new_w_mm
-                meta["h_mm"] = new_h_mm
-                
-                # Update item size variables
-                item_w_mm = new_w_mm
-                item_h_mm = new_h_mm
+            # Consider rotation when fitting and centering (work in mm)
+            try:
+                ang = float(meta.get("angle", 0.0) or 0.0)
+            except Exception:
+                ang = 0.0
 
-            # Item size in pixels (after potential resize)
-            w_px = int(round(item_w_mm * MM_TO_PX * self._zoom))
-            h_px = int(round(item_h_mm * MM_TO_PX * self._zoom))
-            # Slot size and top-left in pixels
-            slot_w_px = int(round(slot_w_mm * MM_TO_PX * self._zoom))
-            slot_h_px = int(round(slot_h_mm * MM_TO_PX * self._zoom))
-            slot_left_px = jx0 + ox + x_mm * MM_TO_PX * self._zoom
-            slot_top_px = jy0 + oy + y_mm * MM_TO_PX * self._zoom
-            # Desired top-left so that item is centered within the slot
-            desired_left = slot_left_px + (slot_w_px - w_px) / 2.0
-            desired_top = slot_top_px + (slot_h_px - h_px) / 2.0
-            # Clamp to keep item fully inside jig
-            min_left = jx0 + ox
-            min_top = jy0 + oy
-            max_left = jx1 - ox - w_px
-            max_top = jy1 - oy - h_px
-            left = max(min_left, min(desired_left, max_left))
-            top = max(min_top, min(desired_top, max_top))
-
-            left = self._jig_inner_rect_px()[0] + (slot_meta.x_mm * self._zoom) + (((slot_meta.w_mm * self._zoom) - (meta.w_mm * self._zoom)) / 2.0)
-            top = self._jig_inner_rect_px()[1] + (slot_meta.y_mm * self._zoom) + (((slot_meta.h_mm * self._zoom) - (meta.h_mm * self._zoom)) / 2.0)
-            if meta.get("type") == "rect":
-                # Update rectangle coordinates
-                self.canvas.coords(cid, left, top, left + w_px, top + h_px)
-                lbl_id = meta.get("label_id")
-                if lbl_id:
-                    self.canvas.coords(lbl_id, left + w_px / 2, top + h_px / 2)
-                meta.x_mm = slot_meta.x_mm - ((meta.w_mm - slot_meta.w_mm) / 2.0)
-                meta.y_mm = slot_meta.y_mm - ((meta.h_mm - slot_meta.h_mm) / 2.0)
-                self._raise_all_labels()
-            else:
-                # Ensure image rendered at current size (based on its own mm)
+            if meta.get("type") == "image":
+                # Fit rotated bbox into slot in mm
+                bw_mm, bh_mm = self._rotated_bounds_mm(item_w_mm, item_h_mm, ang)
+                if bw_mm > slot_w_mm or bh_mm > slot_h_mm:
+                    scale = min(slot_w_mm / float(max(1e-6, bw_mm)), slot_h_mm / float(max(1e-6, bh_mm)))
+                    item_w_mm *= scale
+                    item_h_mm *= scale
+                    meta["w_mm"] = float(item_w_mm)
+                    meta["h_mm"] = float(item_h_mm)
+                    bw_mm, bh_mm = self._rotated_bounds_mm(item_w_mm, item_h_mm, ang)
+                left_mm = x_mm + (slot_w_mm - bw_mm) / 2.0
+                top_mm = y_mm + (slot_h_mm - bh_mm) / 2.0
+                # Clamp within jig in mm (jx/jy are jig size in mm)
+                try:
+                    jx = float(self.jig_x.get() or 0.0)
+                    jy = float(self.jig_y.get() or 0.0)
+                except Exception:
+                    jx, jy = 296.0, 415.0
+                left_mm = max(0.0, min(left_mm, (jx - bw_mm)))
+                top_mm = max(0.0, min(top_mm, (jy - bh_mm)))
+                # Convert to px for drawing
+                w_px = int(round(item_w_mm * MM_TO_PX * self._zoom))
+                h_px = int(round(item_h_mm * MM_TO_PX * self._zoom))
+                bw_px = int(round(bw_mm * MM_TO_PX * self._zoom))
+                bh_px = int(round(bh_mm * MM_TO_PX * self._zoom))
+                left = jx0 + ox + left_mm * MM_TO_PX * self._zoom
+                top = jy0 + oy + top_mm * MM_TO_PX * self._zoom
+                # Render and place using visual top-left
                 photo = self._render_photo(meta, max(1, int(w_px)), max(1, int(h_px)))
                 if photo is not None:
                     self.canvas.itemconfig(cid, image=photo)
                 self.canvas.coords(cid, left, top)
                 bid = meta.get("border_id")
                 if bid:
-                    self.canvas.coords(bid, left, top, left + w_px, top + h_px)
-                meta.x_mm = slot_meta.x_mm - ((meta.w_mm - slot_meta.w_mm) / 2.0)
-                meta.y_mm = slot_meta.y_mm - ((meta.h_mm - slot_meta.h_mm) / 2.0)
+                    self.canvas.coords(bid, left, top, left + bw_px, top + bh_px)
+                # Persist mm top-left
+                meta.x_mm = float(self._snap_mm(left_mm))
+                meta.y_mm = float(self._snap_mm(top_mm))
+            else:
+                # Rect/text block - display dims swap at 90/270
+                disp_w_mm = item_w_mm
+                disp_h_mm = item_h_mm
+                if int(abs(ang)) % 180 == 90:
+                    disp_w_mm, disp_h_mm = item_h_mm, item_w_mm
+                # Fit if needed
+                if disp_w_mm > slot_w_mm or disp_h_mm > slot_h_mm:
+                    scale = min(slot_w_mm / float(max(1e-6, disp_w_mm)), slot_h_mm / float(max(1e-6, disp_h_mm)))
+                    item_w_mm *= scale
+                    item_h_mm *= scale
+                    meta["w_mm"] = float(item_w_mm)
+                    meta["h_mm"] = float(item_h_mm)
+                    disp_w_mm, disp_h_mm = (item_h_mm, item_w_mm) if (int(abs(ang)) % 180 == 90) else (item_w_mm, item_h_mm)
+                left_mm = x_mm + (slot_w_mm - disp_w_mm) / 2.0
+                top_mm = y_mm + (slot_h_mm - disp_h_mm) / 2.0
+                try:
+                    jx = float(self.jig_x.get() or 0.0)
+                    jy = float(self.jig_y.get() or 0.0)
+                except Exception:
+                    jx, jy = 296.0, 415.0
+                left_mm = max(0.0, min(left_mm, jx - disp_w_mm))
+                top_mm = max(0.0, min(top_mm, jy - disp_h_mm))
+                # Draw with px
+                disp_w = int(round(disp_w_mm * MM_TO_PX * self._zoom))
+                disp_h = int(round(disp_h_mm * MM_TO_PX * self._zoom))
+                left = jx0 + ox + left_mm * MM_TO_PX * self._zoom
+                top = jy0 + oy + top_mm * MM_TO_PX * self._zoom
+                self.canvas.coords(cid, left, top, left + disp_w, top + disp_h)
+                lbl_id = meta.get("label_id")
+                if lbl_id:
+                    self.canvas.coords(lbl_id, left + disp_w / 2.0, top + disp_h / 2.0)
+                # update overlay
+                self._update_rect_overlay(cid, meta, left, top, disp_w, disp_h)
+                self._raise_all_labels()
+                # Persist mm top-left
+                meta.x_mm = float(self._snap_mm(left_mm))
+                meta.y_mm = float(self._snap_mm(top_mm))
 
         self._redraw_jig(center=False)
         self.selection._reorder_by_z()
@@ -999,13 +1151,21 @@ class NStickerCanvasScreen(Screen):
                     w_mm = float(meta.get("w_mm", 0.0))
                     h_mm = float(meta.get("h_mm", 0.0))
                 except Exception as e:
-                    logger.debug(f"Failed to get dimensions for item {cid}: {e}")
+                    logger.exception(f"Failed to get dimensions for item {cid}: {e}")
                     continue
                 # Allow touching jig border for rects and slots
                 ox = 0.0
                 oy = 0.0
                 w = w_mm * MM_TO_PX * self._zoom
                 h = h_mm * MM_TO_PX * self._zoom
+                # If rect has 90/270 rotation, display as swapped dims
+                if t == "rect":
+                    try:
+                        ang = float(meta.get("angle", 0.0) or 0.0)
+                    except Exception:
+                        ang = 0.0
+                    if int(abs(ang)) % 180 == 90:
+                        w, h = h, w
                 min_left = x0 + ox
                 min_top = y0 + oy
                 max_left = x1 - ox - w
@@ -1014,7 +1174,11 @@ class NStickerCanvasScreen(Screen):
                 top = y0 + y_mm * MM_TO_PX * self._zoom + oy
                 new_left = max(min_left, min(left, max_left))
                 new_top = max(min_top, min(top, max_top))
+                # Always keep base rect coords in sync (even if invisible for rects)
                 self.canvas.coords(cid, new_left, new_top, new_left + w, new_top + h)
+                if t == "rect":
+                    # Update overlay polygon used for visuals/selection
+                    self._update_rect_overlay(cid, meta, new_left, new_top, w, h)
                 if meta.get("label_id"):
                     self.canvas.coords(meta.label_id, new_left + w / 2, new_top + h / 2)
                     self.canvas.itemconfig(meta.label_id, font=("Myriad Pro", self._scaled_pt(10)))
@@ -1027,17 +1191,23 @@ class NStickerCanvasScreen(Screen):
                     w_mm = float(meta.get("w_mm", 0.0))
                     h_mm = float(meta.get("h_mm", 0.0))
                 except Exception as e:
-                    logger.debug(f"Failed to get image dimensions for item {cid}: {e}")
+                    logger.exception(f"Failed to get image dimensions for item {cid}: {e}")
                     continue
                 # Allow touching jig border for images
                 ox = 0.0
                 oy = 0.0
                 w = int(round(w_mm * MM_TO_PX * self._zoom))
                 h = int(round(h_mm * MM_TO_PX * self._zoom))
+                try:
+                    ang = float(meta.get("angle", 0.0) or 0.0)
+                except Exception:
+                    ang = 0.0
+                bw, bh = self._rotated_bounds_px(w, h, ang)
                 min_left = x0 + ox
                 min_top = y0 + oy
-                max_left = x1 - ox - w
-                max_top = y1 - oy - h
+                # Place by the visual top-left of rotated bounds
+                max_left = x1 - ox - bw
+                max_top = y1 - oy - bh
                 left = x0 + x_mm * MM_TO_PX * self._zoom + ox
                 top = y0 + y_mm * MM_TO_PX * self._zoom + oy
                 new_left = max(min_left, min(left, max_left))
@@ -1045,17 +1215,20 @@ class NStickerCanvasScreen(Screen):
                 photo = self._render_photo(meta, max(1, int(w)), max(1, int(h)))
                 if photo is not None:
                     self.canvas.itemconfig(cid, image=photo)
-                self.canvas.coords(cid, new_left, new_top)
+                # Use visual top-left directly
+                place_left = new_left
+                place_top = new_top
+                self.canvas.coords(cid, place_left, place_top)
                 bid = meta.get("border_id")
                 if bid:
-                    self.canvas.coords(bid, new_left, new_top, new_left + w, new_top + h)
+                    self.canvas.coords(bid, place_left, place_top, place_left + bw, place_top + bh)
                 # don't mutate stored mm during redraw
             # elif t == "text":
             #     try:
             #         x_mm = float(meta.get("x_mm", 0.0))
             #         y_mm = float(meta.get("y_mm", 0.0))
             #     except Exception as e:
-            #         logger.debug(f"Failed to get text position for item {cid}: {e}")
+            #         logger.exception(f"Failed to get text position for item {cid}: {e}")
             #         continue
             #     cx = x0 + x_mm * MM_TO_PX * self._zoom
             #     cy = y0 + y_mm * MM_TO_PX * self._zoom
@@ -1120,7 +1293,7 @@ class NStickerCanvasScreen(Screen):
             try:
                 self.canvas.xview_moveto(frac_x)
             except Exception as e:
-                logger.debug(f"Failed to move xview: {e}")
+                logger.exception(f"Failed to move xview: {e}")
         if total_h > ch:
             target_y = (y0 + y1) / 2 - ch / 2
             frac_y = (target_y - ay0) / max(1, total_h - ch)
@@ -1128,7 +1301,7 @@ class NStickerCanvasScreen(Screen):
             try:
                 self.canvas.yview_moveto(frac_y)
             except Exception as e:
-                logger.debug(f"Failed to move yview: {e}")
+                logger.exception(f"Failed to move yview: {e}")
 
     def _compute_import_size_mm(self, path: str) -> Optional[Tuple[float, float]]:
         """Infer intrinsic image size in mm.
@@ -1159,7 +1332,7 @@ class NStickerCanvasScreen(Screen):
                     # assume px
                     return (w_val / MM_TO_PX, h_val / MM_TO_PX)
             except Exception as e:
-                logger.debug(f"Failed to parse SVG dimensions: {e}")
+                logger.exception(f"Failed to parse SVG dimensions: {e}")
             return None
         # Raster: Pillow first
         try:
@@ -1168,14 +1341,14 @@ class NStickerCanvasScreen(Screen):
                 w_px, h_px = im.size
             return (float(w_px) / MM_TO_PX, float(h_px) / MM_TO_PX)
         except Exception as e:
-            logger.debug(f"Failed to get image size with Pillow: {e}")
+            logger.exception(f"Failed to get image size with Pillow: {e}")
         # Fallback to tk.PhotoImage (PNG/GIF)
         try:
             img = tk.PhotoImage(file=path)
             w_px, h_px = int(img.width()), int(img.height())
             return (float(w_px) / MM_TO_PX, float(h_px) / MM_TO_PX)
         except Exception as e:
-            logger.debug(f"Failed to get image size with tk.PhotoImage: {e}")
+            logger.exception(f"Failed to get image size with tk.PhotoImage: {e}")
         # Last resort: parse PNG IHDR
         try:
             with open(path, 'rb') as f:
@@ -1187,7 +1360,7 @@ class NStickerCanvasScreen(Screen):
                         w_px, h_px = struct.unpack('>II', f.read(8))
                         return (float(w_px) / MM_TO_PX, float(h_px) / MM_TO_PX)
         except Exception as e:
-            logger.debug(f"Failed to parse PNG header: {e}")
+            logger.exception(f"Failed to parse PNG header: {e}")
         return None
 
     
@@ -1203,7 +1376,7 @@ class NStickerCanvasScreen(Screen):
             jx = float(self.sel_w.get())
             jy = float(self.sel_h.get())
         except Exception as e:
-            logger.debug(f"Failed to get jig size from fields: {e}")
+            logger.exception(f"Failed to get jig size from fields: {e}")
             # fallback to safe defaults
             jx, jy = 296.0, 415.0
         self.jig_x.set(str(int(jx)))
@@ -1285,7 +1458,7 @@ class NStickerCanvasScreen(Screen):
                         )
                         slot_z_map[key] = int(meta.get("z", 0))
                     except Exception as e:
-                        logger.debug(f"Failed to process slot item {cid}: {e}")
+                        logger.exception(f"Failed to process slot item {cid}: {e}")
                         continue
                 elif t == "image":
                     try:
@@ -1298,7 +1471,7 @@ class NStickerCanvasScreen(Screen):
                         )
                         image_z_map[key] = int(meta.get("z", 0))
                     except Exception as e:
-                        logger.debug(f"Failed to process image item {cid}: {e}")
+                        logger.exception(f"Failed to process image item {cid}: {e}")
                         continue
                 elif t == "text":
                     try:
@@ -1309,7 +1482,7 @@ class NStickerCanvasScreen(Screen):
                         )
                         text_z_map[key] = int(meta.get("z", 0))
                     except Exception as e:
-                        logger.debug(f"Failed to process text item {cid}: {e}")
+                        logger.exception(f"Failed to process text item {cid}: {e}")
                         continue
                 elif t == "rect":
                     try:
@@ -1324,7 +1497,7 @@ class NStickerCanvasScreen(Screen):
                             )
                             text_rect_z_map[key] = int(meta.get("z", 0))
                     except Exception as e:
-                        logger.debug(f"Failed to process rect item {cid}: {e}")
+                        logger.exception(f"Failed to process rect item {cid}: {e}")
                         continue
 
             def _compose_side(items_for_side: list[dict]) -> dict:
@@ -1350,7 +1523,7 @@ class NStickerCanvasScreen(Screen):
                             }
                             slot_descs.append(slot_entry)
                         except Exception as e:
-                            logger.debug(f"Failed to process slot entry: {e}")
+                            logger.exception(f"Failed to process slot entry: {e}")
                             continue
 
                 def _center_in_slot(img: dict, sl: dict) -> bool:
@@ -1363,7 +1536,7 @@ class NStickerCanvasScreen(Screen):
                         sh = float(sl.get("h_mm", 0.0))
                         return (sx <= cx <= sx + sw) and (sy <= cy <= sy + sh)
                     except Exception as e:
-                        logger.debug(f"Failed to check if image is centered in slot: {e}")
+                        logger.exception(f"Failed to check if image is centered in slot: {e}")
                         return False
 
                 for it in items_for_side:
@@ -1384,10 +1557,11 @@ class NStickerCanvasScreen(Screen):
                             "y_mm": float(it.get("y_mm", 0.0)),
                             "w_mm": float(it.get("w_mm", 0.0)),
                             "h_mm": float(it.get("h_mm", 0.0)),
+                            "angle": float(it.get("angle", 0.0) or 0.0),
                             "z": int(image_z_map.get(key, 0)),
                         }
                     except Exception as e:
-                        logger.debug(f"Failed to process image for slot: {e}")
+                        logger.exception(f"Failed to process image for slot: {e}")
                         continue
                     for sl in slot_descs:
                         if _center_in_slot(obj, sl):
@@ -1413,7 +1587,7 @@ class NStickerCanvasScreen(Screen):
                             "z": int(text_z_map.get(key, 0)),
                         }
                     except Exception as e:
-                        logger.debug(f"Failed to process text for slot: {e}")
+                        logger.exception(f"Failed to process text for slot: {e}")
                         continue
                     for sl in slot_descs:
                         try:
@@ -1425,13 +1599,13 @@ class NStickerCanvasScreen(Screen):
                             cy = float(obj.get("y_mm", 0.0))
                             inside = (sx <= cx <= sx + sw) and (sy <= cy <= sy + sh)
                         except Exception as e:
-                            logger.debug(f"Failed to check if text is inside slot: {e}")
+                            logger.exception(f"Failed to check if text is inside slot: {e}")
                             inside = False
                         if inside:
                             try:
                                 sl["objects"].append(obj)
                             except Exception as e:
-                                logger.debug(f"Failed to append object to slot: {e}")
+                                logger.exception(f"Failed to append object to slot: {e}")
                             break
 
                 for it in items_for_side:
@@ -1452,10 +1626,11 @@ class NStickerCanvasScreen(Screen):
                             "y_mm": float(it.get("y_mm", 0.0)),
                             "w_mm": float(it.get("w_mm", 0.0)),
                             "h_mm": float(it.get("h_mm", 0.0)),
+                            "angle": float(it.get("angle", 0.0) or 0.0),
                             "z": int(text_rect_z_map.get(key, 0)),
                         }
                     except Exception as e:
-                        logger.debug(f"Failed to process rect for slot: {e}")
+                        logger.exception(f"Failed to process rect for slot: {e}")
                         continue
                     for sl in slot_descs:
                         try:
@@ -1465,13 +1640,13 @@ class NStickerCanvasScreen(Screen):
                             sh = float(sl.get("h_mm", 0.0))
                             inside = (sx <= obj["x_mm"] <= sx + sw) and (sy <= obj["y_mm"] <= sy + sh)
                         except Exception as e:
-                            logger.debug(f"Failed to check if rect is inside slot: {e}")
+                            logger.exception(f"Failed to check if rect is inside slot: {e}")
                             inside = False
                         if inside:
                             try:
                                 sl["objects"].append(obj)
                             except Exception as e:
-                                logger.debug(f"Failed to append object to slot: {e}")
+                                logger.exception(f"Failed to append object to slot: {e}")
                             break
 
                 return {"slots": slot_descs}
@@ -1500,7 +1675,7 @@ class NStickerCanvasScreen(Screen):
                 "Backside": _compose_side(back_items),
             }
         except Exception as e:
-            logger.debug(f"Failed to build combined JSON: {e}")
+            logger.exception(f"Failed to build combined JSON: {e}")
             combined = {"Sku": str(state.sku or ""), "Scene": {}, "Frontside": {}, "Backside": {}}
         json_path = PRODUCTS_PATH / f"{state.sku}.json"
 
@@ -1593,12 +1768,12 @@ class NStickerCanvasScreen(Screen):
             if total_h > ch:
                 self.canvas.yview_moveto((desired_top - sy0) / (total_h - ch))
         except Exception as e:
-            logger.debug(f"Failed to update zoom view: {e}")
+            logger.exception(f"Failed to update zoom view: {e}")
         # After zooming, scale all text fonts to match the new zoom
         try:
             self._update_all_text_fonts()
         except Exception as e:
-            logger.debug(f"Failed to update text fonts: {e}")
+            logger.exception(f"Failed to update text fonts: {e}")
 
 
     # ---- Front/Back scene state management ----
@@ -1607,6 +1782,28 @@ class NStickerCanvasScreen(Screen):
             for cid, meta in list(self._items.items()):
                 if keep_slots and meta.get("type") == "slot":
                     continue
+                # Remove rotated overlay polygon for rects
+                try:
+                    rid = int(meta.get("rot_id", 0) or 0)
+                except Exception:
+                    rid = 0
+                if rid:
+                    try:
+                        self.canvas.delete(rid)
+                    except Exception:
+                        pass
+                    meta["rot_id"] = None
+                # Remove selection border for images
+                try:
+                    bid = int(meta.get("border_id", 0) or 0)
+                except Exception:
+                    bid = 0
+                if bid:
+                    try:
+                        self.canvas.delete(bid)
+                    except Exception:
+                        pass
+                    meta["border_id"] = None
                 self.canvas.delete(cid)
                 lbl_id = meta.get("label_id")
                 if lbl_id:
@@ -1615,7 +1812,7 @@ class NStickerCanvasScreen(Screen):
         finally:
             self.selection.select(None)
 
-    def _create_rect_at_mm(self, label: str, w_mm: float, h_mm: float, x_mm: float, y_mm: float, outline: str = "#d0d0d0", text_fill: str = "white"):
+    def _create_rect_at_mm(self, label: str, w_mm: float, h_mm: float, x_mm: float, y_mm: float, outline: str = "#d0d0d0", text_fill: str = "white", angle: float = 0.0):
         x0, y0, x1, y1 = self._jig_inner_rect_px()
         ox = self._item_outline_half_px()
         oy = self._item_outline_half_px()
@@ -1626,6 +1823,12 @@ class NStickerCanvasScreen(Screen):
         y_mm_i = self._snap_mm(y_mm)
         w = w_mm_i * MM_TO_PX * self._zoom
         h = h_mm_i * MM_TO_PX * self._zoom
+        try:
+            ang = float(angle or 0.0)
+        except Exception:
+            ang = 0.0
+        if int(abs(ang)) % 180 == 90:
+            w, h = h, w
         # clamp top-left within inner jig
         min_left = x0 + ox
         min_top = y0 + oy
@@ -1635,7 +1838,8 @@ class NStickerCanvasScreen(Screen):
         top = y0 + y_mm_i * MM_TO_PX * self._zoom + oy
         new_left = max(min_left, min(left, max_left))
         new_top = max(min_top, min(top, max_top))
-        rect = self.canvas.create_rectangle(new_left, new_top, new_left + w, new_top + h, fill="#2b2b2b", outline=outline, width=2, tags=("text_item",) if outline == "#17a24b" else None)
+        # Invisible base rect; visual is drawn via overlay polygon
+        rect = self.canvas.create_rectangle(new_left, new_top, new_left + w, new_top + h, fill="", outline="", width=0)
         txt = self.canvas.create_text(new_left + w / 2, new_top + h / 2, text=label, fill=text_fill, font=("Myriad Pro", self._scaled_pt(10)), tags=("label",))
 
         # keep provided mm unless clamped
@@ -1654,7 +1858,10 @@ class NStickerCanvasScreen(Screen):
             outline=outline,
             canvas_id=rect,
             z=int(max_z + 1),
+            angle=float(ang),
         )
+        # Create overlay to visualize rotation; base rect stays invisible
+        self._update_rect_overlay(rect, self._items[rect], new_left, new_top, w, h)
 
     def _create_text_at_mm(self, text: str, x_mm: float, y_mm: float, fill: str = "#17a24b"):
         x0, y0, x1, y1 = self._jig_inner_rect_px()
@@ -1689,6 +1896,7 @@ class NStickerCanvasScreen(Screen):
                         "x_mm": float(meta.get("x_mm", 0.0)),
                         "y_mm": float(meta.get("y_mm", 0.0)),
                         "outline": str(meta.get("outline", "#d0d0d0")),
+                        "angle": float(meta.get("angle", 0.0) or 0.0),
                     })
                 except Exception:
                     continue
@@ -1706,7 +1914,7 @@ class NStickerCanvasScreen(Screen):
                         "outline": str(meta.get("outline", "#9a9a9a")),
                     })
                 except Exception as e:
-                    logger.debug(f"Failed to serialize slot item {cid}: {e}")
+                    logger.exception(f"Failed to serialize slot item {cid}: {e}")
                     continue
             elif t == "image":
                 try:
@@ -1717,9 +1925,10 @@ class NStickerCanvasScreen(Screen):
                         "h_mm": float(meta.get("h_mm", 0.0)),
                         "x_mm": float(meta.get("x_mm", 0.0)),
                         "y_mm": float(meta.get("y_mm", 0.0)),
+                        "angle": float(meta.get("angle", 0.0) or 0.0),
                     })
                 except Exception as e:
-                    logger.debug(f"Failed to serialize image item {cid}: {e}")
+                    logger.exception(f"Failed to serialize image item {cid}: {e}")
                     continue
             elif t == "text":
                 try:
@@ -1735,7 +1944,7 @@ class NStickerCanvasScreen(Screen):
                         "fill": fill,
                     })
                 except Exception as e:
-                    logger.debug(f"Failed to serialize text item {cid}: {e}")
+                    logger.exception(f"Failed to serialize text item {cid}: {e}")
                     continue
         return items
 
@@ -1754,6 +1963,7 @@ class NStickerCanvasScreen(Screen):
                     float(it.get("y_mm", 0.0)),
                     outline=outline,
                     text_fill=text_fill,
+                    angle=float(it.get("angle", 0.0) or 0.0),
                 )
             elif t == "slot":
                 outline = str(it.get("outline", "#9a9a9a"))
@@ -1772,6 +1982,7 @@ class NStickerCanvasScreen(Screen):
                     y_mm = float(it.get("y_mm", 0.0))
                     w_mm = float(it.get("w_mm", 0.0))
                     h_mm = float(it.get("h_mm", 0.0))
+                    angle = float(it.get("angle", 0.0) or 0.0)
                     # Create at explicit mm rather than centered
                     # Reuse helper via temporary meta
                     # Compute px and create image
@@ -1788,10 +1999,14 @@ class NStickerCanvasScreen(Screen):
                         h_mm=float(self._snap_mm(h_mm)),
                         x_mm=float(self._snap_mm(x_mm)),
                         y_mm=float(self._snap_mm(y_mm)),
+                        angle=float(angle),
                     )
                     photo = self._render_photo(meta, max(1, int(w_px)), max(1, int(h_px)))
                     if photo is not None:
-                        img_id = self.canvas.create_image(left, top, image=photo, anchor="nw")
+                        bw, bh = self._rotated_bounds_px(w_px, h_px, angle)
+                        place_left = left + (w_px - bw) / 2.0
+                        place_top = top + (h_px - bh) / 2.0
+                        img_id = self.canvas.create_image(place_left, place_top, image=photo, anchor="nw")
                         meta.canvas_id = img_id
                         # assign next z
                         max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
@@ -1818,6 +2033,7 @@ class NStickerCanvasScreen(Screen):
                         float(it["y_mm"]),
                         outline="#17a24b",
                         text_fill="#17a24b",
+                        angle=float(it.get("angle", 0.0) or 0.0),
                     )
 
     def _maybe_load_saved_product(self):
@@ -2030,6 +2246,18 @@ class NStickerCanvasScreen(Screen):
                     x = cx - tw // 2
                     y = cy - th // 2 - best_bbox[1]
 
+                    # If angle is 90/270, swap target box for text placement
+                    try:
+                        ang = float(it.get("angle", 0.0) or 0.0)
+                    except Exception:
+                        ang = 0.0
+                    if int(abs(ang)) % 180 == 90:
+                        # swap W/H for text-fitting box
+                        W, H = H, W
+                        cx = l + (r - l) // 2
+                        cy = t + (b - t) // 2
+                        x = cx - tw // 2
+                        y = cy - th // 2 - best_bbox[1]
                     draw.text((x, y), label, font=best_font, fill=(0, 255, 0))
 
             elif t == "image":
@@ -2039,10 +2267,24 @@ class NStickerCanvasScreen(Screen):
                 l, t, r, b = rect_from_mm(it.get("x_mm", 0.0), it.get("y_mm", 0.0), it.get("w_mm", 0.0), it.get("h_mm", 0.0))
                 rw = max(1, r - l)
                 rh = max(1, b - t)
-                with _PIL_Image.open(path_img) as im:
+                ext = os.path.splitext(path_img)[1].lower()
+                try:
+                    if ext == ".svg":
+                        im = svg_to_png(str(path_img), width=int(rw), height=int(rh), device_pixel_ratio=1.0)
+                    else:
+                        im = _PIL_Image.open(path_img)
                     # Preserve alpha to avoid white background for PNGs
                     im = im.convert("RGBA")
                     im_resized = im.resize((int(rw), int(rh)), _PIL_Image.LANCZOS)
+                    try:
+                        ang = float(it.get("angle", 0.0) or 0.0)
+                    except Exception:
+                        ang = 0.0
+                    if abs(ang) > 1e-6:
+                        im_resized = im_resized.rotate(-ang, expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0,0,0,0))
+                        rrw, rrh = im_resized.size
+                        l = int(round(l + (rw - rrw) / 2.0))
+                        t = int(round(t + (rh - rrh) / 2.0))
                     # Split alpha as mask if present
                     _r, _g, _b, _a = im_resized.split()
                     mask = _a
@@ -2050,6 +2292,8 @@ class NStickerCanvasScreen(Screen):
                         img.paste(im_resized.convert("RGB"), (int(l), int(t)), mask)
                     else:
                         img.paste(im_resized.convert("RGB"), (int(l), int(t)))
+                except Exception as e:
+                    logger.exception(f"Failed to render image in PDF: {e}")
                         
             elif t == "text":
                 txt = str(it.get("text", ""))

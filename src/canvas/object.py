@@ -38,6 +38,9 @@ class CanvasObject:
     # Stacking order indicator (optional, for future z-ordering)
     z: int = 0
 
+    # Rotation angle in degrees (clockwise), for type in {"rect", "image"}
+    angle: float = 0.0
+
     def is_text_rect(self) -> bool:
         return self.type == "rect" and str(self.outline or "") == "#17a24b"
 

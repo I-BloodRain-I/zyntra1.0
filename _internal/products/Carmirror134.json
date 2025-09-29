@@ -21,7 +21,7 @@
     "slot_count": 48,
     "objects_count": {
       "images": 1,
-      "text": 0
+      "text": 1
     }
   },
   "Frontside": {
@@ -35,12 +35,13 @@
         "z": -1,
         "objects": [
           {
-            "type": "image",
-            "path": "C:/Users/vboxuser/Desktop/images.jpg",
-            "x_mm": 248.10666666666665,
-            "y_mm": 367.0,
-            "w_mm": 47.78666666666667,
-            "h_mm": 48.0,
+            "type": "text",
+            "label": "Text",
+            "x_mm": 252.0,
+            "y_mm": 371.0,
+            "w_mm": 40.0,
+            "h_mm": 40.0,
+            "angle": 45.0,
             "z": 0
           }
         ]
@@ -52,7 +53,18 @@
         "w_mm": 48.0,
         "h_mm": 48.0,
         "z": -2,
-        "objects": []
+        "objects": [
+          {
+            "type": "image",
+            "path": "C:/Users/vboxuser/Desktop/images.jpg",
+            "x_mm": 200.0,
+            "y_mm": 367.0,
+            "w_mm": 33.86553278983411,
+            "h_mm": 34.016718204074444,
+            "angle": 45.0,
+            "z": 1
+          }
+        ]
       },
       {
         "label": "Slot 3",
