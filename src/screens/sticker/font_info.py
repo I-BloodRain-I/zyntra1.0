@@ -16,7 +16,7 @@ class StickerFontInfoScreen(Screen):
         self.pack(fill="both", expand=True)
 
         tk.Label(self,
-                 text=state.sku,
+                 text=state.sku_name,
                  bg=COLOR_BG_DARK,
                  fg=COLOR_TEXT,
                  font=("Myriad Pro", int(round(24 * UI_SCALE))))\

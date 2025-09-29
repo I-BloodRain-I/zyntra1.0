@@ -18,7 +18,7 @@ class NStickerResultsDownloadScreen(Screen):
         # Top brand bar and left-top SKU pill like OrderRangeScreen
         self.brand_bar(self)
         tk.Label(self,
-                 text=(state.sku or "—"),
+                 text=(state.sku_name or "—"),
                  bg=COLOR_BG_DARK,
                  fg=COLOR_TEXT,
                  font=("Myriad Pro", int(round(24 * UI_SCALE))))\
@@ -312,6 +312,9 @@ class NStickerResultsDownloadScreen(Screen):
             messagebox.showerror("Error", f"Could not save file:\n{e}")
 
     def _back_home(self):
+        state.sku = ""
+        state.sku_name = ""
+        state.saved_product = ""
         try:
             from src.screens.common.select_product import SelectProductScreen
             self.app.show_screen(SelectProductScreen)

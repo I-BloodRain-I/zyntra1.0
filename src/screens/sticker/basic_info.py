@@ -29,7 +29,7 @@ class StickerBasicInfoScreen(Screen):
         # Body
         def _sku_input():
             def _on_sku_change():
-                state.sku = self.sku_entry_obj.get()
+                state.sku_name = self.sku_entry_obj.get()
                 
             sku_info = PillLabelInfo(
                 width=750,
@@ -561,7 +561,7 @@ class StickerBasicInfoScreen(Screen):
             return
 
         # Persist validated values
-        state.sku = sku_val
+        state.sku_name = sku_val
         state.pkg_x = str(x_val)
         state.pkg_y = str(y_val)
         state.major_variations = int(major_count)

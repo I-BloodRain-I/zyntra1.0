@@ -87,10 +87,10 @@ class App(tk.Tk):
         self.size = (int(size.split("x")[0]), int(size.split("x")[1]))
 
         self.resizable(True, True)
-        screen_width, screen_height = self.winfo_screenwidth(), self.winfo_screenheight()
+        self.screen_width, self.screen_height = self.winfo_screenwidth(), self.winfo_screenheight()
         self.minsize(self.size[0], self.size[1])
-        self.maxsize(screen_width, screen_height) 
-        self.geometry(f"{screen_width}x{screen_height}")
+        self.maxsize(self.screen_width, self.screen_height) 
+        self.geometry(f"{self.screen_width}x{self.screen_height}")
         self.attributes("-fullscreen", True)
         self.is_fullscreen = True
 

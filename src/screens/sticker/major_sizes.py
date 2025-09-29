@@ -4,7 +4,7 @@ from tkinter import messagebox, filedialog
 from src.core import Screen, warn, COLOR_TEXT, COLOR_BG_LIGHT, COLOR_BG_SCREEN, COLOR_BG_DARK, COLOR_PILL, UI_SCALE, scale_px
 from src.core.state import state
 from src.utils import *
-from .sticker_copy import Screen5
+from .define_image import StickerDefineImageScreen
 
 
 class StickerMajorSizesScreen(Screen):
@@ -16,7 +16,7 @@ class StickerMajorSizesScreen(Screen):
         self.pack(fill="both", expand=True)
 
         tk.Label(self,
-                 text=state.sku,
+                 text=state.sku_name,
                  bg=COLOR_BG_DARK,
                  fg=COLOR_TEXT,
                  font=("Myriad Pro", int(round(24 * UI_SCALE))))\
@@ -86,7 +86,7 @@ class StickerMajorSizesScreen(Screen):
                     return
 
                 # state.major_sizes = [(x.get(), y.get(), file_path) for x, y, file_path in self.size_entry_objs]
-                self.app.show_screen(Screen5)
+                self.app.show_screen(StickerDefineImageScreen)
 
             button = create_button(
                 ButtonInfo(

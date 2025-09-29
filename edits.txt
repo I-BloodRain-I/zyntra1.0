@@ -1,1 +1,5 @@
-1. Complete the combobox
+1. The text rect will define the position for text and max width, height.
+    If the size(text) > widht || height -> decrease font-size
+2. Export to .svg with only outline of objects
+3. Add font-family, font-size, color, name, import to canvas
+4. Z-index to text

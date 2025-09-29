@@ -614,6 +614,9 @@ class SelectProductScreen(Screen):
         
         with open(PRODUCTS_PATH / f"{product}.json", "r", encoding="utf-8") as f:
             product_info = json.load(f)
+            state.sku = product_info["Sku"]
+            state.sku_name = product_info["SkuName"]
+            
         if product_info["IsSticker"]:
             from src.screens.sticker import StickerBasicInfoScreen
             self.app.show_screen(StickerBasicInfoScreen)

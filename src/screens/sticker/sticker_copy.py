@@ -47,7 +47,7 @@ class Screen2(Screen):
         row1 = ttk.Frame(form, padding=(0, 6))
         row1.pack(fill="x")
         ttk.Label(row1, text="Give your SKU number:", style="Label.TLabel").pack(side="left")
-        self.sku_var = tk.StringVar(value=state.sku or "1324-2342-5433")
+        self.sku_var = tk.StringVar(value=state.sku_name or "1324-2342-5433")
         ttk.Entry(row1, textvariable=self.sku_var, width=22).pack(side="left", padx=10)
 
         # Package size
@@ -155,7 +155,7 @@ class Screen2(Screen):
             warn("Package size X/Y must be numbers (mm).", title="Numbers only")
             return
 
-        state.sku = sku_val
+        state.sku_name = sku_val
         state.pkg_x = self.pkgx.get().strip()
         state.pkg_y = self.pkgy.get().strip()
         state.major_variations = int(self.major_count.get())
@@ -597,7 +597,7 @@ class Screen8(Screen):
 
         product_name = state.saved_product if state.saved_product else "Product"
         sku_line1 = f"Sku {product_name}"
-        sku_line2 = state.sku or "—"
+        sku_line2 = state.sku_name or "—"
         ttk.Label(wrap, text=sku_line1, style="H1.TLabel").pack(pady=(6, 0))
         ttk.Label(wrap, text=sku_line2, style="H1.TLabel").pack(pady=(0, 16))
 

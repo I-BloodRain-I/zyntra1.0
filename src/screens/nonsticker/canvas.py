@@ -9,6 +9,7 @@ import math
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+from tkinter import font as tkfont
 
 from PIL import ImageDraw
 
@@ -16,6 +17,10 @@ from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL, 
 from src.utils import *
 from src.core.state import ALL_PRODUCTS, FONTS_PATH, PRODUCTS_PATH, state
 from src.canvas import CanvasObject, CanvasSelection
+from src.canvas.jig import JigController
+from src.canvas.slots import SlotManager
+from src.canvas.images import ImageManager
+from src.canvas.export import PdfExporter
 from .results_download import NStickerResultsDownloadScreen
 
 logger = logging.getLogger(__name__)
@@ -42,26 +47,40 @@ class NStickerCanvasScreen(Screen):
         state.is_failed = False
         state.error_message = ""
 
-        header_row = ttk.Frame(self, style="Screen.TFrame")
-        header_row.pack(padx=0, pady=(25, 25))
-        tk.Label(header_row, text=" Write name for SKU ", bg="#737373", fg=COLOR_TEXT,
-                 font=("Myriad Pro", 22)).pack(side="left", padx=(8, 0))
-        self.sku_var = tk.StringVar(value=state.sku or "Carmirror134")
-        # Flat tk.Entry without focus border, with manual left padding via a black wrapper
-        input_wrap = tk.Frame(header_row, bg="#000000")
-        input_wrap.pack(side="left")
-        tk.Frame(input_wrap, width=15, height=1, bg="#000000").pack(side="left")
-        sku_entry = tk.Entry(input_wrap, textvariable=self.sku_var, width=22,
-                             bg="#000000", fg="#ffffff", insertbackground="#ffffff",
-                             relief="flat", bd=0, highlightthickness=0,
-                             font=("Myriad Pro", 22))
-        sku_entry.pack(side="left", ipady=2)
+        # Top row: Write SKU (primary SKU field)
+        header_row_top = ttk.Frame(self, style="Screen.TFrame")
+        header_row_top.pack(padx=0, pady=(35, 8))
+        tk.Label(header_row_top, text=" Write SKU ", bg="#737373", fg=COLOR_TEXT,
+                 font=("Myriad Pro", 22), width=20).pack(side="left", padx=(8, 0))
+        self.sku_var = tk.StringVar(value=state.sku or "")
+        input_wrap_top = tk.Frame(header_row_top, bg="#000000")
+        input_wrap_top.pack(side="left") 
+        tk.Frame(input_wrap_top, width=15, height=1, bg="#000000").pack(side="left")
+        sku_entry_top = tk.Entry(input_wrap_top, textvariable=self.sku_var, width=22,
+                                 bg="#000000", fg="#ffffff", insertbackground="#ffffff",
+                                 relief="flat", bd=0, highlightthickness=0,
+                                 font=("Myriad Pro", 22))
+        sku_entry_top.pack(side="left", ipady=2)
+
+        # Second row: Write name for SKU (independent, labels aligned by fixed width)
+        header_row_bottom = ttk.Frame(self, style="Screen.TFrame")
+        header_row_bottom.pack(padx=0, pady=(0, 25))
+        tk.Label(header_row_bottom, text=" Write name for SKU ", bg="#737373", fg=COLOR_TEXT,
+                 font=("Myriad Pro", 22), width=20).pack(side="left", padx=(8, 0))
+        self.sku_name_var = tk.StringVar(value=state.sku_name or "")
+        input_wrap_bottom = tk.Frame(header_row_bottom, bg="#000000")
+        input_wrap_bottom.pack(side="left")
+        tk.Frame(input_wrap_bottom, width=15, height=1, bg="#000000").pack(side="left")
+        sku_entry_bottom = tk.Entry(input_wrap_bottom, textvariable=self.sku_name_var, width=22,
+                                    bg="#000000", fg="#ffffff", insertbackground="#ffffff",
+                                    relief="flat", bd=0, highlightthickness=0,
+                                    font=("Myriad Pro", 22))
+        sku_entry_bottom.pack(side="left", ipady=2)
 
         bar = tk.Frame(self, bg="black")
         bar.pack(fill="x", padx=10, pady=(6, 10))
 
         # 1) Import Image pill button (styled like "Yes")
-        from tkinter import font as tkfont
         pill_font_obj = tkfont.Font(font=("Myriad Pro", 16))
         pad_x = 12
         pad_y = 12
@@ -271,7 +290,7 @@ class NStickerCanvasScreen(Screen):
         row2 = tk.Frame(self, bg="black")
         row2.pack(fill="x", padx=10, pady=(0, 6))
         # Image size label at start of the line
-        tk.Label(row2, text="Image size:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(2, 8))
+        tk.Label(row2, text="Object:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(2, 8))
         # Position fields (X, Y) in mm (restored)
         self.sel_x = tk.StringVar(value="0")
         self.sel_y = tk.StringVar(value="0")
@@ -313,10 +332,36 @@ class NStickerCanvasScreen(Screen):
         board = tk.Frame(self, bg="black")
         board.pack(expand=True, fill="both", padx=10, pady=10)
         # canvas without visible scrollbars
-        self.canvas = tk.Canvas(board, bg="#5a5a5a", highlightthickness=0)
+        self.canvas = tk.Canvas(board, bg="#5a5a5a", highlightthickness=0, takefocus=1)
         self.canvas.pack(expand=True, fill="both")
+        # Managers and method delegations (must be set before bindings)
+        self.jig = JigController(self)
+        self.slots = SlotManager(self)
+        self.images = ImageManager(self)
+        self.exporter = PdfExporter(self)
+        # Delegate helpers to keep existing call sites
+        self._scaled_pt = self.jig.scaled_pt
+        self._update_all_text_fonts = self.jig.update_all_text_fonts
+        self._update_rect_overlay = self.jig.update_rect_overlay
+        self._jig_rect_px = self.jig.jig_rect_px
+        self._jig_inner_rect_px = self.jig.jig_inner_rect_px
+        self._item_outline_half_px = self.jig.item_outline_half_px
+        self._update_scrollregion = self.jig.update_scrollregion
+        self._center_view = self.jig.center_view
+        self._redraw_jig = self.jig.redraw_jig
+        self._zoom_step = self.jig.zoom_step
+        self._rotated_bounds_px = self.images.rotated_bounds_px
+        self._rotated_bounds_mm = self.images.rotated_bounds_mm
+        self._render_photo = self.images.render_photo
+        self.create_image_item = self.images.create_image_item
+        self._create_slot_at_mm = self.slots.create_slot_at_mm
+        self._place_slots = self.slots.place_slots
+        self._renumber_slots = self.slots.renumber_slots
+        self._render_scene_to_pdf = self.exporter.render_scene_to_pdf
+        # Now bind using delegated methods
         self.canvas.bind("<Configure>", self._redraw_jig)
         self.canvas.bind("<Button-1>", self.selection.on_click)
+        self.canvas.bind("<Button-1>", lambda _e: self.canvas.focus_set(), add="+")
         self.canvas.bind("<B1-Motion>", self.selection.on_drag)
         self.canvas.bind("<ButtonRelease-1>", self.selection.on_release)
         # delete selected with keyboard Delete
@@ -334,6 +379,11 @@ class NStickerCanvasScreen(Screen):
         self.canvas.bind("<Button-4>", self.selection.on_wheel_pan)   # Linux up
         self.canvas.bind("<Button-5>", self.selection.on_wheel_pan)   # Linux down
         self.canvas.bind("<Shift-MouseWheel>", self.selection.on_wheel_pan)
+        # Zoom via +/- keys only when canvas has focus
+        for seq in ("<KeyPress-plus>", "<KeyPress-equal>", "<KP_Add>"):
+            self.canvas.bind(seq, lambda _e: self._zoom_step(1))
+        for seq in ("<KeyPress-minus>", "<KeyPress-KP_Subtract>"):
+            self.canvas.bind(seq, lambda _e: self._zoom_step(-1))
         # initial jig draw
         self.after(0, self._redraw_jig)
         # initialize jig size from Size fields when no saved size
@@ -357,15 +407,9 @@ class NStickerCanvasScreen(Screen):
         # Show popup on right-click only when an object is under cursor
         self.canvas.bind("<Button-3>", self.selection.maybe_show_context_menu)
 
-        # Key bindings for zoom in/out
-        for seq in ("<KeyPress-plus>", "<KeyPress-equal>", "<KP_Add>"):
-            self.app.bind(seq, lambda _e: self._zoom_step(1))
-
-        for seq in ("<KeyPress-minus>", "<KeyPress-KP_Subtract>"):
-            self.app.bind(seq, lambda _e: self._zoom_step(-1))
+        # Key bindings moved to canvas-level to require focus
 
         # Bottom buttons styled like font_info
-        from tkinter import font as tkfont
         back_btn = create_button(
             ButtonInfo(
                 parent=self,
@@ -419,23 +463,7 @@ class NStickerCanvasScreen(Screen):
         # Ensure text squares (rect + label) are above normal items
         self.canvas.tag_raise("text_item")
         self.canvas.tag_raise("label")
-    def _scaled_pt(self, base: int) -> int:
-        try:
-            return max(1, int(round(base * self._zoom * 0.7)))
-        except Exception:
-            return max(1, int(base))
 
-    def _update_all_text_fonts(self):
-        # Scale fonts of all canvas item labels according to current zoom
-        for cid, meta in list(self._items.items()):
-            t = meta.get("type")
-            if t in ("rect", "slot"):
-                tid = meta.get("label_id")
-                if tid:
-                    self.canvas.itemconfig(tid, font=("Myriad Pro", self._scaled_pt(10)))
-            elif t == "text":
-                tid = meta.get("label_id") or cid
-                self.canvas.itemconfig(tid, font=("Myriad Pro", self._scaled_pt(12), "bold"))
     def _chip(self, parent, label, var, width=8):
         box = tk.Frame(parent, bg="#6f6f6f")
         box.pack(side="left", padx=6, pady=8)
@@ -443,58 +471,6 @@ class NStickerCanvasScreen(Screen):
         tk.Entry(box, textvariable=var, width=width, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         return box
-    def _update_rect_overlay(self, cid: int, meta: CanvasObject, left: float, top: float, bbox_w: float, bbox_h: float) -> None:
-        try:
-            ang = float(meta.get("angle", 0.0) or 0.0)
-        except Exception:
-            ang = 0.0
-        # Source (unrotated) size in px from stored mm
-        try:
-            w_src = float(meta.get("w_mm", 0.0)) * MM_TO_PX * self._zoom
-            h_src = float(meta.get("h_mm", 0.0)) * MM_TO_PX * self._zoom
-        except Exception:
-            w_src = bbox_w
-            h_src = bbox_h
-        cx = left + bbox_w / 2.0
-        cy = top + bbox_h / 2.0
-        # Compute rotated rectangle polygon (clockwise degrees)
-        a = -math.radians(ang)
-        ca = math.cos(a); sa = math.sin(a)
-        hw = w_src / 2.0; hh = h_src / 2.0
-        pts = [(-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)]
-        rot = []
-        for x, y in pts:
-            rx = x * ca - y * sa
-            ry = x * sa + y * ca
-            rot.extend([cx + rx, cy + ry])
-        # Create or update polygon
-        rid = int(meta.get("rot_id", 0) or 0)
-        fill_col = "#2b2b2b"
-        # If this rect is currently selected, use blue selection color and thicker stroke
-        try:
-            sel_id = getattr(self.selection, "_selected", None)
-        except Exception:
-            sel_id = None
-        is_selected = bool(sel_id and sel_id == cid)
-        outline_col = "#6ec8ff" if is_selected else str(meta.get("outline", "#d0d0d0"))
-        stroke_w = 3 if is_selected else 2
-        try:
-            if rid and self.canvas.type(rid):
-                self.canvas.coords(rid, *rot)
-                self.canvas.itemconfig(rid, fill=fill_col, outline=outline_col, width=stroke_w)
-            else:
-                rid = self.canvas.create_polygon(*rot, fill=fill_col, outline=outline_col, width=stroke_w,
-                                                 tags=("text_item",) if outline_col == "#17a24b" else None)
-                meta["rot_id"] = rid
-        except Exception as e:
-            logger.exception(f"Failed to update rect overlay polygon: {e}")
-        # Keep overlay above base rect
-        try:
-            self.canvas.tag_raise(rid, cid)
-        except Exception as e:
-            logger.exception(f"Failed to raise rect overlay above base: {e}")
-
-    
 
     def _create_tool_tile(self, parent, icon_image: Optional[tk.PhotoImage], icon_text: Optional[str], label_text: str, command):
         """Create a square tile with an icon (image or text) and a label underneath."""
@@ -585,156 +561,6 @@ class NStickerCanvasScreen(Screen):
         self._place_slots(silent=True)
         self._renumber_slots()
 
-    def _create_slot_at_mm(self, label: str, w_mm: float, h_mm: float, x_mm: float, y_mm: float):
-        x0, y0, x1, y1 = self._jig_inner_rect_px()
-        # For slots, allow touching jig border without the +1px inward offset
-        ox = 0.0
-        oy = 0.0
-        # snap all inputs to integer mm
-        w_mm_i = self._snap_mm(w_mm)
-        h_mm_i = self._snap_mm(h_mm)
-        x_mm_i = self._snap_mm(x_mm)
-        y_mm_i = self._snap_mm(y_mm)
-        w = w_mm_i * MM_TO_PX * self._zoom
-        h = h_mm_i * MM_TO_PX * self._zoom
-        # clamp top-left within inner jig
-        min_left = x0 + ox
-        min_top = y0 + oy
-        max_left = x1 - ox - w
-        max_top = y1 - oy - h
-        left = x0 + x_mm_i * MM_TO_PX * self._zoom + ox
-        top = y0 + y_mm_i * MM_TO_PX * self._zoom + oy
-        new_left = max(min_left, min(left, max_left))
-        new_top = max(min_top, min(top, max_top))
-        rect = self.canvas.create_rectangle(new_left, new_top, new_left + w, new_top + h, fill="#5a5a5a", outline="#898989", width=1)
-        txt = self.canvas.create_text(new_left + w / 2, new_top + h / 2, text=label, fill="#898989", font=("Myriad Pro", self._scaled_pt(10)), tags=("slot_label",))
-        # keep provided mm unless clamped
-        if new_left != left or new_top != top:
-            x_mm_i = self._snap_mm((new_left - (x0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6)))
-            y_mm_i = self._snap_mm((new_top - (y0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6)))
-        # next z
-        min_z = min(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
-        self._items[rect] = CanvasObject(
-            type="slot",
-            w_mm=float(w_mm_i),
-            h_mm=float(h_mm_i),
-            x_mm=float(x_mm_i),
-            y_mm=float(y_mm_i),
-            label_id=txt,
-            outline="#9a9a9a",
-            canvas_id=rect,
-            z=int(min_z - 1),
-        )
-
-    def _place_slots(self, silent: bool = False):
-        # Validate and read inputs
-        try:
-            jx = float(self.jig_x.get()); jy = float(self.jig_y.get())
-            sw = float(self.slot_w.get()); sh = float(self.slot_h.get())
-            ox = float(self.origin_x.get()); oy = float(self.origin_y.get())
-            sx = float(self.step_x.get() or 0.0); sy = float(self.step_y.get() or 0.0)
-        except Exception:
-            if not silent:
-                messagebox.showerror("Invalid input", "Enter numeric jig, slot, origin and step values (mm).")
-            return
-        # Basic validation
-        if sw <= 0 or sh <= 0:
-            if not silent:
-                messagebox.showerror("Invalid slot size", "Slot width and height must be > 0 mm.")
-            return
-        if sw > jx or sh > jy:
-            # If slot doesn't fit the jig, remove any existing slots and stop
-            for cid, meta in list(self._items.items()):
-                if meta.get("type") == "slot":
-                    if meta.get("label_id"):
-                        self.canvas.delete(meta.get("label_id"))
-                    self.canvas.delete(cid)
-                    self._items.pop(cid, None)
-            self._update_scrollregion()
-            if not silent:
-                messagebox.showerror("Slot too large", "Slot must fit inside the jig size.")
-            return
-        if ox < 0 or oy < 0:
-            if not silent:
-                messagebox.showerror("Invalid origin", "Origin offsets must be >= 0 mm from lower-right corner.")
-            return
-        # Step sizes are center-to-center. Default to slot size if not provided or invalid.
-        if sx <= 0:
-            sx = sw
-        if sy <= 0:
-            sy = sh
-        # Prevent overlap: step must be at least slot size in each axis
-        if sx < sw:
-            sx = sw
-        if sy < sh:
-            sy = sh
-        # Starting center at lower-right, offset by origin
-        start_cx = jx - ox - sw / 2.0
-        start_cy = jy - oy - sh / 2.0
-        # Clamp so the first slot fully fits
-        start_cx = min(jx - sw / 2.0, max(sw / 2.0, start_cx))
-        start_cy = min(jy - sh / 2.0, max(sh / 2.0, start_cy))
-
-        # Remove existing slots before laying out new ones
-        for cid, meta in list(self._items.items()):
-            if meta.get("type") == "slot":
-                if meta.get("label_id"):
-                    self.canvas.delete(meta.get("label_id"))
-                self.canvas.delete(cid)
-                self._items.pop(cid, None)
-
-        # Lay out grid row-major from lower-right: left first, then move up
-        counter = 1
-        row = 0
-        while True:
-            cy = start_cy - row * sy
-            if cy - sh / 2.0 < 0:
-                break
-            col = 0
-            placed_any = False
-            while True:
-                cx = start_cx - col * sx
-                if cx - sw / 2.0 < 0:
-                    break
-                x_mm = cx - sw / 2.0
-                y_mm = cy - sh / 2.0
-                # Ensure fully inside jig bounds
-                if x_mm >= 0 and y_mm >= 0 and (x_mm + sw) <= jx and (y_mm + sh) <= jy:
-                    self._create_slot_at_mm(f"Slot {counter}", sw, sh, x_mm, y_mm)
-                    counter += 1
-                    placed_any = True
-                col += 1
-            if not placed_any and row > 0:
-                # No more space vertically
-                break
-            row += 1
-        # Finalize visuals
-        self._update_scrollregion()
-        self._raise_all_labels()
-        self.selection._reorder_by_z()
-        # After repositioning items, ensure slot labels are sequential in desired order
-        self._renumber_slots()
-        # Ensure labels are contiguous and ordered right-to-left, bottom-to-top
-        self._renumber_slots()
-
-    def _renumber_slots(self):
-        # Build list of (left_px, top_px, rect_id, label_id) for slot rectangles using current canvas positions
-        slots = []
-        for cid, meta in self._items.items():
-            if meta.get("type") == "slot":
-                try:
-                    x1, y1, x2, y2 = self.canvas.bbox(cid)
-                except Exception as e:
-                    logger.exception(f"Failed to get bbox for slot {cid}: {e}")
-                    continue
-                slots.append((float(x1), float(y1), cid, meta.get("label_id")))
-        # Sort rows first: bottom-to-top (y desc), then within row right-to-left (x desc)
-        slots.sort(key=lambda t: (-t[1], -t[0]))
-        # Apply contiguous labels starting from 1
-        for idx, (_lx, _ty, _cid, lbl_id) in enumerate(slots, start=1):
-            if lbl_id:
-                self.canvas.itemconfig(lbl_id, text=f"Slot {idx}")
-
     def _maybe_recreate_slots(self):
         self._place_slots(silent=True)
 
@@ -800,8 +626,8 @@ class NStickerCanvasScreen(Screen):
         # Create initial overlay polygon to visualize rotation/selection consistently
         try:
             self._update_rect_overlay(rect, self._items[rect], new_left, new_top, scaled_w, scaled_h)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.exception(f"Failed to create/update rect overlay: {e}")
         self.selection.select(rect)
         self._update_scrollregion()
         self._raise_all_labels()
@@ -813,154 +639,6 @@ class NStickerCanvasScreen(Screen):
         default_h = 40.0
         # Text rectangles use green outline
         self.create_placeholder("Text", default_w, default_h, text_fill="#17a24b", outline="#17a24b")
-
-    # ---- Image support ----
-    def _render_photo(self, meta: dict, w_px: int, h_px: int) -> Optional[tk.PhotoImage]:
-        # Returns a tk.PhotoImage of requested size; stores reference on meta to avoid GC
-        if w_px < 1 or h_px < 1:
-            return None
-        path = meta.get("path")
-        if not path or not os.path.exists(path):
-            return None
-        # SVG handling via svg_to_png (PySide6) → temp PNG → PIL → ImageTk
-        try:
-            ext = os.path.splitext(str(path))[1].lower()
-        except Exception:
-            ext = ""
-        if ext == ".svg" and Image is not None and ImageTk is not None:
-            try:
-                pil = svg_to_png(str(path), width=int(w_px), height=int(h_px), device_pixel_ratio=1.0)
-                try:
-                    pil = pil.convert("RGBA")
-                except Exception as e:
-                    logger.exception(f"Failed to convert SVG image to RGBA: {e}")
-                try:
-                    angle = float(meta.get("angle", 0.0) or 0.0)
-                except Exception:
-                    angle = 0.0
-                if abs(angle) > 1e-6:
-                    pil = pil.rotate(-angle, expand=True, resample=Image.BICUBIC)
-                photo = ImageTk.PhotoImage(pil)
-                meta["photo"] = photo
-                return photo
-            except Exception as e:
-                logger.exception(f"Failed to rasterize SVG with svg_to_png: {e}")
-        # Try high-quality resize via PIL for raster formats
-        try:
-            if Image is not None and ImageTk is not None:
-                pil = meta.get("pil")
-                if pil is None:
-                    pil = Image.open(path)
-                    meta["pil"] = pil
-                # Ensure RGBA to preserve transparency during rotation
-                try:
-                    pil = pil.convert("RGBA")
-                except Exception as e:
-                    logger.exception(f"Failed to convert raster image to RGBA: {e}")
-                resized = pil.resize((int(w_px), int(h_px)), Image.LANCZOS)
-                # Apply rotation if any (clockwise degrees)
-                angle = 0.0
-                try:
-                    angle = float(meta.get("angle", 0.0) or 0.0)
-                except Exception:
-                    angle = 0.0
-                if abs(angle) > 1e-6:
-                    # PIL rotates counterclockwise; invert to get clockwise
-                    # preserve transparent corners with fillcolor
-                    rotated = resized.rotate(-angle, expand=True, resample=Image.BICUBIC, fillcolor=(0,0,0,0))
-                    resized = rotated
-                photo = ImageTk.PhotoImage(resized)
-                meta["photo"] = photo
-                return photo
-        except Exception as e:
-            logger.exception(f"Failed to render photo with PIL: {e}")
-        # Fallback to tk.PhotoImage (best-effort; may not scale exactly)
-        try:
-            photo = tk.PhotoImage(file=path)
-            meta["photo"] = photo
-            return photo
-        except Exception:
-            return None
-
-    def _rotated_bounds_px(self, w_px: int, h_px: int, angle_deg: float) -> tuple[int, int]:
-        try:
-            a = math.radians(float(angle_deg) % 360.0)
-            ca = abs(math.cos(a))
-            sa = abs(math.sin(a))
-            bw = int(round(w_px * ca + h_px * sa))
-            bh = int(round(w_px * sa + h_px * ca))
-            return max(1, bw), max(1, bh)
-        except Exception:
-            return max(1, int(w_px)), max(1, int(h_px))
-
-    def _rotated_bounds_mm(self, w_mm: float, h_mm: float, angle_deg: float) -> tuple[float, float]:
-        try:
-            a = math.radians(float(angle_deg) % 360.0)
-            ca = abs(math.cos(a))
-            sa = abs(math.sin(a))
-            bw = (w_mm * ca) + (h_mm * sa)
-            bh = (w_mm * sa) + (h_mm * ca)
-            return float(max(0.0, bw)), float(max(0.0, bh))
-        except Exception:
-            return float(max(0.0, w_mm)), float(max(0.0, h_mm))
-
-    def create_image_item(self, path: str, w_mm: float, h_mm: float, x_mm: Optional[float] = None, y_mm: Optional[float] = None) -> None:
-        # place at the center of current viewport similar to placeholders
-        cw = max(1, self.canvas.winfo_width())
-        ch = max(1, self.canvas.winfo_height())
-        cx = self.canvas.canvasx(cw // 2)
-        cy = self.canvas.canvasy(ch // 2)
-        # snap width/height to integer millimeters
-        qw_mm = self._snap_mm(w_mm)
-        qh_mm = self._snap_mm(h_mm)
-        base_w = float(qw_mm) * MM_TO_PX
-        base_h = float(qh_mm) * MM_TO_PX
-        scaled_w = int(round(base_w * self._zoom))
-        scaled_h = int(round(base_h * self._zoom))
-        # Ensure within jig; compute snapped top-left mm
-        ox = self._item_outline_half_px()
-        oy = self._item_outline_half_px()
-        jx0, jy0, jx1, jy1 = self._jig_inner_rect_px()
-        if x_mm is None:
-            x_mm = (cx - scaled_w / 2 - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))
-        if y_mm is None:
-            y_mm = (cy - scaled_h / 2 - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))
-        sx_mm = self._snap_mm(x_mm)
-        sy_mm = self._snap_mm(y_mm)
-        new_left = (jx0 + ox) + sx_mm * MM_TO_PX * self._zoom
-        new_top = (jy0 + oy) + sy_mm * MM_TO_PX * self._zoom
-        # Build meta and render
-        meta = CanvasObject(
-            type="image",
-            path=path,
-            w_mm=float(qw_mm),
-            h_mm=float(qh_mm),
-            x_mm=float(sx_mm),
-            y_mm=float(sy_mm),
-        )
-        photo = self._render_photo(meta, scaled_w, scaled_h)
-        if photo is None:
-            # fallback to placeholder if render failed
-            self.create_placeholder(os.path.basename(path), qw_mm, qh_mm)
-            return
-        # For rotation, use visual top-left of rotated bounds
-        angle = 0.0
-        try:
-            angle = float(meta.get("angle", 0.0) or 0.0)
-        except Exception:
-            angle = 0.0
-        bw, bh = self._rotated_bounds_px(scaled_w, scaled_h, angle)
-        place_left = new_left
-        place_top = new_top
-        img_id = self.canvas.create_image(place_left, place_top, image=photo, anchor="nw")
-        meta.canvas_id = img_id
-        # assign next z
-        max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
-        meta["z"] = int(max_z + 1)
-        self._items[img_id] = meta
-        self.selection.select(img_id)
-        self._update_scrollregion()
-        self.selection._reorder_by_z()
 
     def _ai_arrange(self):
         # Arrange non-slot items into existing slots.
@@ -1112,197 +790,6 @@ class NStickerCanvasScreen(Screen):
         self._redraw_jig(center=False)
         self.selection._reorder_by_z()
 
-    # Selection/drag delegated to CanvasSelection
-
-    def _redraw_jig(self, _evt=None, center=True):
-        self.canvas.delete("jig")
-        try:
-            jx = float(self.jig_x.get())
-            jy = float(self.jig_y.get())
-        except ValueError:
-            jx, jy = 296, 415
-        # Draw jig scaled by current zoom
-        w = int(jx * MM_TO_PX * self._zoom)
-        h = int(jy * MM_TO_PX * self._zoom)
-        pad = 20
-        cw = max(1, self.canvas.winfo_width())
-        ch = max(1, self.canvas.winfo_height())
-        if w + 2 * pad <= cw:
-            x0 = (cw - w) // 2
-        else:
-            x0 = pad
-        if h + 2 * pad <= ch:
-            y0 = (ch - h) // 2
-        else:
-            y0 = pad
-        x1 = x0 + w
-        y1 = y0 + h
-        self.canvas.create_rectangle(x0, y0, x1, y1, outline="#dddddd", width=3, tags="jig")
-        self._update_scrollregion()
-        if center:
-            self._center_view()
-        # Reposition all items using persisted mm
-        for cid, meta in self._items.items():
-            t = meta.get("type")
-            if t == "rect" or t == "slot":
-                try:
-                    x_mm = float(meta.get("x_mm", 0.0))
-                    y_mm = float(meta.get("y_mm", 0.0))
-                    w_mm = float(meta.get("w_mm", 0.0))
-                    h_mm = float(meta.get("h_mm", 0.0))
-                except Exception as e:
-                    logger.exception(f"Failed to get dimensions for item {cid}: {e}")
-                    continue
-                # Allow touching jig border for rects and slots
-                ox = 0.0
-                oy = 0.0
-                w = w_mm * MM_TO_PX * self._zoom
-                h = h_mm * MM_TO_PX * self._zoom
-                # If rect has 90/270 rotation, display as swapped dims
-                if t == "rect":
-                    try:
-                        ang = float(meta.get("angle", 0.0) or 0.0)
-                    except Exception:
-                        ang = 0.0
-                    if int(abs(ang)) % 180 == 90:
-                        w, h = h, w
-                min_left = x0 + ox
-                min_top = y0 + oy
-                max_left = x1 - ox - w
-                max_top = y1 - oy - h
-                left = x0 + x_mm * MM_TO_PX * self._zoom + ox
-                top = y0 + y_mm * MM_TO_PX * self._zoom + oy
-                new_left = max(min_left, min(left, max_left))
-                new_top = max(min_top, min(top, max_top))
-                # Always keep base rect coords in sync (even if invisible for rects)
-                self.canvas.coords(cid, new_left, new_top, new_left + w, new_top + h)
-                if t == "rect":
-                    # Update overlay polygon used for visuals/selection
-                    self._update_rect_overlay(cid, meta, new_left, new_top, w, h)
-                if meta.get("label_id"):
-                    self.canvas.coords(meta.label_id, new_left + w / 2, new_top + h / 2)
-                    self.canvas.itemconfig(meta.label_id, font=("Myriad Pro", self._scaled_pt(10)))
-                self._raise_all_labels()
-                # don't mutate stored mm during redraw
-            elif t == "image":
-                try:
-                    x_mm = float(meta.get("x_mm", 0.0))
-                    y_mm = float(meta.get("y_mm", 0.0))
-                    w_mm = float(meta.get("w_mm", 0.0))
-                    h_mm = float(meta.get("h_mm", 0.0))
-                except Exception as e:
-                    logger.exception(f"Failed to get image dimensions for item {cid}: {e}")
-                    continue
-                # Allow touching jig border for images
-                ox = 0.0
-                oy = 0.0
-                w = int(round(w_mm * MM_TO_PX * self._zoom))
-                h = int(round(h_mm * MM_TO_PX * self._zoom))
-                try:
-                    ang = float(meta.get("angle", 0.0) or 0.0)
-                except Exception:
-                    ang = 0.0
-                bw, bh = self._rotated_bounds_px(w, h, ang)
-                min_left = x0 + ox
-                min_top = y0 + oy
-                # Place by the visual top-left of rotated bounds
-                max_left = x1 - ox - bw
-                max_top = y1 - oy - bh
-                left = x0 + x_mm * MM_TO_PX * self._zoom + ox
-                top = y0 + y_mm * MM_TO_PX * self._zoom + oy
-                new_left = max(min_left, min(left, max_left))
-                new_top = max(min_top, min(top, max_top))
-                photo = self._render_photo(meta, max(1, int(w)), max(1, int(h)))
-                if photo is not None:
-                    self.canvas.itemconfig(cid, image=photo)
-                # Use visual top-left directly
-                place_left = new_left
-                place_top = new_top
-                self.canvas.coords(cid, place_left, place_top)
-                bid = meta.get("border_id")
-                if bid:
-                    self.canvas.coords(bid, place_left, place_top, place_left + bw, place_top + bh)
-                # don't mutate stored mm during redraw
-            # elif t == "text":
-            #     try:
-            #         x_mm = float(meta.get("x_mm", 0.0))
-            #         y_mm = float(meta.get("y_mm", 0.0))
-            #     except Exception as e:
-            #         logger.exception(f"Failed to get text position for item {cid}: {e}")
-            #         continue
-            #     cx = x0 + x_mm * MM_TO_PX * self._zoom
-            #     cy = y0 + y_mm * MM_TO_PX * self._zoom
-            #     new_cx = max(x0, min(cx, x1))
-            #     new_cy = max(y0, min(cy, y1))
-            #     self.canvas.coords(cid, new_cx, new_cy)
-            #     self.canvas.itemconfig(cid, font=("Myriad Pro", self._scaled_pt(12), "bold"))
-                # don't mutate stored mm during redraw
-        # Re-apply stacking order after positions were updated
-        self.selection._reorder_by_z()
-
-    def _jig_rect_px(self):
-        objs = self.canvas.find_withtag("jig")
-        if not objs:
-            return (20, 20, self.canvas.winfo_width() - 20, self.canvas.winfo_height() - 20)
-        return self.canvas.bbox(objs[0])
-
-    def _jig_inner_rect_px(self):
-        x0, y0, x1, y1 = self._jig_rect_px()
-        # compensate for jig border width (3px) drawing centered on the rectangle edge
-        stroke = 3.0
-        half = stroke / 2.0
-        return (x0 + half, y0 + half, x1 - half, y1 - half)
-
-    def _item_outline_half_px(self) -> float:
-        # Rectangle outline width is 2 px (see _create_placeholder); keep fully inside jig
-        return 1.0
-
-    def _update_scrollregion(self):
-        # still maintain scrollregion internally for centering math
-        bbox = self.canvas.bbox("all")
-        cw = self.canvas.winfo_width()
-        ch = self.canvas.winfo_height()
-        if bbox is None:
-            self.canvas.configure(scrollregion=(0, 0, cw, ch))
-            return
-        x0, y0, x1, y1 = bbox
-        pad = 20
-        left = min(0, x0 - pad)
-        top = min(0, y0 - pad)
-        right = max(cw, x1 + pad)
-        bottom = max(ch, y1 + pad)
-        self.canvas.configure(scrollregion=(left, top, right, bottom))
-
-    def _center_view(self):
-        # Center viewport on the jig if content is larger than the viewport
-        jig_bbox = self.canvas.bbox("jig")
-        all_bbox = self.canvas.bbox("all")
-        if not jig_bbox or not all_bbox:
-            return
-        x0, y0, x1, y1 = jig_bbox
-        ax0, ay0, ax1, ay1 = all_bbox
-        cw = max(1, self.canvas.winfo_width())
-        ch = max(1, self.canvas.winfo_height())
-        total_w = max(1, ax1 - ax0)
-        total_h = max(1, ay1 - ay0)
-        # Only move if we actually have scrollable overflow
-        if total_w > cw:
-            target_x = (x0 + x1) / 2 - cw / 2
-            frac_x = (target_x - ax0) / max(1, total_w - cw)
-            frac_x = min(1.0, max(0.0, frac_x))
-            try:
-                self.canvas.xview_moveto(frac_x)
-            except Exception as e:
-                logger.exception(f"Failed to move xview: {e}")
-        if total_h > ch:
-            target_y = (y0 + y1) / 2 - ch / 2
-            frac_y = (target_y - ay0) / max(1, total_h - ch)
-            frac_y = min(1.0, max(0.0, frac_y))
-            try:
-                self.canvas.yview_moveto(frac_y)
-            except Exception as e:
-                logger.exception(f"Failed to move yview: {e}")
-
     def _compute_import_size_mm(self, path: str) -> Optional[Tuple[float, float]]:
         """Infer intrinsic image size in mm.
         - SVG: parse viewBox or width/height attributes
@@ -1394,6 +881,16 @@ class NStickerCanvasScreen(Screen):
             messagebox.showwarning("Invalid SKU", "SKU doesn't exist.")
             return
         state.sku = sku_val
+        
+        sku_name_val = self.sku_name_var.get().strip()
+        if not sku_name_val:
+            messagebox.showwarning("Missing SKU", "Please select an SKU name before proceeding.")
+            return
+        if len(sku_name_val) < 3:
+            messagebox.showwarning("Invalid SKU", "SKU doesn't exist.")
+            return
+
+        state.sku_name = sku_name_val
         state.pkg_x = self.jig_x.get().strip()
         state.pkg_y = self.jig_y.get().strip()
         # Count only image items. Text items are stored with type 'text'
@@ -1668,7 +1165,8 @@ class NStickerCanvasScreen(Screen):
                 },
             }
             combined = {
-                "Sku": str(state.sku or ""),
+                "Sku": state.sku or "",
+                "SkuName": state.sku_name or "",
                 "IsSticker": False,
                 "Scene": scene_top,
                 "Frontside": _compose_side(front_items),
@@ -1676,8 +1174,8 @@ class NStickerCanvasScreen(Screen):
             }
         except Exception as e:
             logger.exception(f"Failed to build combined JSON: {e}")
-            combined = {"Sku": str(state.sku or ""), "Scene": {}, "Frontside": {}, "Backside": {}}
-        json_path = PRODUCTS_PATH / f"{state.sku}.json"
+            combined = {"Sku": str(state.sku_name or ""), "Scene": {}, "Frontside": {}, "Backside": {}}
+        json_path = PRODUCTS_PATH / f"{state.sku_name}.json"
 
         # Mark processing and launch worker thread
         state.is_processing = True
@@ -1711,10 +1209,10 @@ class NStickerCanvasScreen(Screen):
                 state.processing_message = ""
                 # Add new product to list if not already present
                 for p in ALL_PRODUCTS:
-                    if p == state.sku:
+                    if p == state.sku_name:
                         break
                 else:
-                    ALL_PRODUCTS.append(state.sku)
+                    ALL_PRODUCTS.append(state.sku_name)
 
             except MemoryError:
                 state.is_failed = True
@@ -1732,50 +1230,6 @@ class NStickerCanvasScreen(Screen):
         # Navigate immediately; results screen will poll state and update UI
         self.app.show_screen(NStickerResultsDownloadScreen)
 
-    def _zoom_step(self, direction: int):
-        # direction: +1 zoom in, -1 zoom out
-        old_zoom = self._zoom
-        if direction > 0:
-            self._zoom = min(5.0, self._zoom * 1.1)
-        else:
-            self._zoom = max(0.2, self._zoom / 1.1)
-        if abs(self._zoom - old_zoom) < 1e-6:
-            return
-        # Compute current viewport center pivot in mm relative to jig
-        cw = max(1, self.canvas.winfo_width())
-        ch = max(1, self.canvas.winfo_height())
-        px = self.canvas.canvasx(cw // 2)
-        py = self.canvas.canvasy(ch // 2)
-        jx0, jy0, jx1, jy1 = self._jig_inner_rect_px()
-        pivot_x_mm = (px - jx0) / (MM_TO_PX * max(old_zoom, 1e-6))
-        pivot_y_mm = (py - jy0) / (MM_TO_PX * max(old_zoom, 1e-6))
-        # Recompute all coordinates from mm at the new zoom
-        self._redraw_jig(center=False)
-        # Keep the same pivot at the center of the viewport
-        try:
-            njx0, njy0, njx1, njy1 = self._jig_inner_rect_px()
-            target_px = njx0 + pivot_x_mm * MM_TO_PX * self._zoom
-            target_py = njy0 + pivot_y_mm * MM_TO_PX * self._zoom
-            # Update scrollregion and move view so target pivot is centered
-            self._update_scrollregion()
-            sx0, sy0, sx1, sy1 = [float(v) for v in str(self.canvas.cget("scrollregion")).split()]
-            total_w = max(1.0, sx1 - sx0)
-            total_h = max(1.0, sy1 - sy0)
-            desired_left = max(sx0, min(target_px - cw / 2, sx1 - cw))
-            desired_top = max(sy0, min(target_py - ch / 2, sy1 - ch))
-            if total_w > cw:
-                self.canvas.xview_moveto((desired_left - sx0) / (total_w - cw))
-            if total_h > ch:
-                self.canvas.yview_moveto((desired_top - sy0) / (total_h - ch))
-        except Exception as e:
-            logger.exception(f"Failed to update zoom view: {e}")
-        # After zooming, scale all text fonts to match the new zoom
-        try:
-            self._update_all_text_fonts()
-        except Exception as e:
-            logger.exception(f"Failed to update text fonts: {e}")
-
-
     # ---- Front/Back scene state management ----
     def _clear_scene(self, keep_slots: bool = False):
         try:
@@ -1790,8 +1244,8 @@ class NStickerCanvasScreen(Screen):
                 if rid:
                     try:
                         self.canvas.delete(rid)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.exception(f"Failed to delete rect overlay: {e}")
                     meta["rot_id"] = None
                 # Remove selection border for images
                 try:
@@ -1801,8 +1255,8 @@ class NStickerCanvasScreen(Screen):
                 if bid:
                     try:
                         self.canvas.delete(bid)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.exception(f"Failed to delete image selection border: {e}")
                     meta["border_id"] = None
                 self.canvas.delete(cid)
                 lbl_id = meta.get("label_id")
@@ -1862,6 +1316,7 @@ class NStickerCanvasScreen(Screen):
         )
         # Create overlay to visualize rotation; base rect stays invisible
         self._update_rect_overlay(rect, self._items[rect], new_left, new_top, w, h)
+        return rect
 
     def _create_text_at_mm(self, text: str, x_mm: float, y_mm: float, fill: str = "#17a24b"):
         x0, y0, x1, y1 = self._jig_inner_rect_px()
@@ -1879,6 +1334,7 @@ class NStickerCanvasScreen(Screen):
             label_id=tid,
             canvas_id=tid,
         )
+        return tid
 
     def _serialize_scene(self) -> list[dict]:
         items: list[dict] = []
@@ -1897,6 +1353,7 @@ class NStickerCanvasScreen(Screen):
                         "y_mm": float(meta.get("y_mm", 0.0)),
                         "outline": str(meta.get("outline", "#d0d0d0")),
                         "angle": float(meta.get("angle", 0.0) or 0.0),
+                        "z": int(meta.get("z", 0)),
                     })
                 except Exception:
                     continue
@@ -1912,6 +1369,7 @@ class NStickerCanvasScreen(Screen):
                         "x_mm": float(meta.get("x_mm", 0.0)),
                         "y_mm": float(meta.get("y_mm", 0.0)),
                         "outline": str(meta.get("outline", "#9a9a9a")),
+                        "z": int(meta.get("z", 0)),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize slot item {cid}: {e}")
@@ -1926,6 +1384,7 @@ class NStickerCanvasScreen(Screen):
                         "x_mm": float(meta.get("x_mm", 0.0)),
                         "y_mm": float(meta.get("y_mm", 0.0)),
                         "angle": float(meta.get("angle", 0.0) or 0.0),
+                        "z": int(meta.get("z", 0)),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize image item {cid}: {e}")
@@ -1942,6 +1401,7 @@ class NStickerCanvasScreen(Screen):
                         "x_mm": x_mm,
                         "y_mm": y_mm,
                         "fill": fill,
+                        "z": int(meta.get("z", 0)),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize text item {cid}: {e}")
@@ -1955,7 +1415,7 @@ class NStickerCanvasScreen(Screen):
                 outline = str(it.get("outline", "#d0d0d0"))
                 # If restored rect is a Text rect, it may have green outline
                 text_fill = "#17a24b" if outline == "#17a24b" else "white"
-                self._create_rect_at_mm(
+                rid = self._create_rect_at_mm(
                     it.get("label", ""),
                     float(it.get("w_mm", 0.0)),
                     float(it.get("h_mm", 0.0)),
@@ -1965,15 +1425,29 @@ class NStickerCanvasScreen(Screen):
                     text_fill=text_fill,
                     angle=float(it.get("angle", 0.0) or 0.0),
                 )
+                try:
+                    if rid in self._items:
+                        z_val = it.get("z")
+                        if z_val is not None:
+                            self._items[rid]["z"] = int(z_val)
+                except Exception as e:
+                    logger.exception(f"Failed to apply rect z from JSON: {e}")
             elif t == "slot":
                 outline = str(it.get("outline", "#9a9a9a"))
-                self._create_slot_at_mm(
+                sid = self._create_slot_at_mm(
                     it.get("label", ""),
                     float(it.get("w_mm", 0.0)),
                     float(it.get("h_mm", 0.0)),
                     float(it.get("x_mm", 0.0)),
                     float(it.get("y_mm", 0.0)),
                 )
+                try:
+                    if sid in self._items:
+                        z_val = it.get("z")
+                        if z_val is not None:
+                            self._items[sid]["z"] = int(z_val)
+                except Exception as e:
+                    logger.exception(f"Failed to apply slot z from JSON: {e}")
             elif t == "image":
                 path = str(it.get("path", ""))
                 if path and os.path.exists(path):
@@ -2010,22 +1484,33 @@ class NStickerCanvasScreen(Screen):
                         meta.canvas_id = img_id
                         # assign next z
                         max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
-                        meta["z"] = int(max_z + 1)
+                        try:
+                            meta["z"] = int(it.get("z", int(max_z + 1)))
+                        except Exception as e:
+                            logger.exception(f"Failed to apply image z from JSON: {e}")
+                            meta["z"] = int(max_z + 1)
                         self._items[img_id] = meta
             elif t == "text":
                 # Two shapes are encoded as text in saved JSON:
                 # 1) Plain text labels: have a 'text' field and no size.
                 # 2) Text blocks (green rectangles): no 'text' field but have w_mm/h_mm.
                 if ("text" in it) and ("w_mm" not in it and "h_mm" not in it):
-                    self._create_text_at_mm(
+                    tid = self._create_text_at_mm(
                         it.get("text", "Text"),
                         float(it.get("x_mm", 0.0)),
                         float(it.get("y_mm", 0.0)),
                         str(it.get("fill", "white")),
                     )
+                    try:
+                        if tid in self._items:
+                            z_val = it.get("z")
+                            if z_val is not None:
+                                self._items[tid]["z"] = int(z_val)
+                    except Exception as e:
+                        logger.exception(f"Failed to apply text z from JSON: {e}")
                 else:
                     # Restore as the same rectangle block that was saved, using required fields
-                    self._create_rect_at_mm(
+                    rid = self._create_rect_at_mm(
                         "Text",
                         float(it["w_mm"]),
                         float(it["h_mm"]),
@@ -2035,6 +1520,13 @@ class NStickerCanvasScreen(Screen):
                         text_fill="#17a24b",
                         angle=float(it.get("angle", 0.0) or 0.0),
                     )
+                    try:
+                        if rid in self._items:
+                            z_val = it.get("z")
+                            if z_val is not None:
+                                self._items[rid]["z"] = int(z_val)
+                    except Exception as e:
+                        logger.exception(f"Failed to apply text-rect z from JSON: {e}")
 
     def _maybe_load_saved_product(self):
         # Load saved non-sticker scene when editing an existing product
@@ -2051,9 +1543,12 @@ class NStickerCanvasScreen(Screen):
         if bool(data.get("IsSticker", False)):
             return
         sku_val = str(data.get("Sku") or prod)
+        sku_name_val = str(data.get("SkuName") or prod)
         if sku_val:
             self.sku_var.set(sku_val)
+            self.sku_name_var.set(sku_name_val)
             state.sku = sku_val
+            state.sku_name = sku_name_val
 
         scene = data.get("Scene") or {}
         jig = scene.get("jig") or {}
@@ -2090,13 +1585,20 @@ class NStickerCanvasScreen(Screen):
             # Clear anything auto-created and recreate slots from JSON for exact positions
             self._clear_scene(keep_slots=False)
             for sl in front_slots:
-                self._create_slot_at_mm(
+                sid = self._create_slot_at_mm(
                     str(sl.get("label", "")),
                     float(sl.get("w_mm", 0.0)),
                     float(sl.get("h_mm", 0.0)),
                     float(sl.get("x_mm", 0.0)),
                     float(sl.get("y_mm", 0.0)),
                 )
+                try:
+                    if sid in self._items:
+                        z_val = sl.get("z")
+                        if z_val is not None:
+                            self._items[sid]["z"] = int(z_val)
+                except Exception as e:
+                    logger.exception(f"Failed to apply saved slot z from JSON: {e}")
             # Restore front items on canvas; stash back items for toggling
             if front_items:
                 self._restore_scene(front_items)
@@ -2126,191 +1628,3 @@ class NStickerCanvasScreen(Screen):
         self._redraw_jig(center=False)
         # Ensure labels on top after switching sides
         self._raise_all_labels()
-
-    def _render_scene_to_pdf(
-        self, 
-        path: str, 
-        items: list[dict], 
-        jig_w_mm: float, 
-        jig_h_mm: float, 
-        only_jig: bool = False, 
-        dpi: int = 300
-    ) -> None:
-        """Render a scene (slots + items) into a single-page PDF.
-
-        - Places the jig rectangle at the lower-right corner of a US Letter page.
-        - Draws slots, rectangles, text, and raster images at exact mm coordinates.
-        - Requires Pillow; raises if unavailable.
-        """
-        try:
-            from PIL import Image as _PIL_Image  # type: ignore
-            from PIL import ImageDraw as _PIL_Draw  # type: ignore
-            from PIL import ImageFont as _PIL_Font  # type: ignore
-        except Exception as e:
-            raise RuntimeError("Pillow (PIL) is required to export PDF.") from e
-
-        # Page equals jig size in mm
-        px_per_mm = float(dpi) / 25.4
-        page_w_px = max(1, int(round(jig_w_mm * px_per_mm)))
-        page_h_px = max(1, int(round(jig_h_mm * px_per_mm)))
-        img = _PIL_Image.new("RGB", (page_w_px, page_h_px), "white")
-        draw = _PIL_Draw.Draw(img)
-        font_small = _PIL_Font.load_default()
-
-        # Jig covers the entire page; draw its border
-        jw = max(1, int(round(jig_w_mm * px_per_mm)))
-        jh = max(1, int(round(jig_h_mm * px_per_mm)))
-        jx0 = 0
-        jy0 = 0
-        jx1 = page_w_px - 1
-        jy1 = page_h_px - 1
-        # Draw jig border (slightly grey to mirror UI)
-        draw.rectangle([jx0, jy0, jx1, jy1], outline=(221, 221, 221), width=3)
-
-        def mm_to_px(m: float) -> int:
-            return int(round(float(m) * px_per_mm))
-
-        def rect_from_mm(x_mm: float, y_mm: float, w_mm: float, h_mm: float) -> tuple[int, int, int, int]:
-            # Round both edges so right/bottom alignment is exact to avoid gaps
-            l = int(round(float(x_mm) * px_per_mm))
-            t = int(round(float(y_mm) * px_per_mm))
-            r = int(round(float(x_mm + w_mm) * px_per_mm))
-            b = int(round(float(y_mm + h_mm) * px_per_mm))
-            if r <= l:
-                r = l + 1
-            if b <= t:
-                b = t + 1
-            return l, t, r, b
-
-        # Draw each item
-        if only_jig:
-            items = [it for it in items if it.get("type") == "slot"]
-
-        for it in items:
-            t = str(it.get("type", ""))
-            if t == "slot":
-                # Items are positioned within jig; with jig at page origin
-                # use their mm directly from page origin
-                l, t, r, b = rect_from_mm(it.get("x_mm", 0.0), it.get("y_mm", 0.0), it.get("w_mm", 0.0), it.get("h_mm", 0.0))
-                # outline only (no fill) for slots
-                draw.rectangle([l, t, r - 1, b - 1], outline=(137, 137, 137), width=10)
-                label = str(it.get("label", ""))
-                if label and font_small is not None:
-                    cx = l + (r - l) // 2
-                    cy = t + (b - t) // 2
-                    bbox = draw.textbbox((0, 0), label, font=font_small)
-                    tw = bbox[2] - bbox[0]
-                    th = bbox[3] - bbox[1]
-                    draw.text((cx - tw // 2, cy - th // 2), label, fill=(200, 200, 200), font=font_small)
-
-            elif t == "rect":
-                l, t, r, b = rect_from_mm(
-                    it.get("x_mm", 0.0),
-                    it.get("y_mm", 0.0),
-                    it.get("w_mm", 0.0),
-                    it.get("h_mm", 0.0)
-                )
-
-                label = str(it.get("label", "")).strip()
-                if label:
-                    W = max(1, r - l)
-                    H = max(1, b - t)
-
-                    # подбор размера шрифта по области
-                    lo, hi = 1, H
-                    best_font = None
-                    best_bbox = None
-                    font_path = FONTS_PATH / "MyriadPro-Regular.ttf"
-                    while lo <= hi:
-                        mid = (lo + hi) // 2
-                        f = _PIL_Font.truetype(font_path, mid)
-                        bb = draw.textbbox((0, 0), label, font=f)
-                        tw = bb[2] - bb[0]
-                        th = bb[3] - bb[1]
-                        if tw <= W and th <= H:
-                            best_font, best_bbox = f, bb
-                            lo = mid + 1
-                        else:
-                            hi = mid - 1
-                    if best_font is None:
-                        best_font = _PIL_Font.truetype(font_path, H)
-                        best_bbox = draw.textbbox((0, 0), label, font=best_font)
-
-                    tw = best_bbox[2] - best_bbox[0]
-                    th = best_bbox[3] - best_bbox[1]
-
-                    cx = l + W // 2
-                    cy = t + H // 2
-
-                    # вертикальное центрирование по bbox
-                    x = cx - tw // 2
-                    y = cy - th // 2 - best_bbox[1]
-
-                    # If angle is 90/270, swap target box for text placement
-                    try:
-                        ang = float(it.get("angle", 0.0) or 0.0)
-                    except Exception:
-                        ang = 0.0
-                    if int(abs(ang)) % 180 == 90:
-                        # swap W/H for text-fitting box
-                        W, H = H, W
-                        cx = l + (r - l) // 2
-                        cy = t + (b - t) // 2
-                        x = cx - tw // 2
-                        y = cy - th // 2 - best_bbox[1]
-                    draw.text((x, y), label, font=best_font, fill=(0, 255, 0))
-
-            elif t == "image":
-                path_img = str(it.get("path", ""))
-                if not path_img:
-                    continue
-                l, t, r, b = rect_from_mm(it.get("x_mm", 0.0), it.get("y_mm", 0.0), it.get("w_mm", 0.0), it.get("h_mm", 0.0))
-                rw = max(1, r - l)
-                rh = max(1, b - t)
-                ext = os.path.splitext(path_img)[1].lower()
-                try:
-                    if ext == ".svg":
-                        im = svg_to_png(str(path_img), width=int(rw), height=int(rh), device_pixel_ratio=1.0)
-                    else:
-                        im = _PIL_Image.open(path_img)
-                    # Preserve alpha to avoid white background for PNGs
-                    im = im.convert("RGBA")
-                    im_resized = im.resize((int(rw), int(rh)), _PIL_Image.LANCZOS)
-                    try:
-                        ang = float(it.get("angle", 0.0) or 0.0)
-                    except Exception:
-                        ang = 0.0
-                    if abs(ang) > 1e-6:
-                        im_resized = im_resized.rotate(-ang, expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0,0,0,0))
-                        rrw, rrh = im_resized.size
-                        l = int(round(l + (rw - rrw) / 2.0))
-                        t = int(round(t + (rh - rrh) / 2.0))
-                    # Split alpha as mask if present
-                    _r, _g, _b, _a = im_resized.split()
-                    mask = _a
-                    if mask is not None:
-                        img.paste(im_resized.convert("RGB"), (int(l), int(t)), mask)
-                    else:
-                        img.paste(im_resized.convert("RGB"), (int(l), int(t)))
-                except Exception as e:
-                    logger.exception(f"Failed to render image in PDF: {e}")
-                        
-            elif t == "text":
-                txt = str(it.get("text", ""))
-                fill = str(it.get("fill", "#17a24b"))
-                # hex to rgb
-                if fill.startswith("#") and len(fill) == 7:
-                    r = int(fill[1:3], 16); g = int(fill[3:5], 16); b = int(fill[5:7], 16)
-                    col = (r, g, b)
-                else:
-                    col = (23, 162, 75)
-                cx = jx0 + mm_to_px(it.get("x_mm", 0.0))
-                cy = jy0 + mm_to_px(it.get("y_mm", 0.0))
-                if font_small is not None and txt:
-                    bbox = draw.textbbox((0, 0), txt, font=font_small)
-                    tw = bbox[2] - bbox[0]
-                    th = bbox[3] - bbox[1]
-                    draw.text((int(cx - tw / 2), int(cy - th / 2)), txt, fill=col, font=font_small)
-
-        # Save as PDF
-        img.save(path, "PDF", resolution=dpi)

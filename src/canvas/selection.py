@@ -1,12 +1,15 @@
 from typing import Optional, Tuple
 from dataclasses import asdict
 
+import logging
 import tkinter as tk
 from tkinter import messagebox
 
 from src.canvas.object import CanvasObject
 from src.core import MM_TO_PX
 from .context_menu import CanvasContextPopup
+
+logger = logging.getLogger(__name__)
 
 
 class CanvasSelection:
@@ -38,14 +41,14 @@ class CanvasSelection:
                 for seq in ("<KeyPress-Left>", "<KeyPress-Right>", "<KeyPress-Up>", "<KeyPress-Down>"):
                     self.s.canvas.bind(seq, self.on_key_pan)
             except Exception:
-                pass
+                logger.exception("Failed to bind key pan handlers on canvas")
 
     # --- Event bindings ---
     def on_click(self, e):
         try:
             self.s.canvas.focus_set()
         except Exception:
-            pass
+            logger.exception("Failed to set focus to canvas")
         hit = self.s.canvas.find_withtag("current")
         target = None
         if hit:
@@ -69,7 +72,7 @@ class CanvasSelection:
                                 target = rid
                                 break
                         except Exception:
-                            pass
+                            logger.exception("Error while checking overlay hit for rect selection")
         self.select(target)
         if target:
             meta = self.s._items.get(target, {})
@@ -147,7 +150,7 @@ class CanvasSelection:
                 try:
                     self.s._update_rect_overlay(self._selected, meta, new_left, new_top, w, h)
                 except Exception:
-                    pass
+                    logger.exception("Failed to update rect overlay during drag")
             elif meta.get("type") == "image":
                 # place using rotated bounds (visual top-left == new_left/new_top)
                 self.s.canvas.coords(self._selected, new_left, new_top)
@@ -176,7 +179,7 @@ class CanvasSelection:
                 y_mm = (cy - jy0) / (MM_TO_PX * max(self.s._zoom, 1e-6))
                 meta["x_mm"], meta["y_mm"] = float(x_mm), float(y_mm)
             except Exception:
-                pass
+                logger.exception("Failed to persist text position during drag")
 
     def on_release(self, _):
         self._drag_kind = None
@@ -186,7 +189,7 @@ class CanvasSelection:
             if self._ctx_popup_obj:
                 self._ctx_popup_obj.destroy()
         except Exception:
-            pass
+            logger.exception("Failed to delete selected canvas item")
         finally:
             self._ctx_popup_obj = None
 
@@ -211,14 +214,14 @@ class CanvasSelection:
                                 target = rid
                                 break
                     except Exception:
-                        pass
+                        logger.exception("Failed to delete selection border on deselect")
         if not target:
             self.destroy_context_popup()
             return
         try:
             self.select(target)
         except Exception:
-            pass
+            logger.exception("Failed to delete selection border")
         # Rebuild popup via ContextPopup
         self.destroy_context_popup()
         self._ctx_popup_obj = CanvasContextPopup(
@@ -243,14 +246,14 @@ class CanvasSelection:
         try:
             self.s.canvas.delete(cid)
         except Exception:
-            pass
+            logger.exception("Failed to mark canvas for scan (pan start)")
         # delete selection border if any
         try:
             bid = meta.get("border_id")
             if bid:
                 self.s.canvas.delete(bid)
         except Exception:
-            pass
+            logger.exception("Failed to scan-drag canvas (pan move)")
         # delete rotation overlay polygon if any
         try:
             rid = int(meta.get("rot_id", 0) or 0)
@@ -260,14 +263,14 @@ class CanvasSelection:
             try:
                 self.s.canvas.delete(rid)
             except Exception:
-                pass
+                logger.exception("Failed to delete rotated overlay polygon")
             meta["rot_id"] = None
         try:
             lbl_id = meta.get("label_id")
             if lbl_id:
                 self.s.canvas.delete(lbl_id)
         except Exception:
-            pass
+            logger.exception("Failed to delete item label")
         self._selected = None
         self.s._update_scrollregion()
 
@@ -298,13 +301,13 @@ class CanvasSelection:
                 try:
                     self.s.canvas.tag_lower(cid)
                 except Exception:
-                    pass
+                    logger.exception("Failed to lower canvas item while reordering by z")
             # Raise in sorted order (later ones end up on top)
             for cid, _ in items:
                 try:
                     self.s.canvas.tag_raise(cid)
                 except Exception:
-                    pass
+                    logger.exception("Failed to raise canvas item while reordering by z")
             # Ensure slot labels are above their slots but below other labels
             try:
                 for cid, meta in items:
@@ -312,7 +315,7 @@ class CanvasSelection:
                         # Bring slot label just above its rect
                         self.s.canvas.tag_raise(meta.get("label_id"), cid)
             except Exception:
-                pass
+                logger.exception("Failed to raise slot label above its slot")
             # Ensure current selection border is on top
             if self._selected and self._selected in self.s._items:
                 meta = self.s._items.get(self._selected, {})
@@ -321,7 +324,7 @@ class CanvasSelection:
                     try:
                         self.s.canvas.tag_raise(bid)
                     except Exception:
-                        pass
+                        logger.exception("Failed to raise selection border to top")
                 # Ensure rotated overlay (if any) for selected rect stays on top
                 try:
                     rid = int(meta.get("rot_id", 0) or 0)
@@ -331,15 +334,15 @@ class CanvasSelection:
                     try:
                         self.s.canvas.tag_raise(rid)
                     except Exception:
-                        pass
+                        logger.exception("Failed to raise rotated overlay to top")
             # Ensure labels/text squares stay above
             try:
                 # Raise standard labels but not above selection border
                 self.s._raise_all_labels()
             except Exception:
-                pass
+                logger.exception("Failed to raise labels after z-ordering")
         except Exception:
-            pass
+            logger.exception("Failed to reorder items by z")
 
     def _normalize_z(self) -> None:
         """Normalize z values to a compact 0..N-1 sequence preserving order."""
@@ -350,9 +353,9 @@ class CanvasSelection:
                 try:
                     meta["z"] = int(idx)
                 except Exception:
-                    pass
+                    logger.exception("Failed to normalize z value for item")
         except Exception:
-            pass
+            logger.exception("Failed to query canvas bbox during wheel pan")
 
     def nudge_z(self, delta: int) -> None:
         """Move selected item up (+1) or down (-1) in stacking order."""
@@ -385,13 +388,13 @@ class CanvasSelection:
                     swap_cid = cid
                     break
             except Exception:
-                pass
+                logger.exception("Failed to swap z values during nudge")
         meta["z"] = int(new_z)
         if swap_cid is not None and swap_cid in self.s._items:
             try:
                 self.s._items[swap_cid]["z"] = int(z)
             except Exception:
-                pass
+                logger.exception("Failed to compute angle for rect during resize")
         # Apply and normalize
         self._reorder_by_z()
         self._normalize_z()
@@ -401,13 +404,13 @@ class CanvasSelection:
         try:
             self.s.canvas.scan_mark(e.x, e.y)
         except Exception:
-            pass
+            logger.exception("Failed to move canvas view during wheel pan")
 
     def on_pan_move(self, e):
         try:
             self.s.canvas.scan_dragto(e.x, e.y, gain=1)
         except Exception:
-            pass
+            logger.exception("Failed to scan-drag canvas (pan move)")
 
     def on_pan_end(self, _e):
         # no-op; keep for symmetry/future logic
@@ -576,7 +579,7 @@ class CanvasSelection:
                     try:
                         self.s.canvas.itemconfig(rid, outline=outline_col, width=2)
                     except Exception:
-                        pass
+                        logger.exception("Failed to delete selection border on deselect")
             elif prev_meta.get("type") == "text":
                 # restore default text color when deselected
                 self.s.canvas.itemconfig(self._selected, fill=prev_meta.get("default_fill", "white"))
@@ -652,7 +655,7 @@ class CanvasSelection:
                 bid = self.s.canvas.create_rectangle(x1, y1, x2, y2, outline="#6ec8ff", width=3)
                 meta["border_id"] = bid
             except Exception:
-                pass
+                logger.exception("Failed to update rect overlay after resize")
             try:
                 self._suppress_size_trace = True
                 self.s.sel_w.set(str(int(round(float(meta["w_mm"] or 0)))))
@@ -776,10 +779,22 @@ class CanvasSelection:
         if meta.get("type") in ("rect", "slot"):
             w = w_mm * MM_TO_PX * self.s._zoom
             h = h_mm * MM_TO_PX * self.s._zoom
-            self.s.canvas.coords(self._selected, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+            # Respect 90/270 rotation for rect display bbox
+            try:
+                ang = float(meta.get("angle", 0.0) or 0.0)
+            except Exception:
+                ang = 0.0
+            rw, rh = (h, w) if (meta.get("type") == "rect" and int(abs(ang)) % 180 == 90) else (w, h)
+            self.s.canvas.coords(self._selected, cx - rw / 2, cy - rh / 2, cx + rw / 2, cy + rh / 2)
             if meta.get("label_id"):
                 self.s.canvas.coords(meta["label_id"], cx, cy)
                 self.s._raise_all_labels()
+            # Keep rotated overlay polygon in sync for rects
+            if meta.get("type") == "rect":
+                try:
+                    self.s._update_rect_overlay(self._selected, meta, cx - rw / 2, cy - rh / 2, rw, rh)
+                except Exception:
+                    pass
         else:
             # image: re-render at new size and keep center, honoring rotation for border and anchor
             w_px = max(1, int(round(w_mm * MM_TO_PX * self.s._zoom)))
@@ -900,6 +915,7 @@ class CanvasSelection:
             cx = (x1 + x2) / 2
             cy = (y1 + y2) / 2
         except Exception:
+            logger.exception("Failed to get current bbox during angle change")
             return
         if meta.get("type") == "rect":
             w = float(meta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom
@@ -921,6 +937,7 @@ class CanvasSelection:
             try:
                 tlx, tly, brx, bry = self.s.canvas.bbox(self._selected)
             except Exception:
+                logger.exception("Failed to get image bbox during angle change; falling back to center")
                 tlx, tly = cx, cy
             photo = self.s._render_photo(meta, max(1, int(w_px)), max(1, int(h_px)))
             if photo is not None:
