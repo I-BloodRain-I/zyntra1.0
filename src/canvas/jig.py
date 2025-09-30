@@ -23,7 +23,8 @@ class JigController:
     # ---- Common helpers ----
     def scaled_pt(self, base: int) -> int:
         try:
-            return max(1, int(round(base * self.s._zoom * 0.7)))
+            # Scale text strictly by zoom so perceived size stays real except when zooming
+            return max(1, int(round(base * self.s._zoom)))
         except Exception:
             return max(1, int(base))
 
@@ -31,13 +32,47 @@ class JigController:
         # Scale fonts of all canvas item labels according to current zoom
         for cid, meta in list(self.s._items.items()):
             t = meta.get("type")
-            if t in ("rect", "slot"):
+            if t == "rect":
+                # Rect labels are rendered as rotated images; re-render at current zoom
+                try:
+                    self.s._update_rect_label_image(cid)
+                except Exception:
+                    logger.exception("Failed to update rotated rect label image during font update")
+            elif t == "slot":
                 tid = meta.get("label_id")
                 if tid:
-                    self.s.canvas.itemconfig(tid, font=("Myriad Pro", self.scaled_pt(10)))
+                    try:
+                        self.s.canvas.itemconfig(tid, state="normal")
+                        self.s.canvas.itemconfig(tid, font=("Myriad Pro", self.scaled_pt(10)))
+                    except Exception:
+                        logger.exception("Failed to update slot label font/visibility")
             elif t == "text":
                 tid = meta.get("label_id") or cid
-                self.s.canvas.itemconfig(tid, font=("Myriad Pro", self.scaled_pt(12), "bold"))
+                family = str(meta.get("font_family", "Myriad Pro"))
+                try:
+                    base_pt = int(round(float(meta.get("font_size_pt", 12))))
+                except Exception:
+                    base_pt = 12
+                size_px = self.scaled_pt(base_pt)
+                try:
+                    # Keep bold if requested in metadata, otherwise normal
+                    weight = str(meta.get("font_weight", "normal"))
+                    if weight.lower() == "bold":
+                        self.s.canvas.itemconfig(tid, state="normal", font=(family, size_px, "bold"))
+                    else:
+                        self.s.canvas.itemconfig(tid, state="normal", font=(family, size_px))
+                except Exception:
+                    if weight.lower() == "bold":
+                        self.s.canvas.itemconfig(tid, state="normal", font=("Myriad Pro", size_px, "bold"))
+                    else:
+                        self.s.canvas.itemconfig(tid, state="normal", font=("Myriad Pro", size_px))
+                # Apply text fill override when present
+                try:
+                    fill_col = str(meta.get("default_fill")) if meta.get("default_fill") else None
+                    if fill_col:
+                        self.s.canvas.itemconfig(tid, fill=fill_col)
+                except Exception:
+                    logger.exception("Failed to apply default fill to text item")
 
     def update_rect_overlay(self, cid: int, meta: dict, left: float, top: float, bbox_w: float, bbox_h: float) -> None:
         try:
@@ -222,10 +257,14 @@ class JigController:
                 if t == "rect":
                     # Update overlay polygon used for visuals/selection
                     self.update_rect_overlay(cid, meta, new_left, new_top, wpx, hpx)
-                if meta.get("label_id"):
+                if meta.get("type") == "rect":
+                    try:
+                        self.s._update_rect_label_image(cid)
+                    except Exception:
+                        pass
+                elif meta.get("label_id"):
                     self.s.canvas.coords(meta.label_id, new_left + wpx / 2, new_top + hpx / 2)
-                    self.s.canvas.itemconfig(meta.label_id, font=("Myriad Pro", self.scaled_pt(10)))
-                self.s._raise_all_labels()
+                    self.s._raise_all_labels()
                 # don't mutate stored mm during redraw
             elif t == "image":
                 try:
@@ -268,6 +307,11 @@ class JigController:
                 # don't mutate stored mm during redraw
         # Re-apply stacking order after positions were updated
         self.s.selection._reorder_by_z()
+        # After redraw, restore fonts/colors from metadata instead of defaults
+        try:
+            self.update_all_text_fonts()
+        except Exception as e:
+            logger.exception(f"Failed to update text fonts after redraw: {e}")
 
     def zoom_step(self, direction: int) -> None:
         # direction: +1 zoom in, -1 zoom out

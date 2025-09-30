@@ -1,7 +1,11 @@
+import logging
+
 import tkinter as tk
 from typing import Optional, Callable, Sequence, Tuple, List
 
 from src.utils import create_button, ButtonInfo, TextInfo, _rounded_rect
+
+logger = logging.getLogger(__name__)
 
 
 class CanvasContextPopup:
@@ -45,7 +49,7 @@ class CanvasContextPopup:
             if self._popup and self._popup.winfo_exists():
                 self._popup.destroy()
         except Exception:
-            pass
+            logger.exception("Failed to destroy context popup")
         finally:
             self._popup = None
 
@@ -57,18 +61,18 @@ class CanvasContextPopup:
         try:
             popup.overrideredirect(True)
         except Exception:
-            pass
+            logger.exception("Failed to set overrideredirect on popup")
         try:
             popup.attributes("-topmost", True)
         except Exception:
-            pass
+            logger.exception("Failed to set popup topmost attribute")
 
         # Transparent rounded corners using a color key
         magic = "#00ff01"
         try:
             popup.wm_attributes("-transparentcolor", magic)
         except Exception:
-            pass
+            logger.exception("Failed to set transparent color attribute")
         popup.configure(bg=magic)
 
         # Dimensions and layout
@@ -105,7 +109,7 @@ class CanvasContextPopup:
             try:
                 btn.pack_forget()
             except Exception:
-                pass
+                logger.exception("Failed to pack_forget for context menu button")
             btn.configure(bg=self.panel_bg, highlightthickness=0, bd=0)
             cv.create_window(total_w // 2, y_center, window=btn, width=btn_w, height=btn_h)
             return btn
@@ -119,7 +123,7 @@ class CanvasContextPopup:
                     try:
                         cb()
                     except Exception:
-                        pass
+                        logger.exception("Context menu button command failed")
                 return _wrapped
             make_btn(str(label), _make_cmd(callback), y)
             y += btn_h + gap
@@ -128,7 +132,7 @@ class CanvasContextPopup:
         try:
             cv.configure(scrollregion=(0, 0, total_w, content_h))
         except Exception:
-            pass
+            logger.exception("Failed to configure scrollregion for context menu")
 
         if content_h > max_h:
             def _on_mousewheel(e):
@@ -146,7 +150,7 @@ class CanvasContextPopup:
             try:
                 cv.bind("<MouseWheel>", _on_mousewheel)
             except Exception:
-                pass
+                logger.exception("Failed to bind mousewheel on context menu")
 
         # Auto-close conditions
         def on_focus_out(_):
@@ -154,12 +158,12 @@ class CanvasContextPopup:
         try:
             popup.bind("<FocusOut>", on_focus_out)
         except Exception:
-            pass
+            logger.exception("Failed to bind FocusOut on context menu")
         if close_bind_widget is not None:
             try:
                 close_bind_widget.bind("<Button-1>", lambda _e: self.destroy(), add=True)
             except Exception:
-                pass
+                logger.exception("Failed to bind close on Button-1 for context menu")
 
         # Place and focus
         try:
@@ -168,6 +172,6 @@ class CanvasContextPopup:
             popup.deiconify()
             popup.focus_force()
         except Exception:
-            pass
+            logger.exception("Failed to place/focus context menu popup")
 
 

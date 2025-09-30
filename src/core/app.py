@@ -1,5 +1,6 @@
 # App (Tk), стили ttk, базовый Screen
 import os
+import logging
 
 import tempfile
 import tkinter as tk
@@ -22,6 +23,8 @@ DPI_PX_PER_INCH = 96
 TEMP_FOLDER = os.path.join(tempfile.gettempdir(), "zyntra_temp")
 if not os.path.exists(TEMP_FOLDER):
     os.mkdir(TEMP_FOLDER)
+
+logger = logging.getLogger(__name__)
 
 # Helpers: dialogs (keep warn; used across screens)
 def warn(message: str, title: str = "Warning"):
@@ -105,14 +108,14 @@ class App(tk.Tk):
                 try:
                     self._history.append(self.current.__class__)
                 except Exception:
-                    pass
+                    logger.exception("Failed to push previous screen to history")
             self.current.destroy()
         # clear global hotkeys between screens
         try:
             self.unbind("<Return>")
             self.unbind("<Escape>")
         except Exception:
-            pass
+            logger.exception("Failed to unbind global hotkeys between screens")
         self.current = screen_cls(self, self)
         self.current.pack(expand=True, fill="both")
 

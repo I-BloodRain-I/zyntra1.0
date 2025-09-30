@@ -1,19 +1,18 @@
 import os
 import re
+import json
 import struct
 import logging
+import threading
 from pathlib import Path
 from typing import List, Optional, Tuple
-import threading
-import math
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox, filedialog, simpledialog
 from tkinter import font as tkfont
 
-from PIL import ImageDraw
-
 from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL, MM_TO_PX, IMAGES_PATH, TEMP_FOLDER
+from src.core.app import COLOR_BG_SCREEN
 from src.utils import *
 from src.core.state import ALL_PRODUCTS, FONTS_PATH, PRODUCTS_PATH, state
 from src.canvas import CanvasObject, CanvasSelection
@@ -25,14 +24,6 @@ from .results_download import NStickerResultsDownloadScreen
 
 logger = logging.getLogger(__name__)
 
-# Optional PIL (Pillow) import for high-quality image scaling
-try:
-    from PIL import Image, ImageTk  # type: ignore
-except Exception:  # pragma: no cover - PIL might not be available in some envs
-    Image = None  # type: ignore
-    ImageTk = None  # type: ignore
-
- 
 
 class NStickerCanvasScreen(Screen):
     """Non-sticker designer: SKU, jig, import, place, size."""
@@ -310,6 +301,299 @@ class NStickerCanvasScreen(Screen):
         _ab = self._chip(row2, "Angle:", self.sel_angle, width=6)
         tk.Label(_ab, text="deg", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
 
+        # ------- Text styling controls on the last black line -------
+        try:
+            FONTS_PATH.mkdir(exist_ok=True)
+        except Exception:
+            logger.exception("Failed to ensure fonts directory exists")
+
+        self._fonts_map_path = FONTS_PATH / "fonts.json"
+
+        def _load_fonts_map() -> dict:
+            try:
+                if self._fonts_map_path.exists():
+                    with open(self._fonts_map_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        if isinstance(data, dict):
+                            return data
+            except Exception:
+                logger.exception("Failed to load fonts mapping")
+            # default mapping
+            return {"Myriad Pro": "MyriadPro-Regular"}
+
+        def _save_fonts_map(mp: dict) -> None:
+            try:
+                with open(self._fonts_map_path, "w", encoding="utf-8") as f:
+                    json.dump(mp, f, ensure_ascii=False, indent=2)
+            except Exception:
+                logger.exception("Failed to save fonts map")
+
+        def _list_font_families(mp: dict) -> list[str]:
+            try:
+                return sorted(list(mp.keys()))
+            except Exception:
+                return ["Myriad Pro"]
+
+        self._fonts_map = _load_fonts_map()
+        self._font_families = _list_font_families(self._fonts_map)
+
+        self.text_bar = tk.Frame(row2, bg="black")
+        # vertical separator to appear with text menu
+        self.text_sep = tk.Frame(row2, bg="white", width=2)
+
+        tk.Label(self.text_bar, text="Text:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(2, 6))
+
+        # (Name input removed by request)
+
+        # Font size (pt)
+        self.text_size = tk.StringVar(value="12")
+        _sb = self._chip(self.text_bar, "Size:", self.text_size, width=6)
+        tk.Label(_sb, text="pt", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
+
+        # Color hex
+        self.text_color = tk.StringVar(value="#ffffff")
+        _cb = self._chip(self.text_bar, "Color:", self.text_color, width=10)
+
+        # Family combobox
+        fam_wrap = tk.Frame(self.text_bar, bg="#6f6f6f")
+        fam_wrap.pack(side="left", padx=6, pady=8)
+        tk.Label(fam_wrap, text="Family:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        self.text_family = tk.StringVar(value=(self._font_families[0] if self._font_families else "Myriad Pro"))
+        self._family_combo = ttk.Combobox(fam_wrap, textvariable=self.text_family, state="readonly", values=self._font_families, justify="center", width=18)
+        self._family_combo.pack(side="left")
+
+        # Import font button
+        def _on_import_font():
+            path = filedialog.askopenfilename(title="Import Font", filetypes=[("Font Files", "*.ttf *.otf")])
+            if not path:
+                return
+            try:
+                import shutil
+                dst = FONTS_PATH / os.path.basename(path)
+                shutil.copy(path, dst)
+            except Exception as e:
+                messagebox.showerror("Import failed", f"Could not import font:\n{e}")
+                return
+            # Ask for display name to map
+            try:
+                base_family = os.path.splitext(os.path.basename(path))[0]
+            except Exception:
+                base_family = "ImportedFont"
+            # Mini-window to enter display name
+            try:
+                win = tk.Toplevel(self)
+                win.title("Font name")
+                win.configure(bg=COLOR_BG_SCREEN)
+                win.transient(self)
+                win.grab_set()
+                # Content
+                frm = tk.Frame(win, bg=COLOR_BG_SCREEN); frm.pack(padx=12, pady=0)
+                tk.Label(frm, text="Enter display name for this font:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=("Myriad Pro", 12)).pack(anchor="w", pady=(8, 0))
+                tk.Label(frm, text="(as on Amazon)", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=("Myriad Pro", 8)).pack(anchor="center", pady=(0, 15))
+                # name_var = tk.StringVar(value=base_family)
+                # ent = tk.Entry(frm, textvariable=name_var, width=28, bg="#d9d9d9"); ent.pack(pady=(8, 12))
+                entry, entry_canvas = create_entry(
+                    EntryInfo(
+                        parent=frm,
+                        width=200,
+                        text_info=TextInfo(text=base_family, color=COLOR_TEXT, font_size=12),
+                        fill=COLOR_PILL,
+                        background_color=COLOR_BG_SCREEN,
+                        radius=10,
+                        padding_x=12,
+                        padding_y=6,
+                    )
+                )
+                btn_row = tk.Frame(frm, bg=COLOR_BG_SCREEN); btn_row.pack(fill="x", pady=(15, 12))
+                def _confirm():
+                    display = (entry.get() or base_family).strip() or base_family
+                    try:
+                        # Map "name" (display) -> file stem without extension
+                        self._fonts_map[display] = base_family
+                        _save_fonts_map(self._fonts_map)
+                        self._font_families = _list_font_families(self._fonts_map)
+                        self._family_combo.configure(values=self._font_families)
+                        self.text_family.set(display)
+                    except Exception:
+                        logger.exception("Failed to update fonts mapping after import")
+                    finally:
+                        try:
+                            win.grab_release()
+                        except Exception:
+                            pass
+                        win.destroy()
+                def _cancel():
+                    try:
+                        win.grab_release()
+                    except Exception:
+                        pass
+                    win.destroy()
+                ok_btn = create_button(
+                    ButtonInfo(
+                        parent=btn_row,
+                        text_info=TextInfo(text="OK", color=COLOR_TEXT, font_size=12),
+                        background_color=COLOR_BG_SCREEN,
+                        button_color="#737373",
+                        hover_color=COLOR_BG_DARK,
+                        active_color="#737373",
+                        padding_x=12, 
+                        padding_y=6,
+                        radius=10, 
+                        command=_confirm
+                    )
+                )
+                cancel_btn = create_button(
+                    ButtonInfo(
+                        parent=btn_row,
+                        text_info=TextInfo(text="Cancel", color=COLOR_TEXT, font_size=12),
+                        background_color=COLOR_BG_SCREEN,
+                        button_color="#737373",
+                        hover_color=COLOR_BG_DARK,
+                        active_color="#737373",
+                        padding_x=12,
+                        padding_y=6,
+                        radius=10,
+                        command=_cancel
+                    )
+                )
+                ok_btn.pack(side="left", padx=(48, 8))
+                cancel_btn.pack(side="left")
+                try:
+                    entry.focus_set()
+                except Exception:
+                    pass
+                # Center window over parent
+                try:
+                    self.update_idletasks(); win.update_idletasks()
+                    px = self.winfo_rootx() + (self.winfo_width() - win.winfo_width()) // 2
+                    py = self.winfo_rooty() + (self.winfo_height() - win.winfo_height()) // 2
+                    win.geometry(f"+{max(0, px)}+{max(0, py)}")
+                except Exception:
+                    pass
+                self.wait_window(win)
+            except Exception:
+                logger.exception("Failed to open font name mini-window")
+
+        imp_btn = create_button(
+            ButtonInfo(
+                parent=self.text_bar,
+                text_info=TextInfo(text="Import font", color=COLOR_TEXT, font_size=10),
+                command=_on_import_font,
+                background_color="#000000",
+                button_color=COLOR_PILL,
+                hover_color=COLOR_BG_DARK,
+                active_color=COLOR_PILL,
+                padding_x=8,
+                padding_y=4,
+                radius=10,
+            )
+        )
+        imp_btn.pack(side="left", padx=8)
+
+        # Initially hide text controls; will show when a text block is selected
+        try:
+            # keep both separator and text bar hidden initially
+            self.text_sep.pack_forget()
+            self.text_bar.pack_forget()
+        except Exception:
+            logger.exception("Failed to initially hide text controls")
+
+        # ---- Apply text styling live ----
+        def _valid_hex(s: str) -> bool:
+            s = (s or "").strip()
+            if len(s) != 7 or not s.startswith("#"):
+                return False
+            try:
+                int(s[1:], 16)
+                return True
+            except Exception:
+                logger.exception("Invalid color hex string")
+                return False
+
+        def _apply_text_changes(*_):
+            # Prevent applying while refreshing UI from selection
+            if getattr(self, "_suppress_text_traces", False):
+                return
+            sel = getattr(self.selection, "_selected", None)
+            if not sel or sel not in self._items:
+                return
+            meta = self._items.get(sel, {})
+            t = meta.get("type")
+            # resolve target text item id
+            tid = meta.get("label_id") if t == "rect" else (meta.get("label_id") or sel)
+            # ensure text item is visible
+            try:
+                if tid:
+                    self.canvas.itemconfig(tid, state="normal")
+            except Exception:
+                logger.exception("Failed to ensure text item visible")
+            # Name field removed; do not update text content here
+            # Color
+            try:
+                col = self.text_color.get().strip()
+                if not col.startswith("#"):
+                    col = f"#{col}"
+                if _valid_hex(col) and tid:
+                    if t == "rect":
+                        meta["label_fill"] = col
+                        try:
+                            # Re-render rotated label image with new color
+                            self._update_rect_label_image(sel)
+                        except Exception:
+                            pass
+                    elif t == "text":
+                        self.canvas.itemconfig(tid, fill=col)
+                        meta["default_fill"] = col
+            except Exception:
+                logger.exception("Failed to set text color on canvas")
+            # Size (pt)
+            try:
+                raw_sz = (self.text_size.get() or "").strip()
+                if raw_sz != "":
+                    sz = int(float(raw_sz))
+                    sz = max(6, sz)
+                    if t == "rect":
+                        meta["label_font_size"] = int(sz)
+                        try:
+                            self._update_rect_label_image(sel)
+                        except Exception:
+                            pass
+                    elif t == "text":
+                        meta["font_size_pt"] = int(sz)
+            except Exception:
+                logger.exception("Failed to set text size metadata")
+            # Family
+            try:
+                fam = (self.text_family.get() or "Myriad Pro").strip()
+                if t == "rect":
+                    meta["label_font_family"] = fam
+                    try:
+                        self._update_rect_label_image(sel)
+                    except Exception:
+                        pass
+                elif t == "text":
+                    meta["font_family"] = fam
+            except Exception:
+                logger.exception("Failed to set text family metadata")
+            # Re-apply font metrics for zoom and keep state visible
+            try:
+                self._update_all_text_fonts()
+            except Exception:
+                logger.exception("Failed to update fonts after text changes")
+            # keep labels above after updates
+            try:
+                self._raise_all_labels()
+            except Exception:
+                logger.exception("Failed to raise labels after text changes")
+
+        # Trace-suppression flag to avoid applying changes while populating UI
+        self._suppress_text_traces = False
+
+        # Wire up live updates
+        self.text_size.trace_add("write", _apply_text_changes)
+        self.text_color.trace_add("write", _apply_text_changes)
+        self._family_combo.bind("<<ComboboxSelected>>", lambda _e: _apply_text_changes())
+
         # Selection controller (must be created before traces/bindings)
         self._zoom: float = 1.5
         self.selection = CanvasSelection(self)
@@ -358,10 +642,14 @@ class NStickerCanvasScreen(Screen):
         self._place_slots = self.slots.place_slots
         self._renumber_slots = self.slots.renumber_slots
         self._render_scene_to_pdf = self.exporter.render_scene_to_pdf
+        self._render_jig_to_svg = self.exporter.render_jig_to_svg
+        self._render_single_pattern_svg = self.exporter.render_single_pattern_svg
         # Now bind using delegated methods
         self.canvas.bind("<Configure>", self._redraw_jig)
         self.canvas.bind("<Button-1>", self.selection.on_click)
         self.canvas.bind("<Button-1>", lambda _e: self.canvas.focus_set(), add="+")
+        # After selection changes, refresh text controls
+        self.canvas.bind("<ButtonRelease-1>", lambda _e: self._refresh_text_controls(), add="+")
         self.canvas.bind("<B1-Motion>", self.selection.on_drag)
         self.canvas.bind("<ButtonRelease-1>", self.selection.on_release)
         # delete selected with keyboard Delete
@@ -450,6 +738,71 @@ class NStickerCanvasScreen(Screen):
         # If coming from "Update existing product", restore saved scene
         self.after(0, self._maybe_load_saved_product)
 
+    def _refresh_text_controls(self):
+        sel = getattr(self.selection, "_selected", None)
+        if not sel or sel not in self._items:
+            try:
+                self.text_size.set("")
+                self.text_color.set("")
+                # hide entire controls when nothing selected
+                self.text_sep.pack_forget()
+                self.text_bar.pack_forget()
+            except Exception:
+                logger.exception("Failed to clear/hide text controls on deselect")
+            return
+        meta = self._items.get(sel, {})
+        t = meta.get("type")
+        # Show controls only for text items or rectangle with a label (treat as text block)
+        try:
+            is_text_block = (t == "text") or (t == "rect")
+        except Exception:
+            is_text_block = False
+        if not is_text_block:
+            try:
+                self.text_sep.pack_forget()
+                self.text_bar.pack_forget()
+            except Exception:
+                logger.exception("Failed to hide text controls for non-text selection")
+            return
+        else:
+            try:
+                # re-pack if hidden (separator then menu)
+                if not self.text_sep.winfo_ismapped():
+                    self.text_sep.pack(side="left", fill="y", padx=(24, 0), pady=6)
+                if not self.text_bar.winfo_ismapped():
+                    self.text_bar.pack(side="left", padx=12)
+            except Exception:
+                logger.exception("Failed to show text controls for text selection")
+        # resolve text id
+        tid = meta.get("label_id") if t == "rect" else (meta.get("label_id") or sel)
+        # Name control removed; skip syncing name from canvas
+        try:
+            if t == "rect":
+                sz = int(round(float(meta.get("label_font_size", 10))))
+                fam = str(meta.get("label_font_family", "Myriad Pro"))
+                # Color from metadata; label is an image
+                col = str(meta.get("label_fill", "#17a24b"))
+            elif t == "text":
+                sz = int(round(float(meta.get("font_size_pt", 12))))
+                fam = str(meta.get("font_family", "Myriad Pro"))
+                col = str(meta.get("default_fill", self.canvas.itemcget(tid, "fill") or "#17a24b"))
+            else:
+                sz = 12; fam = "Myriad Pro"; col = "#17a24b"
+            self.text_size.set(str(int(sz)))
+            if fam not in self._font_families:
+                self._font_families.append(fam)
+                try:
+                    self._family_combo.configure(values=sorted(self._font_families))
+                except Exception:
+                    logger.exception("Failed to update family combo values")
+            self.text_family.set(fam)
+            if col:
+                self.text_color.set(col)
+        except Exception:
+            logger.exception("Failed to refresh text control values")
+        finally:
+            self._suppress_text_traces = False
+
     # UI helpers
     def _snap_mm(self, value: float) -> int:
         """Snap a millimeter value to the nearest integer mm."""
@@ -460,9 +813,161 @@ class NStickerCanvasScreen(Screen):
 
     
     def _raise_all_labels(self):
-        # Ensure text squares (rect + label) are above normal items
-        self.canvas.tag_raise("text_item")
-        self.canvas.tag_raise("label")
+        # Raise each item's label just above its own base item (not above all items)
+        try:
+            for cid, meta in self._items.items():
+                try:
+                    if cid == meta.get("canvas_id") and meta.get("label_id"):
+                        lbl_id = meta.get("label_id")
+                        if meta.get("type") == "rect":
+                            # For rects, overlay polygon sits above base; raise label above overlay
+                            try:
+                                rid = int(meta.get("rot_id", 0) or 0)
+                            except Exception:
+                                rid = 0
+                            if rid:
+                                self.canvas.tag_raise(lbl_id, rid)
+                            else:
+                                self.canvas.tag_raise(lbl_id, cid)
+                        elif meta.get("type") == "slot":
+                            # For slots, raise label just above slot rect
+                            self.canvas.tag_raise(lbl_id, cid)
+                        else:
+                            # Other types: keep label above their base item
+                            self.canvas.tag_raise(lbl_id, cid)
+                except Exception as e:
+                    logger.exception(f"Failed to raise label above base item: {e}")
+        except Exception as e:
+            logger.exception(f"Failed to raise all labels: {e}")
+            pass
+
+    def _find_font_path(self, family: str) -> Optional[str]:
+        try:
+            file_stem = str(self._fonts_map.get(family, "MyriadPro-Regular"))
+        except Exception:
+            file_stem = "MyriadPro-Regular"
+        try:
+            ttf = (FONTS_PATH / f"{file_stem}.ttf")
+            if ttf.exists():
+                return str(ttf)
+            otf = (FONTS_PATH / f"{file_stem}.otf")
+            if otf.exists():
+                return str(otf)
+        except Exception:
+            pass
+        return None
+
+    def _update_rect_label_image(self, rect_cid: int) -> None:
+        """Render/update a rect's label as a rotated image and center it inside the rect."""
+        try:
+            meta = self._items.get(rect_cid, {})
+            if meta.get("type") != "rect":
+                return
+            # Current displayed rect bbox and center
+            bx = self.canvas.bbox(rect_cid)
+            if not bx:
+                return
+            x1, y1, x2, y2 = bx
+            cx = (x1 + x2) / 2.0
+            cy = (y1 + y2) / 2.0
+            # Style
+            label_text = str(meta.get("label", "Text"))
+            try:
+                base_pt = int(round(float(meta.get("label_font_size", 10))))
+            except Exception:
+                base_pt = 10
+            size_px = self._scaled_pt(base_pt)
+            fill = str(meta.get("label_fill", "#ffffff"))
+            family = str(meta.get("label_font_family", "Myriad Pro"))
+            try:
+                angle = float(meta.get("angle", 0.0) or 0.0)
+            except Exception:
+                angle = 0.0
+            try:
+                from PIL import Image, ImageDraw, ImageFont, ImageTk  # type: ignore
+            except Exception:
+                return
+            font_path = self._find_font_path(family)
+            try:
+                if font_path:
+                    font = ImageFont.truetype(font_path, max(1, int(size_px)))
+                else:
+                    font = ImageFont.load_default()
+            except Exception:
+                font = ImageFont.load_default()
+            # Measure text
+            tmp = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(tmp)
+            try:
+                tb = draw.textbbox((0, 0), label_text, font=font)
+                tw = max(1, tb[2] - tb[0])
+                th = max(1, tb[3] - tb[1])
+                off_x = -tb[0]
+                off_y = -tb[1]
+            except Exception:
+                try:
+                    tw = int(draw.textlength(label_text, font=font))
+                    th = max(1, int(size_px * 1.4))
+                except Exception:
+                    tw, th = max(1, int(size_px * 2)), max(1, int(size_px * 1.4))
+                off_x = 0
+                off_y = 0
+            pad = 0
+            img_w = int(tw + 2 * pad)
+            img_h = int(th + 2 * pad)
+            img = Image.new("RGBA", (max(1, img_w), max(1, img_h)), (0, 0, 0, 0))
+            d2 = ImageDraw.Draw(img)
+            # Parse hex color
+            try:
+                if fill.startswith("#") and len(fill) == 7:
+                    r = int(fill[1:3], 16); g = int(fill[3:5], 16); b = int(fill[5:7], 16)
+                    color_rgba = (r, g, b, 255)
+                else:
+                    color_rgba = (255, 255, 255, 255)
+            except Exception:
+                color_rgba = (255, 255, 255, 255)
+            d2.text((pad + off_x, pad + off_y), label_text, font=font, fill=color_rgba)
+            try:
+                rotated = img.rotate(angle, expand=True, resample=Image.BICUBIC)
+            except Exception:
+                rotated = img
+            try:
+                from PIL import ImageTk  # type: ignore
+                photo = ImageTk.PhotoImage(rotated)
+            except Exception:
+                return
+            meta["label_photo"] = photo
+            lid = int(meta.get("label_id", 0) or 0)
+            if lid and str(self.canvas.type(lid)) == "image":
+                try:
+                    self.canvas.itemconfig(lid, image=photo)
+                except Exception:
+                    pass
+                self.canvas.coords(lid, cx, cy)
+            else:
+                if lid:
+                    try:
+                        self.canvas.delete(lid)
+                    except Exception:
+                        pass
+                new_lid = self.canvas.create_image(cx, cy, image=photo, anchor="center")
+                meta["label_id"] = new_lid
+            # Keep above overlay/base
+            try:
+                rid = int(meta.get("rot_id", 0) or 0)
+            except Exception:
+                rid = 0
+            try:
+                lbl_id = int(meta.get("label_id", 0) or 0)
+                if lbl_id:
+                    if rid:
+                        self.canvas.tag_raise(lbl_id, rid)
+                    else:
+                        self.canvas.tag_raise(lbl_id, rect_cid)
+            except Exception:
+                pass
+        except Exception:
+            logger.exception("Failed to update rotated label image")
 
     def _chip(self, parent, label, var, width=8):
         box = tk.Frame(parent, bg="#6f6f6f")
@@ -595,7 +1100,6 @@ class NStickerCanvasScreen(Screen):
             cx - scaled_w / 2 + ox, cy - scaled_h / 2 + oy, cx + scaled_w / 2 - ox, cy + scaled_h / 2 - oy,
             fill="", outline="", width=0
         )
-        txt = self.canvas.create_text(cx, cy, text=label, fill=text_fill, font=("Myriad Pro", self._scaled_pt(10)), tags=("label",))
         # Persist position in mm relative to jig for stability on jig resize
         jx0, jy0, jx1, jy1 = self._jig_inner_rect_px()
         if x_mm is None:
@@ -608,7 +1112,6 @@ class NStickerCanvasScreen(Screen):
         new_left = (jx0 + ox) + sx_mm * MM_TO_PX * self._zoom
         new_top = (jy0 + oy) + sy_mm * MM_TO_PX * self._zoom
         self.canvas.coords(rect, new_left, new_top, new_left + scaled_w, new_top + scaled_h)
-        self.canvas.coords(txt, new_left + scaled_w / 2, new_top + scaled_h / 2)
         
         # compute next z to keep newer items above older ones
         max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
@@ -618,11 +1121,20 @@ class NStickerCanvasScreen(Screen):
             h_mm=float(qh_mm),
             x_mm=float(sx_mm),
             y_mm=float(sy_mm),
-            label_id=txt,
+            label_id=None,
             outline=outline,
             canvas_id=rect,
             z=int(max_z + 1),
         )
+        try:
+            self._items[rect]["label"] = str(label)
+        except Exception:
+            pass
+        # Create rotated label image now
+        try:
+            self._update_rect_label_image(rect)
+        except Exception:
+            logger.exception("Failed to create rotated label image for placeholder")
         # Create initial overlay polygon to visualize rotation/selection consistently
         try:
             self._update_rect_overlay(rect, self._items[rect], new_left, new_top, scaled_w, scaled_h)
@@ -641,6 +1153,16 @@ class NStickerCanvasScreen(Screen):
         self.create_placeholder("Text", default_w, default_h, text_fill="#17a24b", outline="#17a24b")
 
     def _ai_arrange(self):
+        # Hide text menu and clear selection before arranging
+        try:
+            self.selection.select(None)
+        except Exception:
+            logger.exception("Failed to deselect before AI arrange")
+        try:
+            self.text_sep.pack_forget()
+            self.text_bar.pack_forget()
+        except Exception:
+            logger.exception("Failed to hide text menu before AI arrange")
         # Arrange non-slot items into existing slots.
         # Order for both slots and items: right-to-left within a row, bottom-to-top across rows
         # so the first item goes to the lower-right slot, then leftwards, then rows upwards.
@@ -789,6 +1311,12 @@ class NStickerCanvasScreen(Screen):
 
         self._redraw_jig(center=False)
         self.selection._reorder_by_z()
+        # Ensure text controls remain hidden after arrange
+        try:
+            self.text_sep.pack_forget()
+            self.text_bar.pack_forget()
+        except Exception:
+            logger.exception("Failed to hide text menu after AI arrange")
 
     def _compute_import_size_mm(self, path: str) -> Optional[Tuple[float, float]]:
         """Infer intrinsic image size in mm.
@@ -905,8 +1433,9 @@ class NStickerCanvasScreen(Screen):
         # Collect slots from the current canvas (slots are shared across sides)
         slots_only = [it for it in self._serialize_scene() if it.get("type") == "slot"]
         # Prepare background job to render PDFs and write JSON without blocking UI
-        p_jig = os.path.join(TEMP_FOLDER, "Jig_file.pdf")
-        p_front = os.path.join(TEMP_FOLDER, "Test_file.pdf")
+        p_jig = os.path.join(TEMP_FOLDER, "Cut_jig.svg")
+        p_pattern = os.path.join(TEMP_FOLDER, "Single_pattern.svg")
+        p_front = os.path.join(TEMP_FOLDER, "Test_file_frontside.pdf")
         p_back = os.path.join(TEMP_FOLDER, "Test_file_backside.pdf")
         try:
             jx = float(self.jig_x.get() or 0.0)
@@ -997,6 +1526,9 @@ class NStickerCanvasScreen(Screen):
                         logger.exception(f"Failed to process rect item {cid}: {e}")
                         continue
 
+            # Before composing, normalize z across current non-slot items to ensure unique, compact values
+            self.selection._normalize_z()
+
             def _compose_side(items_for_side: list[dict]) -> dict:
                 slot_descs: list[dict] = []
                 for it in items_for_side:
@@ -1015,7 +1547,8 @@ class NStickerCanvasScreen(Screen):
                                 "y_mm": float(it.get("y_mm", 0.0)),
                                 "w_mm": float(it.get("w_mm", 0.0)),
                                 "h_mm": float(it.get("h_mm", 0.0)),
-                                "z": int(slot_z_map.get(key, 0)),
+                                # Use the z value directly from the item to avoid key-mismatch defaulting to 0
+                                "z": int(it.get("z", 0)),
                                 "objects": [],
                             }
                             slot_descs.append(slot_entry)
@@ -1055,7 +1588,8 @@ class NStickerCanvasScreen(Screen):
                             "w_mm": float(it.get("w_mm", 0.0)),
                             "h_mm": float(it.get("h_mm", 0.0)),
                             "angle": float(it.get("angle", 0.0) or 0.0),
-                            "z": int(image_z_map.get(key, 0)),
+                            # Use direct z from item; maps can miss due to float rounding
+                            "z": int(it.get("z", 0)),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process image for slot: {e}")
@@ -1081,7 +1615,7 @@ class NStickerCanvasScreen(Screen):
                             "fill": str(it.get("fill", "white")),
                             "x_mm": float(it.get("x_mm", 0.0)),
                             "y_mm": float(it.get("y_mm", 0.0)),
-                            "z": int(text_z_map.get(key, 0)),
+                            "z": int(it.get("z", 0)),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process text for slot: {e}")
@@ -1124,7 +1658,11 @@ class NStickerCanvasScreen(Screen):
                             "w_mm": float(it.get("w_mm", 0.0)),
                             "h_mm": float(it.get("h_mm", 0.0)),
                             "angle": float(it.get("angle", 0.0) or 0.0),
-                            "z": int(text_rect_z_map.get(key, 0)),
+                            "z": int(it.get("z", 0)),
+                            # Persist font info for text blocks
+                            "label_fill": str(it.get("label_fill", "#17a24b")),
+                            "label_font_size": int(round(float(it.get("label_font_size", 10)))),
+                            "label_font_family": str(it.get("label_font_family", "Myriad Pro")),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process rect for slot: {e}")
@@ -1183,9 +1721,24 @@ class NStickerCanvasScreen(Screen):
         def _worker():
             try:
                 # Render PDFs
-                logger.debug(f"Rendering jig PDF...")
-                state.processing_message = "Rendering jig PDF..."
-                self._render_scene_to_pdf(p_jig, front_items, jx, jy, only_jig=True, dpi=1200)
+                logger.debug(f"Rendering jig SVG...")
+                state.processing_message = "Rendering jig SVG..."
+                # For the jig cut file we only need the outer jig frame and slot rectangles
+                self._render_jig_to_svg(p_jig, slots_only, jx, jy)
+                # Render Single Pattern (first slot with its objects from front side)
+                try:
+                    state.processing_message = "Rendering single pattern SVG..."
+                    logger.debug(f"Rendering single pattern SVG...")
+                    front_desc = combined.get("Frontside", {})
+                    slots_desc = list(front_desc.get("slots", []))
+                    if slots_desc:
+                        state.processing_message = "Rendering single pattern SVG..."
+                        self._render_single_pattern_svg(p_pattern, slots_desc[0])
+                except Exception as e:
+                    state.is_failed = True
+                    state.error_message = str(e)
+                    logger.exception(f"Failed to render single pattern: {e}")
+
                 logger.debug(f"Rendering front PDF...")
                 state.processing_message = "Rendering front PDF..."
                 self._render_scene_to_pdf(p_front, front_items, jx, jy, dpi=1200)
@@ -1194,11 +1747,10 @@ class NStickerCanvasScreen(Screen):
                 self._render_scene_to_pdf(p_back, back_items, jx, jy, dpi=1200)
                 # Write JSON
                 try:
-                    import json as _json
                     logger.debug(f"Writing JSON file...")
                     state.processing_message = "Writing JSON file..."
                     with open(json_path, "w", encoding="utf-8") as _f:
-                        _json.dump(combined, _f, ensure_ascii=False, indent=2)
+                        json.dump(combined, _f, ensure_ascii=False, indent=2)
                     logger.debug(f"Processing completed")
                     
                 except Exception as e:
@@ -1294,12 +1846,7 @@ class NStickerCanvasScreen(Screen):
         new_top = max(min_top, min(top, max_top))
         # Invisible base rect; visual is drawn via overlay polygon
         rect = self.canvas.create_rectangle(new_left, new_top, new_left + w, new_top + h, fill="", outline="", width=0)
-        txt = self.canvas.create_text(new_left + w / 2, new_top + h / 2, text=label, fill=text_fill, font=("Myriad Pro", self._scaled_pt(10)), tags=("label",))
 
-        # keep provided mm unless clamped
-        if new_left != left or new_top != top:
-            x_mm_i = self._snap_mm((new_left - (x0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6)))
-            y_mm_i = self._snap_mm((new_top - (y0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6)))
         # next z
         max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
         self._items[rect] = CanvasObject(
@@ -1308,12 +1855,20 @@ class NStickerCanvasScreen(Screen):
             h_mm=float(h_mm_i),
             x_mm=float(x_mm_i),
             y_mm=float(y_mm_i),
-            label_id=txt,
+            label_id=None,
             outline=outline,
             canvas_id=rect,
             z=int(max_z + 1),
             angle=float(ang),
         )
+        try:
+            self._items[rect]["label"] = str(label)
+        except Exception:
+            pass
+        try:
+            self._update_rect_label_image(rect)
+        except Exception:
+            logger.exception("Failed to render rotated rect label on create")
         # Create overlay to visualize rotation; base rect stays invisible
         self._update_rect_overlay(rect, self._items[rect], new_left, new_top, w, h)
         return rect
@@ -1342,8 +1897,7 @@ class NStickerCanvasScreen(Screen):
             t = meta.get("type")
             if t == "rect":
                 try:
-                    label_id = meta.get("label_id")
-                    label_text = self.canvas.itemcget(label_id, "text") if label_id else ""
+                    label_text = str(meta.get("label", ""))
                     items.append({
                         "type": "rect",
                         "label": label_text,
@@ -1354,6 +1908,10 @@ class NStickerCanvasScreen(Screen):
                         "outline": str(meta.get("outline", "#d0d0d0")),
                         "angle": float(meta.get("angle", 0.0) or 0.0),
                         "z": int(meta.get("z", 0)),
+                        # Persist text styling for rect labels
+                        "label_fill": str(meta.get("label_fill", "#ffffff")),
+                        "label_font_size": int(round(float(meta.get("label_font_size", 10)))),
+                        "label_font_family": str(meta.get("label_font_family", "Myriad Pro")),
                     })
                 except Exception:
                     continue
@@ -1402,6 +1960,9 @@ class NStickerCanvasScreen(Screen):
                         "y_mm": y_mm,
                         "fill": fill,
                         "z": int(meta.get("z", 0)),
+                        # Persist text styling for plain text items
+                        "font_size_pt": int(round(float(meta.get("font_size_pt", 12)))),
+                        "font_family": str(meta.get("font_family", "Myriad Pro")),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize text item {cid}: {e}")
@@ -1413,8 +1974,8 @@ class NStickerCanvasScreen(Screen):
             t = it.get("type")
             if t == "rect":
                 outline = str(it.get("outline", "#d0d0d0"))
-                # If restored rect is a Text rect, it may have green outline
-                text_fill = "#17a24b" if outline == "#17a24b" else "white"
+                # Prefer saved label fill; otherwise infer from outline for text-rects
+                text_fill = str(it.get("label_fill", "#17a24b" if outline == "#17a24b" else "white"))
                 rid = self._create_rect_at_mm(
                     it.get("label", ""),
                     float(it.get("w_mm", 0.0)),
@@ -1430,6 +1991,17 @@ class NStickerCanvasScreen(Screen):
                         z_val = it.get("z")
                         if z_val is not None:
                             self._items[rid]["z"] = int(z_val)
+                        # Apply restored label styling if present and re-render label image
+                        try:
+                            if "label_fill" in it:
+                                self._items[rid]["label_fill"] = str(it.get("label_fill"))
+                            if "label_font_size" in it:
+                                self._items[rid]["label_font_size"] = int(round(float(it.get("label_font_size", 10))))
+                            if "label_font_family" in it:
+                                self._items[rid]["label_font_family"] = str(it.get("label_font_family", "Myriad Pro"))
+                            self._update_rect_label_image(rid)
+                        except Exception:
+                            logger.exception("Failed to apply restored rect label styling")
                 except Exception as e:
                     logger.exception(f"Failed to apply rect z from JSON: {e}")
             elif t == "slot":
@@ -1506,6 +2078,18 @@ class NStickerCanvasScreen(Screen):
                             z_val = it.get("z")
                             if z_val is not None:
                                 self._items[tid]["z"] = int(z_val)
+                            # Apply restored text styling
+                            try:
+                                fam = str(it.get("font_family", "Myriad Pro"))
+                                try:
+                                    base_pt = int(round(float(it.get("font_size_pt", 12))))
+                                except Exception:
+                                    base_pt = 12
+                                self._items[tid]["font_family"] = fam
+                                self._items[tid]["font_size_pt"] = int(base_pt)
+                                self.canvas.itemconfig(tid, font=(fam, self._scaled_pt(base_pt), "bold"))
+                            except Exception:
+                                logger.exception("Failed to apply restored text styling")
                     except Exception as e:
                         logger.exception(f"Failed to apply text z from JSON: {e}")
                 else:
@@ -1517,7 +2101,7 @@ class NStickerCanvasScreen(Screen):
                         float(it["x_mm"]),
                         float(it["y_mm"]),
                         outline="#17a24b",
-                        text_fill="#17a24b",
+                        text_fill=str(it.get("label_fill", "#17a24b")),
                         angle=float(it.get("angle", 0.0) or 0.0),
                     )
                     try:
@@ -1525,6 +2109,17 @@ class NStickerCanvasScreen(Screen):
                             z_val = it.get("z")
                             if z_val is not None:
                                 self._items[rid]["z"] = int(z_val)
+                            # Apply restored label styling for text-rects
+                            try:
+                                if "label_fill" in it:
+                                    self._items[rid]["label_fill"] = str(it.get("label_fill"))
+                                if "label_font_size" in it:
+                                    self._items[rid]["label_font_size"] = int(round(float(it.get("label_font_size", 10))))
+                                if "label_font_family" in it:
+                                    self._items[rid]["label_font_family"] = str(it.get("label_font_family", "Myriad Pro"))
+                                self._update_rect_label_image(rid)
+                            except Exception:
+                                logger.exception("Failed to apply restored text-rect label styling")
                     except Exception as e:
                         logger.exception(f"Failed to apply text-rect z from JSON: {e}")
 

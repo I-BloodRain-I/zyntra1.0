@@ -40,7 +40,7 @@ class SlotManager:
         if new_left != left or new_top != top:
             x_mm_i = self.s._snap_mm((new_left - (x0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6)))
             y_mm_i = self.s._snap_mm((new_top - (y0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6)))
-        # next z
+        # next z: force slots to be at the very bottom. Use (current global min z - 1)
         min_z = min(int(m.get("z", 0)) for _cid, m in self.s._items.items()) if self.s._items else 0
         self.s._items[rect] = CanvasObject(
             type="slot",

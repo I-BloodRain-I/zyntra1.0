@@ -144,7 +144,12 @@ class CanvasSelection:
             if meta.get("type") in ("rect", "slot"):
                 # Idk why, but without -4, the rect is slightly larger than the stored mm
                 self.s.canvas.coords(self._selected, new_left, new_top, new_left + w, new_top + h)
-                if meta.get("label_id"):
+                if meta.get("type") == "rect":
+                    try:
+                        self.s._update_rect_label_image(self._selected)
+                    except Exception:
+                        pass
+                elif meta.get("label_id"):
                     self.s.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
                     self.s._raise_all_labels()
                 try:
@@ -215,6 +220,24 @@ class CanvasSelection:
                                 break
                     except Exception:
                         logger.exception("Failed to delete selection border on deselect")
+                # Also allow right-clicking the rotated overlay polygon for rects
+                if not target:
+                    for rid, meta in self.s._items.items():
+                        try:
+                            if int(meta.get("rot_id", 0) or 0) == cid and meta.get("type") == "rect":
+                                target = rid
+                                break
+                        except Exception:
+                            logger.exception("Error while checking overlay hit for context menu")
+                # And allow right-clicking the image selection border
+                if not target:
+                    for iid, meta in self.s._items.items():
+                        try:
+                            if int(meta.get("border_id", 0) or 0) == cid and meta.get("type") == "image":
+                                target = iid
+                                break
+                        except Exception:
+                            logger.exception("Error while checking image border hit for context menu")
         if not target:
             self.destroy_context_popup()
             return
@@ -294,47 +317,66 @@ class CanvasSelection:
         try:
             # Build list of (cid, meta) that have a primary canvas id
             items = [(cid, meta) for cid, meta in self.s._items.items() if cid == meta.get("canvas_id")]
-            # If z is missing, treat as 0
-            items.sort(key=lambda kv: int(kv[1].get("z", 0)))
+            # Partition: slots vs other items. Slots must always stay at the very bottom layer
+            slot_items = [(cid, meta) for cid, meta in items if meta.get("type") == "slot"]
+            other_items = [(cid, meta) for cid, meta in items if meta.get("type") != "slot"]
+            # Sort non-slot items by z (ascending). If z is missing, treat as 0
+            other_items.sort(key=lambda kv: int(kv[1].get("z", 0)))
             # Reset order by lowering everything
             for cid, _ in items:
                 try:
                     self.s.canvas.tag_lower(cid)
                 except Exception:
                     logger.exception("Failed to lower canvas item while reordering by z")
-            # Raise in sorted order (later ones end up on top)
-            for cid, _ in items:
+            # First raise all slots (they'll remain at bottom relative to subsequent raises)
+            for cid, _ in slot_items:
+                try:
+                    self.s.canvas.tag_raise(cid)
+                except Exception:
+                    logger.exception("Failed to raise slot while reordering by z")
+            # Then raise non-slots in sorted order so later ones end up on top
+            for cid, _ in other_items:
                 try:
                     self.s.canvas.tag_raise(cid)
                 except Exception:
                     logger.exception("Failed to raise canvas item while reordering by z")
+            # Ensure rect overlays (rotated polygon) are above their own base rects
+            try:
+                for cid, meta in other_items:
+                    try:
+                        if meta.get("type") == "rect":
+                            rid = int(meta.get("rot_id", 0) or 0)
+                            if rid:
+                                self.s.canvas.tag_raise(rid, cid)
+                                # And ensure the rect's label is above its overlay
+                                try:
+                                    lbl = meta.get("label_id")
+                                    if lbl:
+                                        self.s.canvas.tag_raise(lbl, rid)
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+            except Exception:
+                logger.exception("Failed to raise rect overlays above their base rects")
             # Ensure slot labels are above their slots but below other labels
             try:
-                for cid, meta in items:
-                    if meta.get("type") == "slot" and meta.get("label_id"):
+                for cid, meta in slot_items:
+                    if meta.get("label_id"):
                         # Bring slot label just above its rect
                         self.s.canvas.tag_raise(meta.get("label_id"), cid)
             except Exception:
                 logger.exception("Failed to raise slot label above its slot")
-            # Ensure current selection border is on top
+            # Ensure current selection border (images only) is visible; do not force rect overlays to top
             if self._selected and self._selected in self.s._items:
                 meta = self.s._items.get(self._selected, {})
-                bid = meta.get("border_id")
-                if bid:
-                    try:
-                        self.s.canvas.tag_raise(bid)
-                    except Exception:
-                        logger.exception("Failed to raise selection border to top")
-                # Ensure rotated overlay (if any) for selected rect stays on top
-                try:
-                    rid = int(meta.get("rot_id", 0) or 0)
-                except Exception:
-                    rid = 0
-                if rid:
-                    try:
-                        self.s.canvas.tag_raise(rid)
-                    except Exception:
-                        logger.exception("Failed to raise rotated overlay to top")
+                if meta.get("type") == "image":
+                    bid = meta.get("border_id")
+                    if bid:
+                        try:
+                            self.s.canvas.tag_raise(bid)
+                        except Exception:
+                            logger.exception("Failed to raise selection border to top")
             # Ensure labels/text squares stay above
             try:
                 # Raise standard labels but not above selection border
@@ -345,9 +387,9 @@ class CanvasSelection:
             logger.exception("Failed to reorder items by z")
 
     def _normalize_z(self) -> None:
-        """Normalize z values to a compact 0..N-1 sequence preserving order."""
+        """Normalize z values to a compact 0..N-1 sequence for non-slot items only, preserving order."""
         try:
-            items = [(cid, meta) for cid, meta in self.s._items.items() if cid == meta.get("canvas_id")]
+            items = [(cid, meta) for cid, meta in self.s._items.items() if (cid == meta.get("canvas_id") and meta.get("type") != "slot")]
             items.sort(key=lambda kv: int(kv[1].get("z", 0)))
             for idx, (cid, meta) in enumerate(items):
                 try:
@@ -362,13 +404,16 @@ class CanvasSelection:
         if not self._selected or self._selected not in self.s._items:
             return
         meta = self.s._items[self._selected]
+        # Never allow manipulating slot z via nudge; slots are fixed at bottom
+        if meta.get("type") == "slot":
+            return
         try:
             z = int(meta.get("z", 0))
         except Exception:
             z = 0
         # Compute bounds from current items
         try:
-            all_items = [(cid, m) for cid, m in self.s._items.items() if cid == m.get("canvas_id")]
+            all_items = [(cid, m) for cid, m in self.s._items.items() if (cid == m.get("canvas_id") and m.get("type") != "slot")]
             if not all_items:
                 return
             max_z = max(int(m.get("z", 0)) for _cid, m in all_items)
@@ -384,7 +429,7 @@ class CanvasSelection:
         swap_cid = None
         for cid, m in self.s._items.items():
             try:
-                if cid == m.get("canvas_id") and int(m.get("z", 0)) == new_z and cid != self._selected:
+                if cid == m.get("canvas_id") and m.get("type") != "slot" and int(m.get("z", 0)) == new_z and cid != self._selected:
                     swap_cid = cid
                     break
             except Exception:
@@ -609,6 +654,11 @@ class CanvasSelection:
             finally:
                 self._suppress_pos_trace = False
                 self._suppress_size_trace = False
+            # After deselection, keep global stacking consistent
+            self._reorder_by_z()
+            # Also refresh screen controls so text menu hides on deselect
+            if hasattr(self.s, "_refresh_text_controls"):
+                self.s._refresh_text_controls()
             return
         meta = self.s._items.get(cid, {})
         if meta.get("type") == "slot":
@@ -626,7 +676,15 @@ class CanvasSelection:
                     x1, y1, x2, y2 = self.s.canvas.bbox(cid)
                     self.s._update_rect_overlay(cid, meta, x1, y1, x2 - x1, y2 - y1)
                     self.s.canvas.itemconfig(rid, outline="#6ec8ff", width=3)
-                    self.s.canvas.tag_raise(rid)
+                    # Keep overlay above its own base rect only (respect global z-order)
+                    self.s.canvas.tag_raise(rid, cid)
+                    # Ensure label sits above overlay if present
+                    try:
+                        lbl = meta.get("label_id")
+                        if lbl:
+                            self.s.canvas.tag_raise(lbl, rid)
+                    except Exception:
+                        pass
                 except Exception:
                     pass
             # set size fields without triggering live resize
@@ -675,6 +733,12 @@ class CanvasSelection:
         elif meta.get("type") == "text":
             # highlight selected text in blue
             self.s.canvas.itemconfig(cid, fill="#6ec8ff")
+
+        # Re-apply stacking so overlays/labels stay above backgrounds and slots
+        self._reorder_by_z()
+        # Notify screen to refresh text controls (if available)
+        if hasattr(self.s, "_refresh_text_controls"):
+            self.s._refresh_text_controls()
 
     def apply_size_to_selection(self):
         if not self._selected:
@@ -786,7 +850,12 @@ class CanvasSelection:
                 ang = 0.0
             rw, rh = (h, w) if (meta.get("type") == "rect" and int(abs(ang)) % 180 == 90) else (w, h)
             self.s.canvas.coords(self._selected, cx - rw / 2, cy - rh / 2, cx + rw / 2, cy + rh / 2)
-            if meta.get("label_id"):
+            if meta.get("type") == "rect":
+                try:
+                    self.s._update_rect_label_image(self._selected)
+                except Exception:
+                    pass
+            elif meta.get("label_id"):
                 self.s.canvas.coords(meta["label_id"], cx, cy)
                 self.s._raise_all_labels()
             # Keep rotated overlay polygon in sync for rects
@@ -923,9 +992,10 @@ class CanvasSelection:
             if int(abs(angle)) % 180 == 90:
                 w, h = h, w
             self.s.canvas.coords(self._selected, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
-            if meta.get("label_id"):
-                self.s.canvas.coords(meta.get("label_id"), cx, cy)
-                self.s._raise_all_labels()
+            try:
+                self.s._update_rect_label_image(self._selected)
+            except Exception:
+                pass
             try:
                 self.s._update_rect_overlay(self._selected, meta, cx - w / 2, cy - h / 2, w, h)
             except Exception:

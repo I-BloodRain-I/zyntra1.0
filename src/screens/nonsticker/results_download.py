@@ -1,5 +1,6 @@
 import os
 import shutil
+import logging
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import ttk, messagebox, filedialog
@@ -7,6 +8,8 @@ from tkinter import ttk, messagebox, filedialog
 from src.core import Screen, COLOR_BG_DARK, COLOR_TEXT, COLOR_PILL, COLOR_BG_SCREEN, UI_SCALE, scale_px, COLOR_BG_SCREEN_FOR_LABELS
 from src.core.app import TEMP_FOLDER
 from src.core.state import state
+
+logger = logging.getLogger(__name__)
 
 
 class NStickerResultsDownloadScreen(Screen):
@@ -49,9 +52,10 @@ class NStickerResultsDownloadScreen(Screen):
         self._chip_h = int(chip_font.metrics("linespace") + 20)
 
         # Three file rows with pill-style Download buttons
-        self._file_row(content, "Co2 laser cut Jig", lambda: self._download_pdf("jig")).pack(pady=(10, 8))
-        self._file_row(content, "Test File .pdf", lambda: self._download_pdf("front")).pack(pady=(8, 8))
-        self._file_row(content, "Test File Backside .pdf", lambda: self._download_pdf("back")).pack(pady=(8, 8))
+        self._file_row(content, "Cut Jig", lambda: self._download_pdf("jig")).pack(pady=(10, 8))
+        self._file_row(content, "Single Pattern", lambda: self._download_pdf("pattern")).pack(pady=(8, 8))
+        self._file_row(content, "Test File Frontside", lambda: self._download_pdf("front")).pack(pady=(8, 8))
+        self._file_row(content, "Test File Backside", lambda: self._download_pdf("back")).pack(pady=(8, 8))
 
         # Report row: left strip for "Report:", then dynamic status label
         report_row = tk.Frame(content, bg=COLOR_BG_SCREEN)
@@ -112,11 +116,11 @@ class NStickerResultsDownloadScreen(Screen):
         try:
             self._apply_processing_state()
         except Exception:
-            pass
+            logger.exception("Failed to apply initial processing state")
         try:
             self.after(300, self._poll_processing)
         except Exception:
-            pass
+            logger.exception("Failed to schedule processing poll")
 
     # ---------- helpers ----------
     def _pill_button(self, parent, text: str, command):
@@ -211,7 +215,7 @@ class NStickerResultsDownloadScreen(Screen):
                 self._download_buttons = []
             self._download_buttons.append(b)
         except Exception:
-            pass
+            logger.exception("Failed to register download button for state management")
         if small_note:
             tk.Label(col, text=small_note, bg=COLOR_BG_SCREEN_FOR_LABELS, fg="#333333",
                      font=("Myriad Pro", 10)).pack(pady=(4, 0))
@@ -221,18 +225,30 @@ class NStickerResultsDownloadScreen(Screen):
     def _download_pdf(self, type: str):
         filename = ""
         if type == "jig":
-            filename = "Jig_file.pdf"
+            filename = "Cut_jig.svg"
         elif type == "front":
-            filename = "Test_file.pdf"
+            filename = "Test_file_frontside.pdf"
         elif type == "back":
             filename = "Test_file_backside.pdf"
+        elif type == "pattern":
+            filename = "Single_pattern.svg"
 
-        fname = filedialog.asksaveasfilename(
-            title="Save PDF File",
-            defaultextension=".pdf",
-            filetypes=[("PDF files", "*.pdf")],
-            initialfile=filename
-        )
+        # Choose appropriate dialog based on file extension
+        _, ext = os.path.splitext(filename)
+        if ext.lower() == ".svg":
+            fname = filedialog.asksaveasfilename(
+                title="Save SVG File",
+                defaultextension=".svg",
+                filetypes=[("SVG files", "*.svg"), ("All files", "*.*")],
+                initialfile=filename
+            )
+        else:
+            fname = filedialog.asksaveasfilename(
+                title="Save PDF File",
+                defaultextension=".pdf",
+                filetypes=[("PDF files", "*.pdf")],
+                initialfile=filename
+            )
         if not fname:
             return
         try:
@@ -256,15 +272,15 @@ class NStickerResultsDownloadScreen(Screen):
                         try:
                             b.itemconfigure(sid, fill=fill)
                         except Exception:
-                            pass
+                            logger.exception("Failed to update download button shape fill")
                     try:
                         b.itemconfigure(getattr(b, "_txt_id", None), fill=txt_col)
                     except Exception:
-                        pass
+                        logger.exception("Failed to update download button text color")
                 except Exception:
                     continue
         except Exception:
-            pass
+            logger.exception("Failed to enable/disable download buttons")
 
     def _apply_processing_state(self) -> None:
         processing = bool(getattr(state, "is_processing", False))
@@ -284,33 +300,14 @@ class NStickerResultsDownloadScreen(Screen):
         try:
             self._apply_processing_state()
         except Exception:
-            pass
+            logger.exception("Failed to apply processing state in poll")
         # Keep polling while processing
         if bool(getattr(state, "is_processing", False)):
             try:
                 self.after(300, self._poll_processing)
             except Exception:
-                pass
-
-    def _download_jig(self):
-        fname = filedialog.asksaveasfilename(
-            title="Save Jig File",
-            defaultextension=".svg",
-            filetypes=[("SVG files", "*.svg"), ("All files", "*.*")]
-        )
-        if not fname:
-            return
-        try:
-            svg = """<svg xmlns='http://www.w3.org/2000/svg' width='200' height='140'>
-<rect x='10' y='10' width='180' height='120' fill='none' stroke='black' stroke-width='3'/>
-<text x='20' y='80' font-size='18' font-family='Arial'>CO2 laser cut jig</text>
-</svg>"""
-            with open(fname, "w", encoding="utf-8") as f:
-                f.write(svg)
-            messagebox.showinfo("Saved", f"File saved to:\n{fname}")
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not save file:\n{e}")
-
+                logger.exception("Failed to reschedule processing poll")
+            
     def _back_home(self):
         state.sku = ""
         state.sku_name = ""
