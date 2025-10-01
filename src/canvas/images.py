@@ -20,16 +20,16 @@ class ImageManager:
     def __init__(self, screen: tk.Widget) -> None:
         self.s = screen
 
-    def rotated_bounds_px(self, w_px: int, h_px: int, angle_deg: float) -> tuple[int, int]:
+    def rotated_bounds_px(self, w_px: float, h_px: float, angle_deg: float) -> tuple[float, float]:
         try:
             a = math.radians(float(angle_deg) % 360.0)
             ca = abs(math.cos(a))
             sa = abs(math.sin(a))
-            bw = int(round(w_px * ca + h_px * sa))
-            bh = int(round(w_px * sa + h_px * ca))
-            return max(1, bw), max(1, bh)
+            bw = (float(w_px) * ca) + (float(h_px) * sa)
+            bh = (float(w_px) * sa) + (float(h_px) * ca)
+            return max(1.0, float(bw)), max(1.0, float(bh))
         except Exception:
-            return max(1, int(w_px)), max(1, int(h_px))
+            return max(1.0, float(w_px)), max(1.0, float(h_px))
 
     def rotated_bounds_mm(self, w_mm: float, h_mm: float, angle_deg: float) -> tuple[float, float]:
         try:
@@ -68,6 +68,35 @@ class ImageManager:
                     pil = pil.convert("RGBA")
                 except Exception as e:
                     logger.exception(f"Failed to convert SVG image to RGBA: {e}")
+                # Apply mask selection if provided (treat near-transparent as fully transparent)
+                try:
+                    mpath = str(meta.get("mask_path", "") or "")
+                    if mpath and os.path.exists(mpath):
+                        mimg = Image.open(mpath).convert("RGBA")
+                        mimg = mimg.resize((int(w_px), int(h_px)), Image.LANCZOS)
+                        mask_alpha = mimg.split()[-1]
+                        # Keep-map for TRANSPARENT areas: 255 where alpha <= threshold
+                        thr = 12
+                        keep = mask_alpha.point(lambda a: 255 if int(a) <= thr else 0, "L")
+                        try:
+                            from PIL import ImageChops as _ImageChops, ImageFilter as _ImageFilter  # type: ignore
+                        except Exception:
+                            _ImageChops = None  # type: ignore
+                            _ImageFilter = None  # type: ignore
+                        # Slightly dilate keep region to cover anti-aliased edges
+                        try:
+                            if _ImageFilter is not None:
+                                keep = keep.filter(_ImageFilter.MaxFilter(3))
+                        except Exception:
+                            pass
+                        if _ImageChops is not None:
+                            orig_a = pil.split()[-1]
+                            new_a = _ImageChops.multiply(orig_a, keep)
+                            pil.putalpha(new_a)
+                        else:
+                            pil.putalpha(keep)
+                except Exception:
+                    logger.exception("Failed to apply mask selection to SVG rasterization")
                 try:
                     angle = float(meta.get("angle", 0.0) or 0.0)
                 except Exception:
@@ -92,6 +121,34 @@ class ImageManager:
                 except Exception as e:
                     logger.exception(f"Failed to convert raster image to RGBA: {e}")
                 resized = pil.resize((int(w_px), int(h_px)), Image.LANCZOS)
+                # Apply mask selection if provided (treat near-transparent as fully transparent)
+                try:
+                    mpath = str(meta.get("mask_path", "") or "")
+                    if mpath and os.path.exists(mpath):
+                        mimg = Image.open(mpath).convert("RGBA")
+                        mimg = mimg.resize((int(w_px), int(h_px)), Image.LANCZOS)
+                        mask_alpha = mimg.split()[-1]
+                        thr = 12
+                        # Keep transparent areas
+                        keep = mask_alpha.point(lambda a: 255 if int(a) <= thr else 0, "L")
+                        try:
+                            from PIL import ImageChops as _ImageChops, ImageFilter as _ImageFilter  # type: ignore
+                        except Exception:
+                            _ImageChops = None  # type: ignore
+                            _ImageFilter = None  # type: ignore
+                        try:
+                            if _ImageFilter is not None:
+                                keep = keep.filter(_ImageFilter.MaxFilter(3))
+                        except Exception:
+                            pass
+                        if _ImageChops is not None:
+                            orig_a = resized.split()[-1]
+                            new_a = _ImageChops.multiply(orig_a, keep)
+                            resized.putalpha(new_a)
+                        else:
+                            resized.putalpha(keep)
+                except Exception as e:
+                    logger.exception(f"Failed to apply mask selection: {e}")
                 # Apply rotation if any (clockwise degrees)
                 angle = 0.0
                 try:
@@ -120,13 +177,13 @@ class ImageManager:
         ch = max(1, self.s.canvas.winfo_height())
         cx = self.s.canvas.canvasx(cw // 2)
         cy = self.s.canvas.canvasy(ch // 2)
-        # snap width/height to integer millimeters
+        # keep fractional millimeters
         qw_mm = self.s._snap_mm(w_mm)
         qh_mm = self.s._snap_mm(h_mm)
         base_w = float(qw_mm) * MM_TO_PX
         base_h = float(qh_mm) * MM_TO_PX
-        scaled_w = int(round(base_w * self.s._zoom))
-        scaled_h = int(round(base_h * self.s._zoom))
+        scaled_w = float(base_w * self.s._zoom)
+        scaled_h = float(base_h * self.s._zoom)
         # Ensure within jig; compute snapped top-left mm
         ox = self.s._item_outline_half_px()
         oy = self.s._item_outline_half_px()
@@ -148,7 +205,7 @@ class ImageManager:
             x_mm=float(sx_mm),
             y_mm=float(sy_mm),
         )
-        photo = self.render_photo(meta, scaled_w, scaled_h)
+        photo = self.render_photo(meta, max(1, int(scaled_w)), max(1, int(scaled_h)))
         if photo is None:
             # fallback to placeholder if render failed
             self.s.create_placeholder(os.path.basename(path), qw_mm, qh_mm)
@@ -159,7 +216,7 @@ class ImageManager:
             angle = float(meta.get("angle", 0.0) or 0.0)
         except Exception:
             angle = 0.0
-        bw, bh = self.rotated_bounds_px(scaled_w, scaled_h, angle)
+        bw, bh = self.rotated_bounds_px(float(scaled_w), float(scaled_h), angle)
         place_left = new_left
         place_top = new_top
         img_id = self.s.canvas.create_image(place_left, place_top, image=photo, anchor="nw")

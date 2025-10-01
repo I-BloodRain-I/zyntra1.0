@@ -3,7 +3,7 @@ from dataclasses import asdict
 
 import logging
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 
 from src.canvas.object import CanvasObject
 from src.core import MM_TO_PX
@@ -111,7 +111,7 @@ class CanvasSelection:
             except Exception:
                 ang = 0.0
             if obj.get("type") == "image":
-                bw, bh = self.s._rotated_bounds_px(int(round(w)), int(round(h)), ang)
+                bw, bh = self.s._rotated_bounds_px(float(w), float(h), ang)
             elif obj.get("type") == "rect" and int(abs(ang)) % 180 == 90:
                 bw, bh = h, w
             else:
@@ -121,22 +121,22 @@ class CanvasSelection:
             oy = 0.0
             x1 = max(jx0 + ox, min(x1, jx1 - ox - bw))
             y1 = max(jy0 + oy, min(y1, jy1 - oy - bh))
-            # compute raw mm from clamped px, then snap to nearest 1mm
+            # compute raw mm from clamped px; keep fractional mm
             raw_x_mm = (x1 - (jx0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             raw_y_mm = (y1 - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             sx_mm = self.s._snap_mm(raw_x_mm)
             sy_mm = self.s._snap_mm(raw_y_mm)
-            # clamp snapped mm to allowed integer range
+            # clamp mm to allowed range (floats)
             min_mm_x = (jx0 + ox - (jx0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             max_mm_x = (jx1 - ox - bw - (jx0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             min_mm_y = (jy0 + oy - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             max_mm_y = (jy1 - oy - bh - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
-            sx_mm = int(max(min_mm_x, min(sx_mm, max_mm_x)))
-            sy_mm = int(max(min_mm_y, min(sy_mm, max_mm_y)))
-            # if snapped mm didn't change, skip redundant updates for smoother feel
-            prev_mm_x = int(round(float(meta.get("x_mm", 0))))
-            prev_mm_y = int(round(float(meta.get("y_mm", 0))))
-            if sx_mm == prev_mm_x and sy_mm == prev_mm_y:
+            sx_mm = float(max(min_mm_x, min(sx_mm, max_mm_x)))
+            sy_mm = float(max(min_mm_y, min(sy_mm, max_mm_y)))
+            # if mm didn't change materially, skip redundant updates for smoother feel
+            prev_mm_x = float(meta.get("x_mm", 0.0) or 0.0)
+            prev_mm_y = float(meta.get("y_mm", 0.0) or 0.0)
+            if abs(sx_mm - prev_mm_x) < 1e-6 and abs(sy_mm - prev_mm_y) < 1e-6:
                 return
             new_left = (jx0 + ox) + sx_mm * MM_TO_PX * self.s._zoom
             new_top = (jy0 + oy) + sy_mm * MM_TO_PX * self.s._zoom
@@ -148,7 +148,7 @@ class CanvasSelection:
                     try:
                         self.s._update_rect_label_image(self._selected)
                     except Exception:
-                        pass
+                        logger.exception("Failed to update rect label image during drag")
                 elif meta.get("label_id"):
                     self.s.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
                     self.s._raise_all_labels()
@@ -163,14 +163,14 @@ class CanvasSelection:
                 bid = meta.get("border_id")
                 if bid:
                     self.s.canvas.coords(bid, new_left, new_top, new_left + bw, new_top + bh)
-            # update integer position fields and persist
+            # update position fields and persist (keep floats)
             try:
                 self._suppress_pos_trace = True
-                if self.s.sel_x.get() != str(int(sx_mm)):
-                    self.s.sel_x.set(str(int(sx_mm)))
-                if self.s.sel_y.get() != str(int(sy_mm)):
-                    self.s.sel_y.set(str(int(sy_mm)))
-                meta["x_mm"], meta["y_mm"] = float(int(sx_mm)), float(int(sy_mm))
+                if self.s.sel_x.get() != str(sx_mm):
+                    self.s.sel_x.set(str(sx_mm))
+                if self.s.sel_y.get() != str(sy_mm):
+                    self.s.sel_y.set(str(sy_mm))
+                meta["x_mm"], meta["y_mm"] = float(sx_mm), float(sy_mm)
             finally:
                 self._suppress_pos_trace = False
         elif self._drag_kind == "text":
@@ -247,17 +247,119 @@ class CanvasSelection:
             logger.exception("Failed to delete selection border")
         # Rebuild popup via ContextPopup
         self.destroy_context_popup()
-        self._ctx_popup_obj = CanvasContextPopup(
-            self.s, 
-            buttons=[
-                ("Bring Forward", lambda: self.nudge_z(+1)),
-                ("Send Backward", lambda: self.nudge_z(-1)),
-                ("Duplicate", self.on_duplicate),
-                ("Delete", self.on_delete)
-            ]
-        )
+        buttons = [
+            ("Bring Forward", lambda: self.nudge_z(+1)),
+            ("Send Backward", lambda: self.nudge_z(-1)),
+            ("Duplicate", self.on_duplicate),
+        ]
+        meta = self.s._items.get(target, {})
+        if str(meta.get("type", "")) == "image":
+            buttons.append(("Set mask", self._on_set_mask))
+        # Image-specific actions
+        if str(meta.get("type", "")) == "image":
+            buttons.append(("Remove mask", self._on_remove_mask))
+        buttons.append(("Delete", self.on_delete))
+        self._ctx_popup_obj = CanvasContextPopup(self.s, buttons=buttons)
         self._ctx_popup_obj.show(e.x_root, e.y_root, close_bind_widget=self.s.canvas)
         return "break"
+
+    def _on_set_mask(self) -> None:
+        # Only applicable to selected images
+        if not self._selected or self._selected not in self.s._items:
+            return
+        meta = self.s._items.get(self._selected, {})
+        if str(meta.get("type", "")) != "image":
+            return
+        # Choose PNG mask file
+        try:
+            mask_path = filedialog.askopenfilename(
+                title="Select PNG mask",
+                filetypes=[("PNG image", "*.png")],
+            )
+        except Exception:
+            mask_path = ""
+        if not mask_path:
+            return
+        # Compute original image size (in pixels) for the selected item
+        img_w_px = None
+        img_h_px = None
+        try:
+            from PIL import Image  # type: ignore
+        except Exception:
+            Image = None  # type: ignore
+        src_path = str(meta.get("path", "") or "")
+        if Image is not None and src_path:
+            try:
+                with Image.open(src_path) as im0:
+                    img_w_px, img_h_px = int(im0.width), int(im0.height)
+            except Exception:
+                img_w_px, img_h_px = None, None
+        # Fallback for non-raster (e.g., SVG): use import mm size → px
+        if (img_w_px is None or img_h_px is None) and src_path:
+            try:
+                mm_pair = getattr(self.s, "_compute_import_size_mm", None)
+                if callable(mm_pair):
+                    res = self.s._compute_import_size_mm(src_path)
+                    if res and isinstance(res, tuple) and len(res) == 2:
+                        img_w_px = int(round(float(res[0]) * MM_TO_PX))
+                        img_h_px = int(round(float(res[1]) * MM_TO_PX))
+            except Exception:
+                img_w_px, img_h_px = None, None
+        if img_w_px is None or img_h_px is None:
+            messagebox.showerror("Mask error", "Cannot determine original image size for comparison.")
+            return
+        # Read mask size
+        mask_w_px = None
+        mask_h_px = None
+        if Image is None:
+            messagebox.showerror("Mask error", "Pillow is required to load PNG mask.")
+            return
+        try:
+            with Image.open(mask_path) as im1:
+                mask_w_px, mask_h_px = int(im1.width), int(im1.height)
+        except Exception:
+            messagebox.showerror("Mask error", "Failed to load PNG mask.")
+            return
+        # Compare sizes
+        if int(img_w_px) != int(mask_w_px) or int(img_h_px) != int(mask_h_px):
+            messagebox.showerror(
+                "Mismatch size",
+                f"Mask size {mask_w_px}x{mask_h_px} must match image size {img_w_px}x{img_h_px}.",
+            )
+            return
+        # Persist mask path on object for export/restore
+        meta["mask_path"] = str(mask_path)
+        # Re-render image immediately at current size
+        try:
+            w_px = max(1, int(round(float(meta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom)))
+            h_px = max(1, int(round(float(meta.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom)))
+            photo = self.s._render_photo(meta, w_px, h_px)
+            if photo is not None:
+                self.s.canvas.itemconfig(self._selected, image=photo)
+        except Exception:
+            logger.exception("Failed to refresh image after setting mask")
+        messagebox.showinfo("Mask set", "Mask set successfully.")
+
+    def _on_remove_mask(self) -> None:
+        if not self._selected or self._selected not in self.s._items:
+            return
+        meta = self.s._items.get(self._selected, {})
+        if str(meta.get("type", "")) != "image":
+            return
+        # Clear mask and re-render current image size
+        try:
+            meta["mask_path"] = ""
+        except Exception:
+            pass
+        try:
+            x1, y1, x2, y2 = self.s.canvas.bbox(self._selected)
+            w = max(1, int(x2 - x1))
+            h = max(1, int(y2 - y1))
+            photo = self.s._render_photo(meta, w, h)
+            if photo is not None:
+                self.s.canvas.itemconfig(self._selected, image=photo)
+        except Exception:
+            logger.exception("Failed to refresh image after removing mask")
 
     def on_delete(self, _evt=None):
         if not self._selected:
@@ -354,9 +456,9 @@ class CanvasSelection:
                                     if lbl:
                                         self.s.canvas.tag_raise(lbl, rid)
                                 except Exception:
-                                    pass
+                                    logger.exception("Failed to raise rect label above overlay")
                     except Exception:
-                        pass
+                        logger.exception("Failed while iterating overlays for z-order")
             except Exception:
                 logger.exception("Failed to raise rect overlays above their base rects")
             # Ensure slot labels are above their slots but below other labels
@@ -459,7 +561,7 @@ class CanvasSelection:
 
     def on_pan_end(self, _e):
         # no-op; keep for symmetry/future logic
-        pass
+        return "break"
 
     def on_key_pan(self, e):
         """Pan the canvas view with arrow keys similar to middle-mouse drag.
@@ -522,7 +624,7 @@ class CanvasSelection:
             if dy_px != 0:
                 self.s.canvas.yview_moveto(new_fy)
         except Exception:
-            pass
+            logger.exception("Failed to move view during key pan")
         return "break"
 
     def on_wheel_zoom(self, e):
@@ -547,7 +649,7 @@ class CanvasSelection:
             if getattr(e, "state", 0) & 0x0004:
                 return
         except Exception:
-            pass
+            logger.exception("Failed to read event state for wheel pan ctrl-check")
         dx_px = 0
         dy_px = 0
         # Normalize wheel delta across platforms
@@ -606,7 +708,7 @@ class CanvasSelection:
             if dy_px != 0:
                 self.s.canvas.yview_moveto(new_fy)
         except Exception:
-            pass
+            logger.exception("Failed to move view during wheel pan")
         return "break"
 
     # Core selection API
@@ -647,10 +749,13 @@ class CanvasSelection:
                 self.s.sel_h.set("")
                 self.s.sel_x.set("")
                 self.s.sel_y.set("")
-                try:
-                    self.s.sel_angle.set("")
-                except Exception:
-                    pass
+                self.s.sel_angle.set("")
+                if hasattr(self.s, "sel_amazon_label"):
+                    self.s.sel_amazon_label.set("")
+                if hasattr(self.s, "sel_is_options"):
+                    self.s.sel_is_options.set(False)
+                if hasattr(self.s, "sel_is_static"):
+                    self.s.sel_is_static.set(False)
             finally:
                 self._suppress_pos_trace = False
                 self._suppress_size_trace = False
@@ -690,8 +795,8 @@ class CanvasSelection:
             # set size fields without triggering live resize
             try:
                 self._suppress_size_trace = True
-                self.s.sel_w.set(str(int(round(float(meta["w_mm"] or 0)))))
-                self.s.sel_h.set(str(int(round(float(meta["h_mm"] or 0)))))
+                self.s.sel_w.set(str(float(meta["w_mm"] or 0)))
+                self.s.sel_h.set(str(float(meta["h_mm"] or 0)))
                 # angle (if available in UI)
                 try:
                     self.s.sel_angle.set(str(int(round(float(meta.get("angle", 0.0) or 0.0)))))
@@ -702,8 +807,8 @@ class CanvasSelection:
             # set position from stored mm without triggering move
             try:
                 self._suppress_pos_trace = True
-                self.s.sel_x.set(str(int(round(float(meta.get("x_mm", 0.0))))))
-                self.s.sel_y.set(str(int(round(float(meta.get("y_mm", 0.0))))))
+                self.s.sel_x.set(str(float(meta.get("x_mm", 0.0))))
+                self.s.sel_y.set(str(float(meta.get("y_mm", 0.0))))
             finally:
                 self._suppress_pos_trace = False
         elif meta.get("type") == "image":
@@ -716,8 +821,8 @@ class CanvasSelection:
                 logger.exception("Failed to update rect overlay after resize")
             try:
                 self._suppress_size_trace = True
-                self.s.sel_w.set(str(int(round(float(meta["w_mm"] or 0)))))
-                self.s.sel_h.set(str(int(round(float(meta["h_mm"] or 0)))))
+                self.s.sel_w.set(str(float(meta["w_mm"] or 0)))
+                self.s.sel_h.set(str(float(meta["h_mm"] or 0)))
                 try:
                     self.s.sel_angle.set(str(int(round(float(meta.get("angle", 0.0) or 0.0)))))
                 except Exception:
@@ -726,13 +831,28 @@ class CanvasSelection:
                 self._suppress_size_trace = False
             try:
                 self._suppress_pos_trace = True
-                self.s.sel_x.set(str(int(round(float(meta.get("x_mm", 0.0))))))
-                self.s.sel_y.set(str(int(round(float(meta.get("y_mm", 0.0))))))
+                self.s.sel_x.set(str(float(meta.get("x_mm", 0.0))))
+                self.s.sel_y.set(str(float(meta.get("y_mm", 0.0))))
             finally:
                 self._suppress_pos_trace = False
         elif meta.get("type") == "text":
             # highlight selected text in blue
             self.s.canvas.itemconfig(cid, fill="#6ec8ff")
+
+        # Sync amazon label/flags for any selectable type (after branch-specific UI updates)
+        # Suppress flag traces while populating UI
+        try:
+            if hasattr(self.s, "_suppress_flag_traces"):
+                self.s._suppress_flag_traces = True
+            if hasattr(self.s, "sel_amazon_label"):
+                self.s.sel_amazon_label.set(meta.amazon_label)
+            if hasattr(self.s, "sel_is_options"):
+                self.s.sel_is_options.set(bool(meta.get("is_options", False)))
+            if hasattr(self.s, "sel_is_static"):
+                self.s.sel_is_static.set(bool(meta.get("is_static", False)))
+        finally:
+            if hasattr(self.s, "_suppress_flag_traces"):
+                self.s._suppress_flag_traces = False
 
         # Re-apply stacking so overlays/labels stay above backgrounds and slots
         self._reorder_by_z()
@@ -760,8 +880,8 @@ class CanvasSelection:
         x1, y1, x2, y2 = self.s.canvas.bbox(self._selected)
         cx = (x1 + x2) / 2
         cy = (y1 + y2) / 2
-        w = int(round(w_mm * MM_TO_PX * self.s._zoom))
-        h = int(round(h_mm * MM_TO_PX * self.s._zoom))
+        w = int(w_mm * MM_TO_PX * self.s._zoom)
+        h = int(h_mm * MM_TO_PX * self.s._zoom)
         if meta.get("type") in ("rect", "slot"):
             # account for rotation of rect: 90/270 swap
             try:
@@ -785,7 +905,7 @@ class CanvasSelection:
             photo = self.s._render_photo(meta, max(1, int(w)), max(1, int(h)))
             if photo is not None:
                 # compute rotated bounds for placement
-                bw, bh = self.s._rotated_bounds_px(int(round(w)), int(round(h)), float(meta.get("angle", 0.0) or 0.0))
+                bw, bh = self.s._rotated_bounds_px(float(w), float(h), float(meta.get("angle", 0.0) or 0.0))
                 self.s.canvas.coords(self._selected, cx - bw / 2, cy - bh / 2)
                 self.s.canvas.itemconfig(self._selected, image=photo)
                 bid = meta.get("border_id")
@@ -803,10 +923,10 @@ class CanvasSelection:
             raw_y_mm = (by1 - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             sx_mm = self.s._snap_mm(raw_x_mm)
             sy_mm = self.s._snap_mm(raw_y_mm)
-            self.s.sel_x.set(str(int(sx_mm)))
-            self.s.sel_y.set(str(int(sy_mm)))
-            meta["x_mm"] = float(int(sx_mm))
-            meta["y_mm"] = float(int(sy_mm))
+            self.s.sel_x.set(str(sx_mm))
+            self.s.sel_y.set(str(sy_mm))
+            meta["x_mm"] = float(sx_mm)
+            meta["y_mm"] = float(sy_mm)
         finally:
             self._suppress_pos_trace = False
 
@@ -826,15 +946,6 @@ class CanvasSelection:
             h_mm = 0 if raw_h == "" else self.s._snap_mm(raw_h)
         except ValueError:
             return
-        # Reflect integer values only if user did not clear the input
-        try:
-            self._suppress_size_trace = True
-            if raw_w != "":
-                self.s.sel_w.set(str(int(w_mm)))
-            if raw_h != "":
-                self.s.sel_h.set(str(int(h_mm)))
-        finally:
-            self._suppress_size_trace = False
         meta["w_mm"] = float(w_mm)
         meta["h_mm"] = float(h_mm)
         x1, y1, x2, y2 = self.s.canvas.bbox(self._selected)
@@ -866,8 +977,8 @@ class CanvasSelection:
                     pass
         else:
             # image: re-render at new size and keep center, honoring rotation for border and anchor
-            w_px = max(1, int(round(w_mm * MM_TO_PX * self.s._zoom)))
-            h_px = max(1, int(round(h_mm * MM_TO_PX * self.s._zoom)))
+            w_px = max(1, int(w_mm * MM_TO_PX * self.s._zoom))
+            h_px = max(1, int(h_mm * MM_TO_PX * self.s._zoom))
             photo = self.s._render_photo(meta, w_px, h_px)
             if photo is not None:
                 self.s.canvas.itemconfig(self._selected, image=photo)
@@ -876,7 +987,7 @@ class CanvasSelection:
                 ang = float(meta.get("angle", 0.0) or 0.0)
             except Exception:
                 ang = 0.0
-            bw, bh = self.s._rotated_bounds_px(int(w_px), int(h_px), ang)
+            bw, bh = self.s._rotated_bounds_px(float(w_px), float(h_px), ang)
             self.s.canvas.coords(self._selected, cx - bw / 2, cy - bh / 2)
             bid = meta.get("border_id")
             if bid:
@@ -892,9 +1003,9 @@ class CanvasSelection:
             raw_y_mm = (by1 - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             sx_mm = self.s._snap_mm(raw_x_mm)
             sy_mm = self.s._snap_mm(raw_y_mm)
-            self.s.sel_x.set(str(int(sx_mm)))
-            self.s.sel_y.set(str(int(sy_mm)))
-            meta["x_mm"], meta["y_mm"] = float(int(sx_mm)), float(int(sy_mm))
+            self.s.sel_x.set(str(sx_mm))
+            self.s.sel_y.set(str(sy_mm))
+            meta["x_mm"], meta["y_mm"] = float(sx_mm), float(sy_mm)
         finally:
             self._suppress_pos_trace = False
 
@@ -919,8 +1030,8 @@ class CanvasSelection:
         ox = 0.0
         oy = 0.0
         # desired top-left in px from typed mm
-        desired_left = jx0 + ox + int(x_mm) * MM_TO_PX * self.s._zoom
-        desired_top = jy0 + oy + int(y_mm) * MM_TO_PX * self.s._zoom
+        desired_left = jx0 + ox + float(x_mm) * MM_TO_PX * self.s._zoom
+        desired_top = jy0 + oy + float(y_mm) * MM_TO_PX * self.s._zoom
         w = w_mm * MM_TO_PX * self.s._zoom
         h = h_mm * MM_TO_PX * self.s._zoom
         # clamp within jig bounds
@@ -936,8 +1047,8 @@ class CanvasSelection:
                 self._suppress_pos_trace = True
                 x_mm = self.s._snap_mm((new_left - (jx0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6)))
                 y_mm = self.s._snap_mm((new_top - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6)))
-                self.s.sel_x.set(str(int(x_mm)))
-                self.s.sel_y.set(str(int(y_mm)))
+                self.s.sel_x.set(str(x_mm))
+                self.s.sel_y.set(str(y_mm))
             finally:
                 self._suppress_pos_trace = False
         # move selection and label
@@ -951,7 +1062,7 @@ class CanvasSelection:
             except Exception:
                 pass
         elif meta.get("type") == "image":
-            bw, bh = self.s._rotated_bounds_px(int(round(w)), int(round(h)), float(meta.get("angle", 0.0) or 0.0))
+            bw, bh = self.s._rotated_bounds_px(float(w), float(h), float(meta.get("angle", 0.0) or 0.0))
             place_left = new_left + (w - bw) / 2.0
             place_top = new_top + (h - bh) / 2.0
             self.s.canvas.coords(self._selected, place_left, place_top)
@@ -959,7 +1070,7 @@ class CanvasSelection:
             if bid:
                 self.s.canvas.coords(bid, place_left, place_top, place_left + bw, place_top + bh)
         # persist mm
-        meta["x_mm"], meta["y_mm"] = float(int(x_mm)), float(int(y_mm))
+        meta["x_mm"], meta["y_mm"] = float(x_mm), float(y_mm)
         self.s._update_scrollregion()
 
 
@@ -1001,8 +1112,8 @@ class CanvasSelection:
             except Exception:
                 pass
         else:
-            w_px = int(round(float(meta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom))
-            h_px = int(round(float(meta.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom))
+            w_px = int(float(meta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom)
+            h_px = int(float(meta.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom)
             # preserve current visual top-left
             try:
                 tlx, tly, brx, bry = self.s.canvas.bbox(self._selected)

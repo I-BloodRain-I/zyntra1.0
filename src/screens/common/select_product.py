@@ -2,8 +2,9 @@ import json
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import messagebox
+from tkinter import ttk
 
-from src.core.state import PRODUCTS_PATH, state, ALL_PRODUCTS, APP_TITLE, IMAGES_PATH
+from src.core.state import PRODUCTS_PATH, FONTS_PATH, state, ALL_PRODUCTS, APP_TITLE, IMAGES_PATH
 from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_PILL, COLOR_TEXT, scale_px, font_from_pt, UI_SCALE
 from src.utils import *
 from .order_range import OrderRangeScreen
@@ -583,6 +584,84 @@ class SelectProductScreen(Screen):
         btn_update_canvas.bind("<ButtonRelease-1>", _upd_release)
         btn_update_canvas.place(relx=0.0, rely=1.0, x=scale_px(12), y=-(scale_px(12) + add_height_px + gap_px), anchor="sw")
 
+        # Remove Product button (styled like update)
+        rem_prod_text = "REMOVE PRODUCT"
+        rem_prod_font = font_from_pt(15.74)
+        rem_prod_tk = tkfont.Font(font=rem_prod_font)
+        rem_prod_tracking_px = -0.64
+        rem_prod_char_widths = [rem_prod_tk.measure(ch) for ch in rem_prod_text]
+        rem_prod_text_w = sum(rem_prod_char_widths) + rem_prod_tracking_px * max(0, len(rem_prod_text) - 1)
+        rem_prod_h = int(rem_prod_tk.metrics("linespace") + scale_px(20))
+        rem_prod_pad_lr = scale_px(8)
+        rem_prod_w = int(rem_prod_text_w + rem_prod_pad_lr * 2)
+        btn_remove_prod = tk.Canvas(self, width=rem_prod_w, height=rem_prod_h, bg=COLOR_BG_DARK,
+                                    highlightthickness=0, bd=0, cursor="hand2")
+        x_cursor_rp = rem_prod_pad_lr
+        y_center_rp = rem_prod_h // 2
+        rem_prod_text_ids = []
+        for ch, cw in zip(rem_prod_text, rem_prod_char_widths):
+            tid = btn_remove_prod.create_text(x_cursor_rp, y_center_rp, text=ch, font=rem_prod_font, fill=COLOR_TEXT, anchor="w")
+            rem_prod_text_ids.append(tid)
+            x_cursor_rp += cw + rem_prod_tracking_px
+        def _rp_press(_e, canvas=btn_remove_prod, ids=rem_prod_text_ids):
+            canvas.configure(bg="#3f3f3f");
+            for tid in ids: canvas.move(tid, 1, 1)
+            canvas._pressed = True
+        def _rp_release(e, canvas=btn_remove_prod, ids=rem_prod_text_ids):
+            canvas.configure(bg=COLOR_BG_DARK)
+            for tid in ids: canvas.move(tid, -1, -1)
+            try:
+                w = canvas.winfo_width(); h = canvas.winfo_height()
+                inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(canvas, "_pressed", False) and inside:
+                canvas.after(10, self._remove_product)
+            canvas._pressed = False
+        btn_remove_prod.bind("<ButtonPress-1>", _rp_press)
+        btn_remove_prod.bind("<ButtonRelease-1>", _rp_release)
+        btn_remove_prod.place(relx=0.0, rely=1.0, x=scale_px(12),
+                              y=-(scale_px(12) + add_height_px + gap_px + rem_prod_h + gap_px), anchor="sw")
+
+        # Remove Font button (opens small top dialog)
+        rem_font_text = "REMOVE FONT"
+        rem_font_font = font_from_pt(15.74)
+        rem_font_tk = tkfont.Font(font=rem_font_font)
+        rem_font_tracking_px = -0.64
+        rem_font_char_widths = [rem_font_tk.measure(ch) for ch in rem_font_text]
+        rem_font_text_w = sum(rem_font_char_widths) + rem_font_tracking_px * max(0, len(rem_font_text) - 1)
+        rem_font_h = int(rem_font_tk.metrics("linespace") + scale_px(20))
+        rem_font_pad_lr = scale_px(8)
+        rem_font_w = int(rem_font_text_w + rem_font_pad_lr * 2)
+        btn_remove_font = tk.Canvas(self, width=rem_font_w, height=rem_font_h, bg=COLOR_BG_DARK,
+                                    highlightthickness=0, bd=0, cursor="hand2")
+        x_cursor_rf = rem_font_pad_lr
+        y_center_rf = rem_font_h // 2
+        rem_font_text_ids = []
+        for ch, cw in zip(rem_font_text, rem_font_char_widths):
+            tid = btn_remove_font.create_text(x_cursor_rf, y_center_rf, text=ch, font=rem_font_font, fill=COLOR_TEXT, anchor="w")
+            rem_font_text_ids.append(tid)
+            x_cursor_rf += cw + rem_font_tracking_px
+        def _rf_press(_e, canvas=btn_remove_font, ids=rem_font_text_ids):
+            canvas.configure(bg="#3f3f3f");
+            for tid in ids: canvas.move(tid, 1, 1)
+            canvas._pressed = True
+        def _rf_release(e, canvas=btn_remove_font, ids=rem_font_text_ids):
+            canvas.configure(bg=COLOR_BG_DARK)
+            for tid in ids: canvas.move(tid, -1, -1)
+            try:
+                w = canvas.winfo_width(); h = canvas.winfo_height()
+                inside = 0 <= e.x <= w and 0 <= e.y <= h
+            except Exception:
+                inside = True
+            if getattr(canvas, "_pressed", False) and inside:
+                canvas.after(10, self._remove_font_dialog)
+            canvas._pressed = False
+        btn_remove_font.bind("<ButtonPress-1>", _rf_press)
+        btn_remove_font.bind("<ButtonRelease-1>", _rf_release)
+        btn_remove_font.place(relx=0.0, rely=1.0, x=scale_px(12),
+                              y=-(scale_px(12) + add_height_px + gap_px + rem_prod_h + gap_px + rem_font_h + gap_px), anchor="sw")
+
         # Proceed (styled like font_info)
         proceed_btn = create_button(
             ButtonInfo(
@@ -616,6 +695,7 @@ class SelectProductScreen(Screen):
             product_info = json.load(f)
             state.sku = product_info["Sku"]
             state.sku_name = product_info["SkuName"]
+            state.prev_sku_name = product_info["SkuName"]
             
         if product_info["IsSticker"]:
             from src.screens.sticker import StickerBasicInfoScreen
@@ -637,3 +717,120 @@ class SelectProductScreen(Screen):
 
     def _add_new(self):
         self.app.show_screen(ProductTypeScreen)
+
+    def _remove_product(self):
+        product = self.product_var.get()
+        if not product:
+            messagebox.showerror("Error", "Please select a product to remove")
+            return
+        if product not in ALL_PRODUCTS:
+            messagebox.showerror("Error", "Invalid product")
+            return
+        if not messagebox.askyesno("Confirm", f"Are you sure you want to remove '{product}'?"):
+            return
+        try:
+            path = PRODUCTS_PATH / f"{product}.json"
+            if path.exists():
+                path.unlink()
+            try:
+                ALL_PRODUCTS.remove(product)
+            except ValueError:
+                pass
+            if (self.product_var.get() == product):
+                self.product_var.set("")
+                try:
+                    self.search_var.set("")
+                except Exception:
+                    pass
+            messagebox.showinfo("Removed", f"Product '{product}' has been removed")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to remove product: {e}")
+
+    def _remove_font_dialog(self):
+        def _load_fonts_map():
+            try:
+                mp_path = FONTS_PATH / "fonts.json"
+                if mp_path.exists():
+                    with open(mp_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        if isinstance(data, dict):
+                            return data
+            except Exception:
+                pass
+            return {"Myriad Pro": "MyriadPro-Regular"}
+
+        def _save_fonts_map(mp: dict) -> None:
+            try:
+                with open(FONTS_PATH / "fonts.json", "w", encoding="utf-8") as f:
+                    json.dump(mp, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+
+        mp = _load_fonts_map()
+        families = sorted([k for k in (mp.keys() if mp else []) if str(k).strip() != "Myriad Pro"]) if mp else []
+        if not families:
+            messagebox.showinfo("Fonts", "No removable fonts")
+            return
+
+        win = tk.Toplevel(self)
+        win.title("Remove Font")
+        try:
+            win.attributes("-topmost", True)
+        except Exception:
+            pass
+        win.configure(bg=COLOR_BG_SCREEN)
+        try:
+            rx = self.winfo_rootx(); ry = self.winfo_rooty()
+            win.geometry(f"360x160+{rx+40}+{max(0, ry+40)}")
+        except Exception:
+            pass
+
+        tk.Label(win, text="Select a font to remove:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT,
+                 font=font_from_pt(14)).pack(padx=12, pady=(16, 10))
+
+        sel_var = tk.StringVar(value=families[0])
+        combo = ttk.Combobox(win, textvariable=sel_var, state="readonly", values=families, justify="center")
+        combo.pack(padx=12, pady=(0, 12))
+
+        btns = tk.Frame(win, bg=COLOR_BG_SCREEN); btns.pack(pady=(8, 12))
+        def _do_remove():
+            fam = (sel_var.get() or "").strip()
+            if not fam:
+                return
+            if fam == "Myriad Pro":
+                messagebox.showinfo("Fonts", "Default font 'Myriad Pro' cannot be removed")
+                return
+            if not messagebox.askyesno("Confirm", f"Are you sure you want to remove font '{fam}'?"):
+                return
+            try:
+                file_stem = str(mp.get(fam, ""))
+                if file_stem:
+                    for ext in (".ttf", ".otf"):
+                        fp = FONTS_PATH / f"{file_stem}{ext}"
+                        try:
+                            if fp.exists():
+                                fp.unlink()
+                        except Exception:
+                            pass
+                if fam in mp:
+                    del mp[fam]
+                _save_fonts_map(mp)
+                try:
+                    messagebox.showinfo("Removed", f"Font '{fam}' has been removed")
+                except Exception:
+                    pass
+                try:
+                    win.destroy()
+                except Exception:
+                    pass
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to remove font: {e}")
+
+        def _cancel():
+            try:
+                win.destroy()
+            except Exception:
+                pass
+
+        tk.Button(btns, text="Remove", command=_do_remove).pack(side="left", padx=8)
+        tk.Button(btns, text="Cancel", command=_cancel).pack(side="left", padx=8)

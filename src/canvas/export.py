@@ -112,6 +112,34 @@ class PdfExporter:
                 pass
             return default
 
+        def _draw_rotated_text_center(
+            text: str,
+            center_x: int,
+            center_y: int,
+            font,
+            fill: tuple[int, int, int, int],
+            angle_deg: float,
+        ) -> None:
+            # Measure text bbox to create tight canvas
+            bb = draw.textbbox((0, 0), text, font=font)
+            tw = max(1, bb[2] - bb[0])
+            th = max(1, bb[3] - bb[1])
+            temp_img = _PIL_Image.new("RGBA", (int(tw), int(th)), (0, 0, 0, 0))
+            temp_draw = _PIL_Draw.Draw(temp_img, "RGBA")
+            # Shift by -bb[0], -bb[1] to neutralize baseline offsets
+            temp_draw.text((-bb[0], -bb[1]), text, font=font, fill=fill)
+            if abs(float(angle_deg)) > 1e-6:
+                try:
+                    temp_img = temp_img.rotate(-float(angle_deg), expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0, 0, 0, 0))
+                except Exception:
+                    temp_img = temp_img.rotate(-float(angle_deg), expand=True)
+            left = int(round(center_x - temp_img.width / 2.0))
+            top = int(round(center_y - temp_img.height / 2.0))
+            try:
+                img.alpha_composite(temp_img, (left, top))
+            except Exception:
+                img.paste(temp_img, (left, top), temp_img.split()[-1])
+
         # Empirical scale so exported text matches on-canvas perceived size
         # TEXT_PT_TO_PX_SCALE = 1.33
         TEXT_PT_TO_PX_SCALE = 1.0
@@ -191,15 +219,14 @@ class PdfExporter:
                         # size_px = max(1, int(round(size_pt * float(dpi) / 72.0 * TEXT_PT_TO_PX_SCALE)))
                         size_px = max(1, int(round(size_pt * float(dpi) / 25.4 * TEXT_PT_TO_PX_SCALE)))
                         fnt = _truetype_for_family(fam, size_px)
-                        bb = draw.textbbox((0, 0), label, font=fnt)
-                        tw = bb[2] - bb[0]
-                        th = bb[3] - bb[1]
+                        try:
+                            ang = float(it.get("angle", 0.0) or 0.0)
+                        except Exception:
+                            ang = 0.0
 
                         cx = l + W // 2
                         cy = top + H // 2
-                        x = cx - tw // 2
-                        y = cy - th // 2 - bb[1]
-                        draw.text((x, y), label, font=fnt, fill=col)
+                        _draw_rotated_text_center(label, int(cx), int(cy), fnt, col, ang)
 
                 elif typ == "image":
                     path_img = str(it.get("path", "")) or ""
@@ -231,6 +258,34 @@ class PdfExporter:
                             im = _PIL_Image.open(path_img).convert("RGBA")
 
                         im_resized = im.resize((int(w_px), int(h_px)), _PIL_Image.LANCZOS)
+                        # Apply mask selection if provided (treat near-transparent as transparent)
+                        try:
+                            mpath = str(it.get("mask_path", "") or "")
+                            if mpath and os.path.exists(mpath):
+                                mimg = _PIL_Image.open(mpath).convert("RGBA")
+                                mimg = mimg.resize((int(w_px), int(h_px)), _PIL_Image.LANCZOS)
+                                mask_alpha = mimg.split()[-1]
+                                thr = 12
+                                # Keep transparent areas of mask
+                                keep = mask_alpha.point(lambda a: 255 if int(a) <= thr else 0, "L")
+                                try:
+                                    from PIL import ImageChops as _ImageChops, ImageFilter as _ImageFilter  # type: ignore
+                                except Exception:
+                                    _ImageChops = None  # type: ignore
+                                    _ImageFilter = None  # type: ignore
+                                try:
+                                    if _ImageFilter is not None:
+                                        keep = keep.filter(_ImageFilter.MaxFilter(3))
+                                except Exception:
+                                    pass
+                                if _ImageChops is not None:
+                                    orig_a = im_resized.split()[-1]
+                                    new_a = _ImageChops.multiply(orig_a, keep)
+                                    im_resized.putalpha(new_a)
+                                else:
+                                    im_resized.putalpha(keep)
+                        except Exception:
+                            logger.exception("Failed to apply mask selection for PDF render")
                         if abs(ang) > 1e-6:
                             im_resized = im_resized.rotate(-ang, expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0, 0, 0, 0))
 
@@ -246,28 +301,60 @@ class PdfExporter:
                         logger.exception(f"Failed to render image in PDF: {e}")
 
                 elif typ == "text":
-                    txt = str(it.get("text", ""))
-                    col = _parse_hex_rgba(it.get("fill", "#17a24b"), default=(23, 162, 75, 255))
-                    cx = jx0 + mm_to_px(it.get("x_mm", 0.0))
-                    cy = jy0 + mm_to_px(it.get("y_mm", 0.0))
-                    if txt:
+                    # Handle both plain text items and text blocks inside slots
+                    try:
+                        ang = float(it.get("angle", 0.0) or 0.0)
+                    except Exception:
+                        ang = 0.0
+
+                    has_block_size = ("w_mm" in it) and ("h_mm" in it)
+                    if has_block_size:
+                        # Text block serialized in slot: use label_* fields and block center
+                        txt = str(it.get("label", "")).strip()
+                        if not txt:
+                            continue
+                        fam = str(it.get("label_font_family", "Myriad Pro"))
+                        try:
+                            size_pt = int(round(float(it.get("label_font_size", 10))))
+                        except Exception:
+                            size_pt = 10
+                        col = _parse_hex_rgba(it.get("label_fill", "#17a24b"), default=(23, 162, 75, 255))
+                        size_px = max(1, int(round(size_pt * float(dpi) / 25.4 * TEXT_PT_TO_PX_SCALE)))
+                        fnt = _truetype_for_family(fam, size_px)
+
+                        try:
+                            w_mm = float(it.get("w_mm", 0.0))
+                            h_mm = float(it.get("h_mm", 0.0))
+                            x_mm = float(it.get("x_mm", 0.0))
+                            y_mm = float(it.get("y_mm", 0.0))
+                        except Exception:
+                            w_mm, h_mm, x_mm, y_mm = 0.0, 0.0, 0.0, 0.0
+                        cx = jx0 + mm_to_px(x_mm + w_mm / 2.0)
+                        cy = jy0 + mm_to_px(y_mm + h_mm / 2.0)
+                        _draw_rotated_text_center(txt, int(cx), int(cy), fnt, col, ang)
+                    else:
+                        # Plain free text object, centered at (x_mm, y_mm)
+                        txt = str(it.get("text", "")).strip()
+                        if not txt:
+                            continue
                         fam = str(it.get("font_family", "Myriad Pro"))
                         try:
                             size_pt = int(round(float(it.get("font_size_pt", 12))))
                         except Exception:
                             size_pt = 12
+                        col = _parse_hex_rgba(it.get("fill", "#17a24b"), default=(23, 162, 75, 255))
                         size_px = max(1, int(round(size_pt * float(dpi) / 72.0 * TEXT_PT_TO_PX_SCALE)))
                         fnt = _truetype_for_family(fam, size_px)
-                        bbox = draw.textbbox((0, 0), txt, font=fnt)
-                        tw = bbox[2] - bbox[0]
-                        th = bbox[3] - bbox[1]
-                        draw.text((int(cx - tw / 2), int(cy - th / 2 - bbox[1])), txt, fill=col, font=fnt)
+                        cx = jx0 + mm_to_px(it.get("x_mm", 0.0))
+                        cy = jy0 + mm_to_px(it.get("y_mm", 0.0))
+                        _draw_rotated_text_center(txt, int(cx), int(cy), fnt, col, ang)
 
         # «Сплющивание» на белый фон и сохранение в PDF
         out_rgb = _PIL_Image.new("RGB", (page_w_px, page_h_px), "white")
         # используем альфа-канал итогового холста как маску
         alpha = img.split()[-1]
         out_rgb.paste(img.convert("RGB"), mask=alpha)
+        # out_rgb.save(f"output_{path.split('\\')[-1].split('.')[0]}.png", "png")
         out_rgb.save(path, "PDF", resolution=dpi)
         
     def render_jig_to_svg(

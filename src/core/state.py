@@ -32,6 +32,7 @@ class AppState:
 
     # Screen 1
     sku: str = ""
+    prev_sku_name: str = ""
     sku_name: str = ""
     pkg_x: str = ""
     pkg_y: str = ""

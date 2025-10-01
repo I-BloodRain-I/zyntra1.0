@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import shutil
 import struct
 import logging
 import threading
@@ -127,8 +128,8 @@ class NStickerCanvasScreen(Screen):
 
         # 2) Jig size label and fields
         tk.Label(bar, text="Jig size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left", padx=(16, 6))
-        self.jig_x = tk.StringVar(value=state.pkg_x or "296")
-        self.jig_y = tk.StringVar(value=state.pkg_y or "415")
+        self.jig_x = tk.StringVar(value=state.pkg_x or "296.0")
+        self.jig_y = tk.StringVar(value=state.pkg_y or "394.5831")
         jig_col = tk.Frame(bar, bg="black")
         jig_col.pack(side="left", padx=8, pady=8)
         # Jig X row
@@ -154,8 +155,8 @@ class NStickerCanvasScreen(Screen):
 
         # Slot size label and fields
         tk.Label(bar, text="Slot size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left", padx=(0, 6))
-        self.slot_w = tk.StringVar(value="48")
-        self.slot_h = tk.StringVar(value="48")
+        self.slot_w = tk.StringVar(value="40.66")
+        self.slot_h = tk.StringVar(value="28.9")
         slot_col = tk.Frame(bar, bg="black")
         slot_col.pack(side="left", padx=8, pady=8)
         # Slot Width row
@@ -178,8 +179,8 @@ class NStickerCanvasScreen(Screen):
 
         # Origin Pos label and fields
         tk.Label(bar, text="Origin Pos:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left", padx=(0, 6))
-        self.origin_x = tk.StringVar(value="0")
-        self.origin_y = tk.StringVar(value="0")
+        self.origin_x = tk.StringVar(value="11.76")
+        self.origin_y = tk.StringVar(value="12.52")
         origin_col = tk.Frame(bar, bg="black")
         origin_col.pack(side="left", padx=8, pady=8)
         # Origin X row
@@ -200,8 +201,8 @@ class NStickerCanvasScreen(Screen):
         tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
         # Step Size label and fields
         tk.Label(bar, text="Step Size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left", padx=(0, 6))
-        self.step_x = tk.StringVar(value=self.slot_w.get())
-        self.step_y = tk.StringVar(value=self.slot_h.get())
+        self.step_x = tk.StringVar(value="72.55")
+        self.step_y = tk.StringVar(value="47.85")
         step_col = tk.Frame(bar, bg="black")
         step_col.pack(side="left", padx=8, pady=8)
         # Step X row
@@ -290,8 +291,8 @@ class NStickerCanvasScreen(Screen):
         _yb = self._chip(row2, "Y:", self.sel_y, width=8)
         tk.Label(_yb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         # Width/Height controls
-        self.sel_w = tk.StringVar(value=state.pkg_x or "296")
-        self.sel_h = tk.StringVar(value=state.pkg_y or "415")
+        self.sel_w = tk.StringVar(value=state.pkg_x or "296.0")
+        self.sel_h = tk.StringVar(value=state.pkg_y or "394.5831")
         _wb = self._chip(row2, "Width:", self.sel_w, width=8)
         tk.Label(_wb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         _hb = self._chip(row2, "Height:", self.sel_h, width=8)
@@ -300,6 +301,45 @@ class NStickerCanvasScreen(Screen):
         self.sel_angle = tk.StringVar(value="0")
         _ab = self._chip(row2, "Angle:", self.sel_angle, width=6)
         tk.Label(_ab, text="deg", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
+
+        # Separator and label before Name input
+        tk.Frame(row2, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
+        tk.Label(row2, text="Amazon:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(2, 8))
+        # Name control (free text) – added after Angle
+        self.sel_amazon_label = tk.StringVar(value="")
+        _nb = tk.Frame(row2, bg="#6f6f6f")
+        _nb.pack(side="left", padx=6, pady=8)
+        tk.Label(_nb, text="Label:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        tk.Entry(_nb, textvariable=self.sel_amazon_label, width=18, bg="#d9d9d9", justify="center").pack(side="left")
+        # Options checkboxes placed after Amazon label
+        _flags = tk.Frame(row2, bg="black")
+        _flags.pack(side="left", padx=8)
+        # Suppress trace callbacks while programmatically updating checkboxes
+        self._suppress_flag_traces = False
+        self.sel_is_options = tk.BooleanVar(value=False)
+        self.sel_is_static = tk.BooleanVar(value=False)
+        ttk.Checkbutton(_flags, variable=self.sel_is_options, text="Is Options").pack(side="left", pady=6, padx=(0,6))
+        ttk.Checkbutton(_flags, variable=self.sel_is_static, text="Is Static").pack(side="left", pady=6)
+        # Persist flags into selected object
+        def _on_flags_change(*_):
+            # Ignore programmatic updates
+            if getattr(self, "_suppress_flag_traces", False):
+                return
+            sel = getattr(self.selection, "_selected", None)
+            if not sel or sel not in self._items:
+                return
+        
+            self._items[sel]["is_options"] = bool(self.sel_is_options.get())
+            self._items[sel]["is_static"] = bool(self.sel_is_static.get())
+        self.sel_is_options.trace_add("write", _on_flags_change)
+        self.sel_is_static.trace_add("write", _on_flags_change)
+        # Persist name into selected object's metadata
+        def _on_name_change(*_):
+            sel = getattr(self.selection, "_selected", None)
+            if not sel or sel not in self._items:
+                return
+            self._items[sel]["amazon_label"] = str(self.sel_amazon_label.get() or "").strip()
+        self.sel_amazon_label.trace_add("write", _on_name_change)
 
         # ------- Text styling controls on the last black line -------
         try:
@@ -337,14 +377,11 @@ class NStickerCanvasScreen(Screen):
         self._fonts_map = _load_fonts_map()
         self._font_families = _list_font_families(self._fonts_map)
 
-        self.text_bar = tk.Frame(row2, bg="black")
-        # vertical separator to appear with text menu
-        self.text_sep = tk.Frame(row2, bg="white", width=2)
+        # Separate row for text controls under the object menu
+        self.row_text = tk.Frame(self, bg="black")
+        self.text_bar = tk.Frame(self.row_text, bg="black")
 
-        tk.Label(self.text_bar, text="Text:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(2, 6))
-
-        # (Name input removed by request)
-
+        tk.Label(self.text_bar, text="Text:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(4, 9))
         # Font size (pt)
         self.text_size = tk.StringVar(value="12")
         _sb = self._chip(self.text_bar, "Size:", self.text_size, width=6)
@@ -492,9 +529,9 @@ class NStickerCanvasScreen(Screen):
 
         # Initially hide text controls; will show when a text block is selected
         try:
-            # keep both separator and text bar hidden initially
-            self.text_sep.pack_forget()
+            # keep text controls hidden initially
             self.text_bar.pack_forget()
+            self.row_text.pack_forget()
         except Exception:
             logger.exception("Failed to initially hide text controls")
 
@@ -613,10 +650,10 @@ class NStickerCanvasScreen(Screen):
         # Switch front/back scenes on toggle
         self.backside.trace_add("write", self._on_backside_toggle)
 
-        board = tk.Frame(self, bg="black")
-        board.pack(expand=True, fill="both", padx=10, pady=10)
+        self.board = tk.Frame(self, bg="black")
+        self.board.pack(expand=True, fill="both", padx=10, pady=10)
         # canvas without visible scrollbars
-        self.canvas = tk.Canvas(board, bg="#5a5a5a", highlightthickness=0, takefocus=1)
+        self.canvas = tk.Canvas(self.board, bg="#5a5a5a", highlightthickness=0, takefocus=1)
         self.canvas.pack(expand=True, fill="both")
         # Managers and method delegations (must be set before bindings)
         self.jig = JigController(self)
@@ -745,8 +782,8 @@ class NStickerCanvasScreen(Screen):
                 self.text_size.set("")
                 self.text_color.set("")
                 # hide entire controls when nothing selected
-                self.text_sep.pack_forget()
                 self.text_bar.pack_forget()
+                self.row_text.pack_forget()
             except Exception:
                 logger.exception("Failed to clear/hide text controls on deselect")
             return
@@ -759,16 +796,19 @@ class NStickerCanvasScreen(Screen):
             is_text_block = False
         if not is_text_block:
             try:
-                self.text_sep.pack_forget()
                 self.text_bar.pack_forget()
+                self.row_text.pack_forget()
             except Exception:
                 logger.exception("Failed to hide text controls for non-text selection")
             return
         else:
             try:
-                # re-pack if hidden (separator then menu)
-                if not self.text_sep.winfo_ismapped():
-                    self.text_sep.pack(side="left", fill="y", padx=(24, 0), pady=6)
+                # re-pack if hidden
+                if not self.row_text.winfo_ismapped():
+                    try:
+                        self.row_text.pack(before=self.board, fill="x", padx=10, pady=(0, 6))
+                    except Exception:
+                        self.row_text.pack(fill="x", padx=10, pady=(0, 6))
                 if not self.text_bar.winfo_ismapped():
                     self.text_bar.pack(side="left", padx=12)
             except Exception:
@@ -804,12 +844,23 @@ class NStickerCanvasScreen(Screen):
             self._suppress_text_traces = False
 
     # UI helpers
-    def _snap_mm(self, value: float) -> int:
-        """Snap a millimeter value to the nearest integer mm."""
+    def _snap_mm(self, value: float) -> float:
+        """Normalize a millimeter value; allow fractional mm (no integer snapping)."""
         try:
-            return int(round(float(value)))
+            return float(value)
         except Exception:
-            return 0
+            return 0.0
+
+    def _as_bool(self, v) -> bool:
+        try:
+            if isinstance(v, bool):
+                return v
+            if isinstance(v, (int, float)):
+                return v != 0
+            s = str(v).strip().lower()
+            return s in ("1", "true", "yes", "y", "on")
+        except Exception:
+            return False
 
     
     def _raise_all_labels(self):
@@ -928,7 +979,8 @@ class NStickerCanvasScreen(Screen):
                 color_rgba = (255, 255, 255, 255)
             d2.text((pad + off_x, pad + off_y), label_text, font=font, fill=color_rgba)
             try:
-                rotated = img.rotate(angle, expand=True, resample=Image.BICUBIC)
+                # Rotate label image in the same (clockwise) direction as overlay math
+                rotated = img.rotate(-angle, expand=True, resample=Image.BICUBIC)
             except Exception:
                 rotated = img
             try:
@@ -1084,7 +1136,7 @@ class NStickerCanvasScreen(Screen):
         ch = max(1, self.canvas.winfo_height())
         cx = self.canvas.canvasx(cw // 2)
         cy = self.canvas.canvasy(ch // 2)
-        # snap width/height to integer millimeters
+        # keep fractional millimeters as provided
         qw_mm = self._snap_mm(w_mm)
         qh_mm = self._snap_mm(h_mm)
         base_w = float(qw_mm) * MM_TO_PX
@@ -1106,7 +1158,7 @@ class NStickerCanvasScreen(Screen):
             x_mm = (cx - scaled_w / 2 - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))
         if y_mm is None:
             y_mm = (cy - scaled_h / 2 - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))
-        # snap to integer mm and align rectangle to snapped grid
+        # keep fractional mm and align rectangle to provided grid
         sx_mm = self._snap_mm(x_mm)
         sy_mm = self._snap_mm(y_mm)
         new_left = (jx0 + ox) + sx_mm * MM_TO_PX * self._zoom
@@ -1159,8 +1211,8 @@ class NStickerCanvasScreen(Screen):
         except Exception:
             logger.exception("Failed to deselect before AI arrange")
         try:
-            self.text_sep.pack_forget()
             self.text_bar.pack_forget()
+            self.row_text.pack_forget()
         except Exception:
             logger.exception("Failed to hide text menu before AI arrange")
         # Arrange non-slot items into existing slots.
@@ -1231,6 +1283,10 @@ class NStickerCanvasScreen(Screen):
                 ang = float(meta.get("angle", 0.0) or 0.0)
             except Exception:
                 ang = 0.0
+            # Force images and text blocks (rect) to be rotated to 270 degrees before processing/placement
+            if meta.get("type") in ("image", "rect"):
+                ang = 270.0
+                meta["angle"] = 270.0
 
             if meta.get("type") == "image":
                 # Fit rotated bbox into slot in mm
@@ -1249,7 +1305,7 @@ class NStickerCanvasScreen(Screen):
                     jx = float(self.jig_x.get() or 0.0)
                     jy = float(self.jig_y.get() or 0.0)
                 except Exception:
-                    jx, jy = 296.0, 415.0
+                    jx, jy = 296.0, 394.5831
                 left_mm = max(0.0, min(left_mm, (jx - bw_mm)))
                 top_mm = max(0.0, min(top_mm, (jy - bh_mm)))
                 # Convert to px for drawing
@@ -1268,8 +1324,8 @@ class NStickerCanvasScreen(Screen):
                 if bid:
                     self.canvas.coords(bid, left, top, left + bw_px, top + bh_px)
                 # Persist mm top-left
-                meta.x_mm = float(self._snap_mm(left_mm))
-                meta.y_mm = float(self._snap_mm(top_mm))
+                meta.x_mm = float(left_mm)
+                meta.y_mm = float(top_mm)
             else:
                 # Rect/text block - display dims swap at 90/270
                 disp_w_mm = item_w_mm
@@ -1290,7 +1346,7 @@ class NStickerCanvasScreen(Screen):
                     jx = float(self.jig_x.get() or 0.0)
                     jy = float(self.jig_y.get() or 0.0)
                 except Exception:
-                    jx, jy = 296.0, 415.0
+                    jx, jy = 296.0, 394.5831
                 left_mm = max(0.0, min(left_mm, jx - disp_w_mm))
                 top_mm = max(0.0, min(top_mm, jy - disp_h_mm))
                 # Draw with px
@@ -1304,17 +1360,22 @@ class NStickerCanvasScreen(Screen):
                     self.canvas.coords(lbl_id, left + disp_w / 2.0, top + disp_h / 2.0)
                 # update overlay
                 self._update_rect_overlay(cid, meta, left, top, disp_w, disp_h)
+                # re-render label image to reflect new rotation
+                try:
+                    self._update_rect_label_image(cid)
+                except Exception:
+                    pass
                 self._raise_all_labels()
                 # Persist mm top-left
-                meta.x_mm = float(self._snap_mm(left_mm))
-                meta.y_mm = float(self._snap_mm(top_mm))
+                meta.x_mm = float(left_mm)
+                meta.y_mm = float(top_mm)
 
         self._redraw_jig(center=False)
         self.selection._reorder_by_z()
         # Ensure text controls remain hidden after arrange
         try:
-            self.text_sep.pack_forget()
             self.text_bar.pack_forget()
+            self.row_text.pack_forget()
         except Exception:
             logger.exception("Failed to hide text menu after AI arrange")
 
@@ -1393,9 +1454,10 @@ class NStickerCanvasScreen(Screen):
         except Exception as e:
             logger.exception(f"Failed to get jig size from fields: {e}")
             # fallback to safe defaults
-            jx, jy = 296.0, 415.0
-        self.jig_x.set(str(int(jx)))
-        self.jig_y.set(str(int(jy)))
+            jx, jy = 296.0, 394.5831
+        # Preserve fractional values; avoid coercing to integers
+        self.jig_x.set(str(jx))
+        self.jig_y.set(str(jy))
         self._did_autosize = True
 
     def _proceed(self):
@@ -1422,11 +1484,6 @@ class NStickerCanvasScreen(Screen):
         state.pkg_x = self.jig_x.get().strip()
         state.pkg_y = self.jig_y.get().strip()
         # Count only image items. Text items are stored with type 'text'
-        try:
-            img_count = sum(1 for _cid, meta in self._items.items() if meta.get("type") in ["image", "rect"])
-        except Exception:
-            img_count = 0
-        state.nonsticker_image_count = int(img_count)
         # Snapshot current side (exclude slots) so both sides are up-to-date
         current_no_slots = [it for it in self._serialize_scene() if it.get("type") != "slot"]
         self._scene_store[self._current_side] = current_no_slots
@@ -1441,9 +1498,97 @@ class NStickerCanvasScreen(Screen):
             jx = float(self.jig_x.get() or 0.0)
             jy = float(self.jig_y.get() or 0.0)
         except Exception:
-            jx, jy = 296.0, 415.0
+            jx, jy = 296.0, 394.5831
         front_items = list(slots_only) + list(self._scene_store.get("front") or [])
         back_items = list(slots_only) + list(self._scene_store.get("back") or [])
+
+        # Ensure images are stored internally per product and update paths
+        try:
+            import shutil as _shutil
+            from pathlib import Path as _Path
+            product_folder = PRODUCTS_PATH / (state.sku_name or "Product")
+            product_folder.mkdir(parents=True, exist_ok=True)
+
+            def _rewrite_and_copy_images(items_list: list[dict]) -> None:
+                for _it in items_list:
+                    try:
+                        if str(_it.get("type", "")) != "image":
+                            continue
+                        src_path_str = str(_it.get("path", "") or "").strip()
+                        if not src_path_str:
+                            continue
+                        src_path = _Path(src_path_str)
+                        if not src_path.exists() or str(src_path).startswith(str(PRODUCTS_PATH)):
+                            # Nothing to copy; leave as-is
+                            continue
+                        dst_path = product_folder / src_path.name
+                        try:
+                            # if os.path.exists(dst_path):
+                                # logger.debug(f"Removing existing image from product folder: %s", dst_path)
+                                # os.remove(dst_path)
+                            _shutil.copy2(src_path, dst_path / "_new")
+                            _shutil.move(dst_path / "_new", dst_path)
+                            logger.debug(f"Copied image to product folder: %s -> %s", src_path, dst_path)
+                        except Exception:
+                            logger.exception(f"Failed to first copy image to product folder: {src_path}")
+                            try:
+                                _shutil.copyfile(src_path, dst_path)
+                            except shutil.SameFileError:
+                                logger.debug(f"Image already exists in product folder: %s", dst_path)
+                            except Exception:
+                                logger.exception(f"Failed to second copy image to product folder: {src_path}")
+                                continue
+                        _it["path"] = str(dst_path)
+                        # Optional mask copy if present and valid
+                        try:
+                            mask_path_str = str(_it.get("mask_path", "") or "").strip()
+                        except Exception:
+                            mask_path_str = ""
+                        if mask_path_str and mask_path_str.lower() != "none":
+                            msrc = _Path(mask_path_str)
+                            if msrc.exists():
+                                mdst = product_folder / msrc.name
+                                try:
+                                    _shutil.copy2(msrc, mdst)
+                                except Exception:
+                                    try:
+                                        _shutil.copyfile(msrc, mdst)
+                                    except Exception:
+                                        logger.exception(f"Failed to copy mask to product folder: {msrc}")
+                                    else:
+                                        _it["mask_path"] = str(mdst)
+                                else:
+                                    _it["mask_path"] = str(mdst)
+                    except Exception as e:
+                        logger.exception(f"Failed processing image item for internalization: {e}")
+
+            _rewrite_and_copy_images(front_items)
+            _rewrite_and_copy_images(back_items)
+        except Exception:
+            logger.exception("Failed to prepare internal product images and update paths")
+
+        # Validate that all non-slot objects have a non-empty amazon_label
+        try:
+            def _missing_label(obj: dict) -> bool:
+                try:
+                    if str(obj.get("type", "")) == "slot":
+                        return False
+                    return str(obj.get("amazon_label", "") or "").strip() == ""
+                except Exception:
+                    return True
+            if any(_missing_label(it) for it in (front_items + back_items)):
+                messagebox.showwarning(
+                    "Missing Amazon label",
+                    "One or more objects have empty Amazon Label. Please fill all labels before proceeding.",
+                )
+                return
+        except Exception:
+            # If validation fails for any reason, be conservative and stop
+            messagebox.showwarning(
+                "Validation error",
+                "Could not validate Amazon labels. Please ensure all objects have a label.",
+            )
+            return
 
         # Build combined JSON payload on UI thread (safe to read widgets here)
         try:
@@ -1529,18 +1674,30 @@ class NStickerCanvasScreen(Screen):
             # Before composing, normalize z across current non-slot items to ensure unique, compact values
             self.selection._normalize_z()
 
+            # Helper to store relative paths in JSON while keeping absolute paths in memory
+            def _to_rel(p: str) -> str:
+                try:
+                    from pathlib import Path as __Path
+                    if not p:
+                        return ""
+                    pp = __Path(p)
+                    if not pp.is_absolute():
+                        return str(pp).replace("\\", "/")
+                    rel = pp.relative_to(PRODUCTS_PATH)
+                    return str(rel).replace("\\", "/")
+                except Exception:
+                    try:
+                        # Fallback to sku_name/filename if not under products
+                        from pathlib import Path as __Path
+                        return str(__Path(state.sku_name) / __Path(p).name).replace("\\", "/")
+                    except Exception:
+                        return p
+
             def _compose_side(items_for_side: list[dict]) -> dict:
                 slot_descs: list[dict] = []
                 for it in items_for_side:
                     if str(it.get("type", "")) == "slot":
                         try:
-                            key = (
-                                str(it.get("label", "")),
-                                float(it.get("x_mm", 0.0)),
-                                float(it.get("y_mm", 0.0)),
-                                float(it.get("w_mm", 0.0)),
-                                float(it.get("h_mm", 0.0)),
-                            )
                             slot_entry = {
                                 "label": str(it.get("label", "")),
                                 "x_mm": float(it.get("x_mm", 0.0)),
@@ -1573,16 +1730,9 @@ class NStickerCanvasScreen(Screen):
                     if str(it.get("type", "")) != "image":
                         continue
                     try:
-                        key = (
-                            str(it.get("path", "")),
-                            float(it.get("x_mm", 0.0)),
-                            float(it.get("y_mm", 0.0)),
-                            float(it.get("w_mm", 0.0)),
-                            float(it.get("h_mm", 0.0)),
-                        )
                         obj = {
                             "type": "image",
-                            "path": str(it.get("path", "")),
+                            "path": _to_rel(str(it.get("path", ""))),
                             "x_mm": float(it.get("x_mm", 0.0)),
                             "y_mm": float(it.get("y_mm", 0.0)),
                             "w_mm": float(it.get("w_mm", 0.0)),
@@ -1590,6 +1740,11 @@ class NStickerCanvasScreen(Screen):
                             "angle": float(it.get("angle", 0.0) or 0.0),
                             # Use direct z from item; maps can miss due to float rounding
                             "z": int(it.get("z", 0)),
+                            "amazon_label": it.get("amazon_label", ""),
+                            "is_options": bool(it.get("is_options", False)),
+                            "is_static": bool(it.get("is_static", False)),
+                            # Optional mask path for image
+                            "mask_path": _to_rel(str(it.get("mask_path", ""))),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process image for slot: {e}")
@@ -1603,12 +1758,6 @@ class NStickerCanvasScreen(Screen):
                     if str(it.get("type", "")) != "text":
                         continue
                     try:
-                        key = (
-                            str(it.get("text", "")),
-                            float(it.get("x_mm", 0.0)),
-                            float(it.get("y_mm", 0.0)),
-                            str(it.get("fill", "white")),
-                        )
                         obj = {
                             "type": "text",
                             "text": str(it.get("text", "")),
@@ -1616,6 +1765,9 @@ class NStickerCanvasScreen(Screen):
                             "x_mm": float(it.get("x_mm", 0.0)),
                             "y_mm": float(it.get("y_mm", 0.0)),
                             "z": int(it.get("z", 0)),
+                            "amazon_label": it.get("amazon_label", ""),
+                            "is_options": bool(it.get("is_options", False)),
+                            "is_static": bool(it.get("is_static", False)),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process text for slot: {e}")
@@ -1643,16 +1795,10 @@ class NStickerCanvasScreen(Screen):
                     if str(it.get("type", "")) != "rect" or str(it.get("outline", "")) != "#17a24b":
                         continue
                     try:
-                        key = (
-                            str(it.get("label", "")),
-                            float(it.get("x_mm", 0.0)),
-                            float(it.get("y_mm", 0.0)),
-                            float(it.get("w_mm", 0.0)),
-                            float(it.get("h_mm", 0.0)),
-                        )
                         obj = {
                             "type": "text",
                             "label": str(it.get("label", "")),
+                            "amazon_label": it.get("amazon_label", ""),
                             "x_mm": float(it.get("x_mm", 0.0)),
                             "y_mm": float(it.get("y_mm", 0.0)),
                             "w_mm": float(it.get("w_mm", 0.0)),
@@ -1663,6 +1809,8 @@ class NStickerCanvasScreen(Screen):
                             "label_fill": str(it.get("label_fill", "#17a24b")),
                             "label_font_size": int(round(float(it.get("label_font_size", 10)))),
                             "label_font_family": str(it.get("label_font_family", "Myriad Pro")),
+                            "is_options": bool(it.get("is_options", False)),
+                            "is_static": bool(it.get("is_static", False)),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process rect for slot: {e}")
@@ -1702,6 +1850,7 @@ class NStickerCanvasScreen(Screen):
                     "text": int(text_cnt_front + text_cnt_back),
                 },
             }
+            state.nonsticker_image_count = int(images_cnt_front + images_cnt_back + text_cnt_front + text_cnt_back)
             combined = {
                 "Sku": state.sku or "",
                 "SkuName": state.sku_name or "",
@@ -1766,6 +1915,11 @@ class NStickerCanvasScreen(Screen):
                 else:
                     ALL_PRODUCTS.append(state.sku_name)
 
+                if state.prev_sku_name and state.prev_sku_name != state.sku_name:
+                    logger.debug(f"Removing previous product: %s", state.prev_sku_name)
+                    os.remove(PRODUCTS_PATH / f"{state.prev_sku_name}.json")
+                    shutil.rmtree(PRODUCTS_PATH / state.prev_sku_name, ignore_errors=True)
+
             except MemoryError:
                 state.is_failed = True
                 state.error_message = "Not enough memory to render PDF"
@@ -1822,7 +1976,7 @@ class NStickerCanvasScreen(Screen):
         x0, y0, x1, y1 = self._jig_inner_rect_px()
         ox = self._item_outline_half_px()
         oy = self._item_outline_half_px()
-        # snap all inputs to integer mm
+        # keep fractional mm inputs
         w_mm_i = self._snap_mm(w_mm)
         h_mm_i = self._snap_mm(h_mm)
         x_mm_i = self._snap_mm(x_mm)
@@ -1880,7 +2034,7 @@ class NStickerCanvasScreen(Screen):
         # clamp center within inner jig
         cx = max(x0, min(cx, x1))
         cy = max(y0, min(cy, y1))
-        tid = self.canvas.create_text(cx, cy, text=text, fill=fill, font=("Myriad Pro", self._scaled_pt(12), "bold"), tags=("label",))
+        tid = self.canvas.create_text(cx, cy, text=text, fill=fill, font=("Myriad Pro", self._scaled_pt(6), "bold"), tags=("label",))
         self._items[tid] = CanvasObject(
             type="text",
             default_fill=fill,
@@ -1900,6 +2054,9 @@ class NStickerCanvasScreen(Screen):
                     label_text = str(meta.get("label", ""))
                     items.append({
                         "type": "rect",
+                        "amazon_label": meta.amazon_label,
+                        "is_options": bool(meta.get("is_options", False)),
+                        "is_static": bool(meta.get("is_static", False)),
                         "label": label_text,
                         "w_mm": float(meta.get("w_mm", 0.0)),
                         "h_mm": float(meta.get("h_mm", 0.0)),
@@ -1913,7 +2070,8 @@ class NStickerCanvasScreen(Screen):
                         "label_font_size": int(round(float(meta.get("label_font_size", 10)))),
                         "label_font_family": str(meta.get("label_font_family", "Myriad Pro")),
                     })
-                except Exception:
+                except Exception as e:
+                    logger.exception(f"Failed to serialize rect item {cid}: {e}")
                     continue
             elif t == "slot":
                 try:
@@ -1936,7 +2094,11 @@ class NStickerCanvasScreen(Screen):
                 try:
                     items.append({
                         "type": "image",
+                        "amazon_label": meta.amazon_label,
+                        "is_options": bool(meta.get("is_options", False)),
+                        "is_static": bool(meta.get("is_static", False)),
                         "path": str(meta.get("path", "")),
+                        "mask_path": str(meta.get("mask_path", "")),
                         "w_mm": float(meta.get("w_mm", 0.0)),
                         "h_mm": float(meta.get("h_mm", 0.0)),
                         "x_mm": float(meta.get("x_mm", 0.0)),
@@ -1955,6 +2117,9 @@ class NStickerCanvasScreen(Screen):
                     y_mm = float(meta.get("y_mm", 0.0))
                     items.append({
                         "type": "text",
+                        "amazon_label": meta.amazon_label,
+                        "is_options": bool(meta.get("is_options", False)),
+                        "is_static": bool(meta.get("is_static", False)),
                         "text": txt,
                         "x_mm": x_mm,
                         "y_mm": y_mm,
@@ -1988,6 +2153,10 @@ class NStickerCanvasScreen(Screen):
                 )
                 try:
                     if rid in self._items:
+                        self._items[rid]["amazon_label"] = it.get("amazon_label", "")
+                        # Restore flags if present
+                        self._items[rid]["is_options"] = self._as_bool(it.get("is_options", False))
+                        self._items[rid]["is_static"] = self._as_bool(it.get("is_static", False))
                         z_val = it.get("z")
                         if z_val is not None:
                             self._items[rid]["z"] = int(z_val)
@@ -2015,13 +2184,23 @@ class NStickerCanvasScreen(Screen):
                 )
                 try:
                     if sid in self._items:
+                        self._items[sid]["amazon_label"] = str(it.get("amazon_label", "") or "")
                         z_val = it.get("z")
                         if z_val is not None:
                             self._items[sid]["z"] = int(z_val)
                 except Exception as e:
                     logger.exception(f"Failed to apply slot z from JSON: {e}")
             elif t == "image":
-                path = str(it.get("path", ""))
+                path_val = str(it.get("path", ""))
+                # Resolve relative path (stored in JSON) to absolute on disk for rendering
+                try:
+                    from pathlib import Path as __Path
+                    if path_val and not __Path(path_val).is_absolute():
+                        path = str((PRODUCTS_PATH / path_val).resolve())
+                    else:
+                        path = path_val
+                except Exception:
+                    path = path_val
                 if path and os.path.exists(path):
                     # Create image at specified mm top-left
                     x_mm = float(it.get("x_mm", 0.0))
@@ -2047,6 +2226,27 @@ class NStickerCanvasScreen(Screen):
                         y_mm=float(self._snap_mm(y_mm)),
                         angle=float(angle),
                     )
+                    # Restore optional mask path if provided (resolve if relative)
+                    try:
+                        mpath_val = str(it.get("mask_path", "") or "")
+                        if mpath_val:
+                            try:
+                                from pathlib import Path as __Path
+                                if not __Path(mpath_val).is_absolute():
+                                    mpath = str((PRODUCTS_PATH / mpath_val).resolve())
+                                else:
+                                    mpath = mpath_val
+                            except Exception:
+                                mpath = mpath_val
+                            meta["mask_path"] = mpath
+                    except Exception:
+                        pass
+                    meta["amazon_label"] = str(it.get("amazon_label", "") or "")
+                    try:
+                        meta["is_options"] = self._as_bool(it.get("is_options", False))
+                        meta["is_static"] = self._as_bool(it.get("is_static", False))
+                    except Exception:
+                        logger.exception("Failed to restore flags for image item")
                     photo = self._render_photo(meta, max(1, int(w_px)), max(1, int(h_px)))
                     if photo is not None:
                         bw, bh = self._rotated_bounds_px(w_px, h_px, angle)
@@ -2075,6 +2275,13 @@ class NStickerCanvasScreen(Screen):
                     )
                     try:
                         if tid in self._items:
+                            self._items[tid]["amazon_label"] = str(it.get("amazon_label", "") or "")
+                            try:
+                                self._items[tid]["is_options"] = self._as_bool(it.get("is_options", False))
+                                self._items[tid]["is_static"] = self._as_bool(it.get("is_static", False))
+                                print(f"Restored flags for text item: {self._items[tid]['is_options']}, {self._items[tid]['is_static']}")
+                            except Exception:
+                                logger.exception("Failed to restore flags for text item")
                             z_val = it.get("z")
                             if z_val is not None:
                                 self._items[tid]["z"] = int(z_val)
@@ -2106,6 +2313,12 @@ class NStickerCanvasScreen(Screen):
                     )
                     try:
                         if rid in self._items:
+                            self._items[rid]["amazon_label"] = str(it.get("amazon_label", "") or "")
+                            try:
+                                self._items[rid]["is_options"] = self._as_bool(it.get("is_options", False))
+                                self._items[rid]["is_static"] = self._as_bool(it.get("is_static", False))
+                            except Exception:
+                                logger.exception("Failed to restore flags for text-rect item")
                             z_val = it.get("z")
                             if z_val is not None:
                                 self._items[rid]["z"] = int(z_val)
@@ -2152,7 +2365,12 @@ class NStickerCanvasScreen(Screen):
         slot_size = scene.get("slot_size") or {}
 
         def _set_str(var, val):
-            var.set(str(int(round(float(val)))))
+            # Preserve decimals exactly as provided; avoid rounding/coercion
+            try:
+                s = str(val)
+            except Exception:
+                s = str(val)
+            var.set(s)
 
         _set_str(self.jig_x, jig.get("width_mm", self.jig_x.get()))
         _set_str(self.jig_y, jig.get("height_mm", self.jig_y.get()))

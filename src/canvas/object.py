@@ -25,6 +25,8 @@ class CanvasObject:
     path: Optional[str] = None  # for kind == "image"
     outline: Optional[str] = None  # for kind == "rect"
     default_fill: Optional[str] = None  # for kind == "text"
+    # Optional mask path (PNG) for image items; persisted to JSON
+    mask_path: Optional[str] = None
 
     # Canvas linkage
     label_id: Optional[int] = None  # text item inside rect, or text id for text items
@@ -40,6 +42,12 @@ class CanvasObject:
 
     # Rotation angle in degrees (clockwise), for type in {"rect", "image"}
     angle: float = 0.0
+
+    # Optional human-readable name assigned via UI input
+    amazon_label: str = ""
+    # Optional flags controlled by UI
+    is_options: bool = False
+    is_static: bool = False
 
     def is_text_rect(self) -> bool:
         return self.type == "rect" and str(self.outline or "") == "#17a24b"

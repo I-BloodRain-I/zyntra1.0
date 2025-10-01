@@ -18,7 +18,7 @@ class SlotManager:
         # For slots, allow touching jig border without the +1px inward offset
         ox = 0.0
         oy = 0.0
-        # snap all inputs to integer mm
+        # keep fractional mm inputs
         w_mm_i = self.s._snap_mm(w_mm)
         h_mm_i = self.s._snap_mm(h_mm)
         x_mm_i = self.s._snap_mm(x_mm)
@@ -35,7 +35,7 @@ class SlotManager:
         new_left = max(min_left, min(left, max_left))
         new_top = max(min_top, min(top, max_top))
         rect = self.s.canvas.create_rectangle(new_left, new_top, new_left + w, new_top + h, fill="#5a5a5a", outline="#898989", width=1)
-        txt = self.s.canvas.create_text(new_left + w / 2, new_top + h / 2, text=label, fill="#898989", font=("Myriad Pro", self.s._scaled_pt(10)), tags=("slot_label",))
+        txt = self.s.canvas.create_text(new_left + w / 2, new_top + h / 2, text=label, fill="#898989", font=("Myriad Pro", self.s._scaled_pt(6)), tags=("slot_label",))
         # keep provided mm unless clamped
         if new_left != left or new_top != top:
             x_mm_i = self.s._snap_mm((new_left - (x0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6)))

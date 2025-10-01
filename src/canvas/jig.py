@@ -24,7 +24,7 @@ class JigController:
     def scaled_pt(self, base: int) -> int:
         try:
             # Scale text strictly by zoom so perceived size stays real except when zooming
-            return max(1, int(round(base * self.s._zoom)))
+            return max(1, int(base * self.s._zoom))
         except Exception:
             return max(1, int(base))
 
@@ -43,14 +43,14 @@ class JigController:
                 if tid:
                     try:
                         self.s.canvas.itemconfig(tid, state="normal")
-                        self.s.canvas.itemconfig(tid, font=("Myriad Pro", self.scaled_pt(10)))
+                        self.s.canvas.itemconfig(tid, font=("Myriad Pro", self.scaled_pt(6)))
                     except Exception:
                         logger.exception("Failed to update slot label font/visibility")
             elif t == "text":
                 tid = meta.get("label_id") or cid
                 family = str(meta.get("font_family", "Myriad Pro"))
                 try:
-                    base_pt = int(round(float(meta.get("font_size_pt", 12))))
+                    base_pt = int(float(meta.get("font_size_pt", 12)))
                 except Exception:
                     base_pt = 12
                 size_px = self.scaled_pt(base_pt)
@@ -198,7 +198,7 @@ class JigController:
             jx = float(self.s.jig_x.get())
             jy = float(self.s.jig_y.get())
         except ValueError:
-            jx, jy = 296, 415
+            jx, jy = 296, 394.5831
         # Draw jig scaled by current zoom
         w = int(jx * MM_TO_PX * self.s._zoom)
         h = int(jy * MM_TO_PX * self.s._zoom)
@@ -278,8 +278,8 @@ class JigController:
                 # Allow touching jig border for images
                 ox = 0.0
                 oy = 0.0
-                wpx = int(round(w_mm * MM_TO_PX * self.s._zoom))
-                hpx = int(round(h_mm * MM_TO_PX * self.s._zoom))
+                wpx = int(w_mm * MM_TO_PX * self.s._zoom)
+                hpx = int(h_mm * MM_TO_PX * self.s._zoom)
                 try:
                     ang = float(meta.get("angle", 0.0) or 0.0)
                 except Exception:

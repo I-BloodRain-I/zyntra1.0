@@ -168,7 +168,27 @@ class CanvasContextPopup:
         # Place and focus
         try:
             popup.update_idletasks()
-            popup.geometry(f"+{x_root}+{y_root}")
+            # Compute desired size and screen bounds, adjust if overflowing
+            try:
+                total_w = int(popup.winfo_width())
+                total_h = int(popup.winfo_height())
+            except Exception:
+                total_w = 200
+                total_h = 200
+            try:
+                screen_w = popup.winfo_screenwidth()
+                screen_h = popup.winfo_screenheight()
+            except Exception:
+                screen_w = 1920
+                screen_h = 1080
+            place_x = int(x_root)
+            place_y = int(y_root)
+            # If bottom/right would overflow, move left/up to keep fully visible
+            if place_x + total_w > screen_w:
+                place_x = max(0, screen_w - total_w - 4)
+            if place_y + total_h > screen_h:
+                place_y = max(0, screen_h - total_h - 4)
+            popup.geometry(f"+{place_x}+{place_y}")
             popup.deiconify()
             popup.focus_force()
         except Exception:
