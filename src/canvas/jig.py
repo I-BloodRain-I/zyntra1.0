@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class JigController:
     """Handles jig drawing, zooming, scrollregion and common drawing helpers.
 
-    All methods operate on the owning screen passed at construction time.
+    All methods operate on the owning screen raiseed at construction time.
     """
 
     def __init__(self, screen: tk.Widget) -> None:
@@ -73,6 +73,14 @@ class JigController:
                         self.s.canvas.itemconfig(tid, fill=fill_col)
                 except Exception:
                     logger.exception("Failed to apply default fill to text item")
+            elif t == "major":
+                # Scale major label font
+                tid = meta.get("label_id")
+                if tid:
+                    try:
+                        self.s.canvas.itemconfig(tid, font=("Myriad Pro", self.scaled_pt(8), "bold"))
+                    except Exception:
+                        logger.exception("Failed to update major label font")
 
     def update_rect_overlay(self, cid: int, meta: dict, left: float, top: float, bbox_w: float, bbox_h: float) -> None:
         try:
@@ -222,7 +230,7 @@ class JigController:
         # Reposition all items using persisted mm
         for cid, meta in self.s._items.items():
             t = meta.get("type")
-            if t == "rect" or t == "slot":
+            if t in ("rect", "slot", "major"):
                 try:
                     x_mm = float(meta.get("x_mm", 0.0))
                     y_mm = float(meta.get("y_mm", 0.0))
@@ -261,7 +269,7 @@ class JigController:
                     try:
                         self.s._update_rect_label_image(cid)
                     except Exception:
-                        pass
+                        raise
                 elif meta.get("label_id"):
                     self.s.canvas.coords(meta.label_id, new_left + wpx / 2, new_top + hpx / 2)
                     self.s._raise_all_labels()

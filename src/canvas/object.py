@@ -13,7 +13,7 @@ class CanvasObject:
     are handled by the screen.
     """
 
-    type: str  # "rect", "image", or "text"
+    type: str  # "rect", "image", "text", "slot", or "major"
 
     # Geometry in millimeters (top-left for rect/image, center for text)
     x_mm: float = 0.0

@@ -58,7 +58,7 @@ class PdfExporter:
                         if isinstance(data, dict):
                             return data
             except Exception:
-                pass
+                raise
             return {"Myriad Pro": "MyriadPro-Regular"}
 
         _fonts_map = _load_fonts_map()
@@ -76,14 +76,14 @@ class PdfExporter:
                 if otf.exists():
                     return str(otf)
             except Exception:
-                pass
+                raise
             # final fallback to bundled name if present
             try:
                 fp = FONTS_PATH / "MyriadPro-Regular.ttf"
                 if fp.exists():
                     return str(fp)
             except Exception:
-                pass
+                raise
             return None
 
         def _truetype_for_family(family: str, size_px: int):
@@ -92,14 +92,14 @@ class PdfExporter:
                 if path:
                     return _PIL_Font.truetype(path, max(1, int(size_px)))
             except Exception:
-                pass
+                raise
             # fallback
             try:
                 fp = FONTS_PATH / "MyriadPro-Regular.ttf"
                 if fp.exists():
                     return _PIL_Font.truetype(str(fp), max(1, int(size_px)))
             except Exception:
-                pass
+                raise
             return _PIL_Font.load_default()
 
         def _parse_hex_rgba(hex_str: str, default=(255, 255, 255, 255)):
@@ -109,7 +109,7 @@ class PdfExporter:
                     r = int(s[1:3], 16); g = int(s[3:5], 16); b = int(s[5:7], 16)
                     return (r, g, b, 255)
             except Exception:
-                pass
+                raise
             return default
 
         def _draw_rotated_text_center(
@@ -277,7 +277,7 @@ class PdfExporter:
                                     if _ImageFilter is not None:
                                         keep = keep.filter(_ImageFilter.MaxFilter(3))
                                 except Exception:
-                                    pass
+                                    raise
                                 if _ImageChops is not None:
                                     orig_a = im_resized.split()[-1]
                                     new_a = _ImageChops.multiply(orig_a, keep)

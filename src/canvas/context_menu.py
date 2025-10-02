@@ -145,7 +145,7 @@ class CanvasContextPopup:
                     try:
                         cv.yview_scroll(step * 3, "units")
                     except Exception:
-                        pass
+                        raise
                 return "break"
             try:
                 cv.bind("<MouseWheel>", _on_mousewheel)

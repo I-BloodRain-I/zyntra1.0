@@ -88,7 +88,7 @@ class ImageManager:
                             if _ImageFilter is not None:
                                 keep = keep.filter(_ImageFilter.MaxFilter(3))
                         except Exception:
-                            pass
+                            raise
                         if _ImageChops is not None:
                             orig_a = pil.split()[-1]
                             new_a = _ImageChops.multiply(orig_a, keep)
@@ -140,7 +140,7 @@ class ImageManager:
                             if _ImageFilter is not None:
                                 keep = keep.filter(_ImageFilter.MaxFilter(3))
                         except Exception:
-                            pass
+                            raise
                         if _ImageChops is not None:
                             orig_a = resized.split()[-1]
                             new_a = _ImageChops.multiply(orig_a, keep)
@@ -172,7 +172,7 @@ class ImageManager:
             return None
 
     def create_image_item(self, path: str, w_mm: float, h_mm: float, x_mm: Optional[float] = None, y_mm: Optional[float] = None) -> None:
-        # place at the center of current viewport similar to placeholders
+        # place at the center of selected major if available; otherwise viewport center
         cw = max(1, self.s.canvas.winfo_width())
         ch = max(1, self.s.canvas.winfo_height())
         cx = self.s.canvas.canvasx(cw // 2)
@@ -184,18 +184,41 @@ class ImageManager:
         base_h = float(qh_mm) * MM_TO_PX
         scaled_w = float(base_w * self.s._zoom)
         scaled_h = float(base_h * self.s._zoom)
-        # Ensure within jig; compute snapped top-left mm
+        # Compute initial placement snapped to grid and clamped inside selected major if bound
         ox = self.s._item_outline_half_px()
         oy = self.s._item_outline_half_px()
         jx0, jy0, jx1, jy1 = self.s._jig_inner_rect_px()
-        if x_mm is None:
-            x_mm = (cx - scaled_w / 2 - (jx0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
-        if y_mm is None:
-            y_mm = (cy - scaled_h / 2 - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
-        sx_mm = self.s._snap_mm(x_mm)
-        sy_mm = self.s._snap_mm(y_mm)
-        new_left = (jx0 + ox) + sx_mm * MM_TO_PX * self.s._zoom
-        new_top = (jy0 + oy) + sy_mm * MM_TO_PX * self.s._zoom
+        clamp_left, clamp_top, clamp_right, clamp_bottom = jx0, jy0, jx1, jy1
+        try:
+            owner_try = str(getattr(self.s, "major_name").get()).strip()
+        except Exception:
+            owner_try = ""
+        # Prefer explicit x_mm/y_mm if provided; otherwise derive from center of clamp rect
+        if owner_try and hasattr(self.s, "_majors") and owner_try in getattr(self.s, "_majors", {}):
+            try:
+                mid = int(self.s._majors.get(owner_try) or 0)
+            except Exception:
+                mid = 0
+            if mid:
+                try:
+                    mb = self.s.canvas.bbox(mid)
+                except Exception:
+                    mb = None
+                if mb:
+                    clamp_left, clamp_top, clamp_right, clamp_bottom = float(mb[0]), float(mb[1]), float(mb[2]), float(mb[3])
+                    cx = (clamp_left + clamp_right) / 2.0
+                    cy = (clamp_top + clamp_bottom) / 2.0
+        if x_mm is None or y_mm is None:
+            desired_left = cx - scaled_w / 2.0
+            desired_top = cy - scaled_h / 2.0
+            desired_left = max(clamp_left, min(desired_left, clamp_right - scaled_w))
+            desired_top = max(clamp_top, min(desired_top, clamp_bottom - scaled_h))
+            x_mm = (desired_left - (jx0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
+            y_mm = (desired_top - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
+        sx_mm = self.s._snap_mm(float(x_mm))
+        sy_mm = self.s._snap_mm(float(y_mm))
+        new_left = (jx0 + ox) + float(sx_mm) * MM_TO_PX * self.s._zoom
+        new_top = (jy0 + oy) + float(sy_mm) * MM_TO_PX * self.s._zoom
         # Build meta and render
         meta = CanvasObject(
             type="image",
@@ -205,6 +228,41 @@ class ImageManager:
             x_mm=float(sx_mm),
             y_mm=float(sy_mm),
         )
+        # Tag ownership: prefer the major under initial placement; fallback to selected major
+        try:
+            owner_hit = ""
+            try:
+                cx0 = float(new_left)
+                cy0 = float(new_top)
+                cx1 = float(new_left + scaled_w)
+                cy1 = float(new_top + scaled_h)
+                center_x = (cx0 + cx1) / 2.0
+                center_y = (cy0 + cy1) / 2.0
+            except Exception:
+                center_x = float(new_left)
+                center_y = float(new_top)
+            if hasattr(self.s, "_majors"):
+                for nm, rid in getattr(self.s, "_majors", {}).items():
+                    try:
+                        mb = self.s.canvas.bbox(rid)
+                    except Exception:
+                        mb = None
+                    if not mb:
+                        continue
+                    mx0, my0, mx1, my1 = float(mb[0]), float(mb[1]), float(mb[2]), float(mb[3])
+                    if center_x >= mx0 and center_x <= mx1 and center_y >= my0 and center_y <= my1:
+                        owner_hit = str(nm)
+                        break
+            owner_sel = ""
+            try:
+                owner_sel = str(getattr(self.s, "major_name").get()).strip()
+            except Exception:
+                owner_sel = ""
+            final_owner = owner_hit or owner_sel
+            if final_owner:
+                meta["owner_major"] = final_owner
+        except Exception:
+            raise
         photo = self.render_photo(meta, max(1, int(scaled_w)), max(1, int(scaled_h)))
         if photo is None:
             # fallback to placeholder if render failed
@@ -228,5 +286,11 @@ class ImageManager:
         self.s.selection.select(img_id)
         self.s._update_scrollregion()
         self.s.selection._reorder_by_z()
+        # Ensure only current major's items are visible
+        if hasattr(self.s, "_refresh_major_visibility"):
+            try:
+                self.s._refresh_major_visibility()
+            except Exception:
+                raise
 
 

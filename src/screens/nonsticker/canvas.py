@@ -10,20 +10,23 @@ from typing import List, Optional, Tuple
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
-from tkinter import font as tkfont
 
 from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL, MM_TO_PX, IMAGES_PATH, TEMP_FOLDER
 from src.core.app import COLOR_BG_SCREEN
 from src.utils import *
 from src.core.state import ALL_PRODUCTS, FONTS_PATH, PRODUCTS_PATH, state
-from src.canvas import CanvasObject, CanvasSelection
-from src.canvas.jig import JigController
-from src.canvas.slots import SlotManager
-from src.canvas.images import ImageManager
-from src.canvas.export import PdfExporter
+from src.canvas import CanvasObject, CanvasSelection, MajorManager, JigController, SlotManager, ImageManager, PdfExporter, FontsManager
 from .results_download import NStickerResultsDownloadScreen
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_JIG_SIZE   = (296.0, 394.5831)
+DEFAULT_SLOT_SIZE  = (40.66, 28.9)
+DEFAULT_ORIGIN_POS = (11.76, 12.52)
+DEFAULT_STEP_SIZE  = (72.55, 47.85)
+# Major must be at least as large as a single slot to render slots
+DEFAULT_MAJOR_SIZE = tuple((int(DEFAULT_SLOT_SIZE[i] + (DEFAULT_ORIGIN_POS[i]*2)) for i in range(2)))
+DEFAULT_MAJOR_POS  = (12, 15)
 
 
 class NStickerCanvasScreen(Screen):
@@ -38,6 +41,45 @@ class NStickerCanvasScreen(Screen):
 
         state.is_failed = False
         state.error_message = ""
+
+        self.jig = JigController(self)
+        self.slots = SlotManager(self)
+        self.majors = MajorManager(self)
+        self.images = ImageManager(self)
+        self.exporter = PdfExporter(self)
+        # Delegate helpers to keep existing call sites
+        self._scaled_pt = self.jig.scaled_pt
+        self._update_all_text_fonts = self.jig.update_all_text_fonts
+        self._update_rect_overlay = self.jig.update_rect_overlay
+        self._jig_rect_px = self.jig.jig_rect_px
+        self._jig_inner_rect_px = self.jig.jig_inner_rect_px
+        self._item_outline_half_px = self.jig.item_outline_half_px
+        self._update_scrollregion = self.jig.update_scrollregion
+        self._center_view = self.jig.center_view
+        self._redraw_jig = self.jig.redraw_jig
+        self._zoom_step = self.jig.zoom_step
+        self._rotated_bounds_px = self.images.rotated_bounds_px
+        self._rotated_bounds_mm = self.images.rotated_bounds_mm
+        self._render_photo = self.images.render_photo
+        self.create_image_item = self.images.create_image_item
+        self._create_slot_at_mm = self.slots.create_slot_at_mm
+        self._place_slots = self.slots.place_slots
+        self._renumber_slots = self.slots.renumber_slots
+        # Major delegates
+        self._update_major_rect = self.majors.update_major_rect
+        self._update_all_majors = self.majors.update_all_majors
+        self._place_slots_all_majors = self.majors.place_slots_all_majors
+        self._remove_slots_for_major = self.majors.remove_slots_for_major
+        self._place_slots_for_major = self.majors.place_slots_for_major
+        self._render_scene_to_pdf = self.exporter.render_scene_to_pdf
+        self._render_jig_to_svg = self.exporter.render_jig_to_svg
+        self._render_single_pattern_svg = self.exporter.render_single_pattern_svg
+
+        # Core state maps used across handlers (must exist before any traces/callbacks run)
+        self._items: dict[int, CanvasObject] = {}
+        self._majors: dict[str, int] = {}
+        self._scene_store: dict[str, list[dict]] = {"front": [], "back": []}
+        self._current_side: str = "front"
 
         # Top row: Write SKU (primary SKU field)
         header_row_top = ttk.Frame(self, style="Screen.TFrame")
@@ -69,62 +111,15 @@ class NStickerCanvasScreen(Screen):
                                     font=("Myriad Pro", 22))
         sku_entry_bottom.pack(side="left", ipady=2)
 
+        # Left vertical sidebar for Slot size, Origin Pos, Step Size
+        left_bar = tk.Frame(self, bg="black")
+        left_bar.pack(side="left", fill="y", padx=10, pady=(7, 75))
+
+        # Top horizontal bar for Import, Jig size, tools, and shortcuts
         bar = tk.Frame(self, bg="black")
         bar.pack(fill="x", padx=10, pady=(6, 10))
 
-        # 1) Import Image pill button (styled like "Yes")
-        pill_font_obj = tkfont.Font(font=("Myriad Pro", 16))
-        pad_x = 12
-        pad_y = 12
-        # Calculate width for "Import" (longer word)
-        import_width = pill_font_obj.measure("Import")
-        pill_w = int(import_width + pad_x * 2)
-        pill_h = int(pill_font_obj.metrics("linespace") * 2 + pad_y * 2)
-        self.btn_import_img = tk.Canvas(bar, width=pill_w, height=pill_h, bg="black",
-                                        highlightthickness=0, bd=0, cursor="hand2")
-        # Draw rounded pill
-        r = max(6, int(round(pill_h * 0.22)))
-        x1, y1, x2, y2 = 0, 0, pill_w, pill_h
-        _pill_shapes = []
-        _pill_shapes.append(self.btn_import_img.create_rectangle(x1 + r, y1, x2 - r, y2, fill=COLOR_PILL, outline=""))
-        _pill_shapes.append(self.btn_import_img.create_rectangle(x1, y1 + r, x2, y2 - r, fill=COLOR_PILL, outline=""))
-        _pill_shapes.append(self.btn_import_img.create_oval(x1, y1, x1 + 2 * r, y1 + 2 * r, fill=COLOR_PILL, outline=""))
-        _pill_shapes.append(self.btn_import_img.create_oval(x2 - 2 * r, y1, x2, y1 + 2 * r, fill=COLOR_PILL, outline=""))
-        _pill_shapes.append(self.btn_import_img.create_oval(x1, y2 - 2 * r, x1 + 2 * r, y2, fill=COLOR_PILL, outline=""))
-        _pill_shapes.append(self.btn_import_img.create_oval(x2 - 2 * r, y2 - 2 * r, x2, y2, fill=COLOR_PILL, outline=""))
-        # Two-line text
-        tx = pill_w // 2
-        ty1 = pill_h // 2 - pill_font_obj.metrics("linespace") // 2
-        ty2 = pill_h // 2 + pill_font_obj.metrics("linespace") // 2
-        _pill_text_ids = [
-            self.btn_import_img.create_text(tx, ty1, text="Import", font=("Myriad Pro", 16), fill=COLOR_TEXT, anchor="center"),
-            self.btn_import_img.create_text(tx, ty2, text="Image", font=("Myriad Pro", 16), fill=COLOR_TEXT, anchor="center")
-        ]
-
-        def _pill_press(_e, c=self.btn_import_img, shapes=_pill_shapes, tids=_pill_text_ids):
-            for sid in shapes:
-                c.itemconfigure(sid, fill="#3f3f3f")
-            for tid in tids:
-                c.move(tid, 1, 1)
-            c._pressed = True
-
-        def _pill_release(e, c=self.btn_import_img, shapes=_pill_shapes, tids=_pill_text_ids):
-            for sid in shapes:
-                c.itemconfigure(sid, fill=COLOR_PILL)
-            for tid in tids:
-                c.move(tid, -1, -1)
-            try:
-                w = c.winfo_width(); h = c.winfo_height()
-                inside = 0 <= e.x <= w and 0 <= e.y <= h
-            except Exception:
-                inside = True
-            if getattr(c, "_pressed", False) and inside:
-                c.after(10, self._import_image)
-            c._pressed = False
-
-        self.btn_import_img.bind("<ButtonPress-1>", _pill_press)
-        self.btn_import_img.bind("<ButtonRelease-1>", _pill_release)
-        self.btn_import_img.pack(side="left", padx=8, pady=8)
+        # (Replaced) Old Import Image pill removed in favor of tool tile in tools section
 
         # 2) Jig size label and fields
         tk.Label(bar, text="Jig size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left", padx=(16, 6))
@@ -135,14 +130,14 @@ class NStickerCanvasScreen(Screen):
         # Jig X row
         _jxbox = tk.Frame(jig_col, bg="#6f6f6f")
         _jxbox.pack(side="top", pady=2)
-        tk.Label(_jxbox, text="Width: ", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        tk.Label(_jxbox, text="Width: ", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
         tk.Entry(_jxbox, textvariable=self.jig_x, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_jxbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         # Jig Y row
         _jybox = tk.Frame(jig_col, bg="#6f6f6f")
         _jybox.pack(side="top", pady=2)
-        tk.Label(_jybox, text="Height:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        tk.Label(_jybox, text="Height:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
         tk.Entry(_jybox, textvariable=self.jig_y, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_jybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
@@ -150,78 +145,477 @@ class NStickerCanvasScreen(Screen):
         self.jig_x.trace_add("write", self._on_jig_change)
         self.jig_y.trace_add("write", self._on_jig_change)
 
-        # 4) White vertical separator
+        # 4) White vertical separator (between jig and tools)
+        tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
+
+        # Major Size columns: label | presets | x,y | w,h | vertical separator
+        tk.Label(bar, text="Major Info:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left", padx=(16, 6))
+
+        # Column 2: Preset combobox + buttons stacked
+        ms_preset_col = tk.Frame(bar, bg="black")
+        ms_preset_col.pack(side="left", padx=8, pady=8)
+        ms_wrap = tk.Frame(ms_preset_col, bg="#6f6f6f")
+        ms_wrap.pack(side="top", pady=2)
+        tk.Label(ms_wrap, text="Preset:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        self._major_sizes = {
+            "Major size 1": {
+                "x": str(DEFAULT_MAJOR_POS[0]), "y": str(DEFAULT_MAJOR_POS[1]),
+                "w": str(DEFAULT_MAJOR_SIZE[0]), "h": str(DEFAULT_MAJOR_SIZE[1]),
+                "step_x": str(DEFAULT_STEP_SIZE[0]), "step_y": str(DEFAULT_STEP_SIZE[1]),
+                "origin_x": str(DEFAULT_ORIGIN_POS[0]), "origin_y": str(DEFAULT_ORIGIN_POS[1]),
+                "slot_w": str(DEFAULT_SLOT_SIZE[0]), "slot_h": str(DEFAULT_SLOT_SIZE[1]),
+            },
+        }
+        self.major_name = tk.StringVar(value="Major size 1")
+        self._major_combo = ttk.Combobox(ms_wrap, textvariable=self.major_name, state="readonly", values=list(self._major_sizes.keys()), justify="center", width=13)
+        self._major_combo.pack(side="left")
+
+        # Fields state
+        self.major_x = tk.StringVar(value="0")
+        self.major_y = tk.StringVar(value="0")
+        self.major_w = tk.StringVar(value="0")
+        self.major_h = tk.StringVar(value="0")
+
+        # Column 3: X on top, Y under it (styled like Jig size rows)
+        ms_xy = tk.Frame(bar, bg="black")
+        ms_xy.pack(side="left", padx=8, pady=8)
+        _mxbox = tk.Frame(ms_xy, bg="#6f6f6f")
+        _mxbox.pack(side="top", pady=2)
+        tk.Label(_mxbox, text="X:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        tk.Entry(_mxbox, textvariable=self.major_x, width=8, bg="#d9d9d9", justify="center", validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        tk.Label(_mxbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
+        _mybox = tk.Frame(ms_xy, bg="#6f6f6f")
+        _mybox.pack(side="top", pady=2)
+        tk.Label(_mybox, text="Y:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        tk.Entry(_mybox, textvariable=self.major_y, width=8, bg="#d9d9d9", justify="center", validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        tk.Label(_mybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
+
+        # Column 4: Width on top, Height under it (styled like Jig size rows)
+        ms_wh = tk.Frame(bar, bg="black")
+        ms_wh.pack(side="left", padx=8, pady=8)
+        _mwbox = tk.Frame(ms_wh, bg="#6f6f6f")
+        _mwbox.pack(side="top", pady=2)
+        tk.Label(_mwbox, text="Width: ", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_mwbox, textvariable=self.major_w, width=8, bg="#d9d9d9", justify="center", validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        tk.Label(_mwbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
+        _mhbox = tk.Frame(ms_wh, bg="#6f6f6f")
+        _mhbox.pack(side="top", pady=2)
+        tk.Label(_mhbox, text="Height:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_mhbox, textvariable=self.major_h, width=8, bg="#d9d9d9", justify="center", validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        tk.Label(_mhbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
+
+        # Add/Remove buttons (end of column 2)
+        def _ms_refresh_values():
+            self._major_combo.configure(values=list(self._major_sizes.keys()))
+            # Enable/disable Remove based on count
+            if len(self._major_sizes) <= 1:
+                self._ms_btn_remove.configure(state="disabled")
+            else:
+                self._ms_btn_remove.configure(state="normal")
+
+        # Suppress updates when loading from preset
+        self._suppress_major_traces = False
+
+        def _ms_load_from_combo(_e=None):
+            try:
+                sel = self.major_name.get()
+                vals = self._major_sizes.get(sel)
+                if vals:
+                    # Suppress traces for the full batch update
+                    self._suppress_major_traces = True
+                    try:
+                        self.major_x.set(str(vals.get("x", "0")))
+                        self.major_y.set(str(vals.get("y", "0")))
+                        self.major_w.set(str(vals.get("w", "0")))
+                        self.major_h.set(str(vals.get("h", "0")))
+                        # Load per-major parameters into left bar fields
+                        if hasattr(self, "step_x"):
+                            self.step_x.set(str(vals.get("step_x", self.step_x.get())))
+                        if hasattr(self, "step_y"):
+                            self.step_y.set(str(vals.get("step_y", self.step_y.get())))
+                        if hasattr(self, "origin_x"):
+                            self.origin_x.set(str(vals.get("origin_x", self.origin_x.get())))
+                        if hasattr(self, "origin_y"):
+                            self.origin_y.set(str(vals.get("origin_y", self.origin_y.get())))
+                        if hasattr(self, "slot_w"):
+                            self.slot_w.set(str(vals.get("slot_w", self.slot_w.get())))
+                        if hasattr(self, "slot_h"):
+                            self.slot_h.set(str(vals.get("slot_h", self.slot_h.get())))
+                    finally:
+                        self._suppress_major_traces = False
+                    # After loading preset values, update drawing only if screen is ready
+                    if getattr(self, "_screen_ready", False) and hasattr(self, "canvas"):
+                        try:
+                            self._update_all_majors()
+                        except Exception:
+                            raise
+                        try:
+                            if hasattr(self, "_place_slots_all_majors"):
+                                self._place_slots_all_majors(silent=True)
+                                if hasattr(self, "_refresh_major_visibility"):
+                                    self._refresh_major_visibility()
+                                if hasattr(self, "_renumber_slots"):
+                                    self._renumber_slots()
+                        except Exception:
+                            raise
+            except Exception:
+                raise
+
+        def _ms_add():
+            try:
+                # First, persist current UI values into the currently selected preset
+                try:
+                    cur_name = (self.major_name.get() or "").strip()
+                    if cur_name and cur_name in self._major_sizes:
+                        cur = self._major_sizes.get(cur_name) or {}
+                        # Avoid overwriting a valid preset with zero/blank fields when adding
+                        def _to_f(s):
+                            try:
+                                return float((s or "0").strip())
+                            except Exception:
+                                return 0.0
+                        ui_x = _to_f(getattr(self, "major_x", tk.StringVar(value="0")).get())
+                        ui_y = _to_f(getattr(self, "major_y", tk.StringVar(value="0")).get())
+                        ui_w = _to_f(getattr(self, "major_w", tk.StringVar(value="0")).get())
+                        ui_h = _to_f(getattr(self, "major_h", tk.StringVar(value="0")).get())
+                        cur_x = _to_f(cur.get("x", "0"))
+                        cur_y = _to_f(cur.get("y", "0"))
+                        cur_w = _to_f(cur.get("w", "0"))
+                        cur_h = _to_f(cur.get("h", "0"))
+                        ui_has_meaning = any(v != 0.0 for v in (ui_x, ui_y, ui_w, ui_h))
+                        cur_is_zero = all(v == 0.0 for v in (cur_x, cur_y, cur_w, cur_h))
+                        if ui_has_meaning or cur_is_zero:
+                            cur["x"] = (self.major_x.get() or "0").strip()
+                            cur["y"] = (self.major_y.get() or "0").strip()
+                            cur["w"] = (self.major_w.get() or "0").strip()
+                            cur["h"] = (self.major_h.get() or "0").strip()
+                            if hasattr(self, "step_x"): cur["step_x"] = (self.step_x.get() or "0").strip()
+                            if hasattr(self, "step_y"): cur["step_y"] = (self.step_y.get() or "0").strip()
+                            if hasattr(self, "origin_x"): cur["origin_x"] = (self.origin_x.get() or "0").strip()
+                            if hasattr(self, "origin_y"): cur["origin_y"] = (self.origin_y.get() or "0").strip()
+                            if hasattr(self, "slot_w"): cur["slot_w"] = (self.slot_w.get() or "0").strip()
+                            if hasattr(self, "slot_h"): cur["slot_h"] = (self.slot_h.get() or "0").strip()
+                            self._major_sizes[cur_name] = cur
+                except Exception:
+                    raise
+                # Compute next available unique name: "Major size N"
+                idx = 1
+                while True:
+                    cand = f"Major size {idx}"
+                    if cand not in self._major_sizes:
+                        name = cand
+                        break
+                    idx += 1
+                # Create new preset with defaults based on current scene defaults (do not overwrite existing)
+                self._major_sizes.setdefault(name, {
+                    "x": str(DEFAULT_MAJOR_POS[0]), "y": str(DEFAULT_MAJOR_POS[1]),
+                    "w": str(DEFAULT_MAJOR_SIZE[0]), "h": str(DEFAULT_MAJOR_SIZE[1]),
+                    "step_x": str(DEFAULT_STEP_SIZE[0]), "step_y": str(DEFAULT_STEP_SIZE[1]),
+                    "origin_x": str(DEFAULT_ORIGIN_POS[0]), "origin_y": str(DEFAULT_ORIGIN_POS[1]),
+                    "slot_w": str(DEFAULT_SLOT_SIZE[0]), "slot_h": str(DEFAULT_SLOT_SIZE[1]),
+                })
+                # Refresh list and select the new preset
+                _ms_refresh_values()
+                self.major_name.set(name)
+                try:
+                    self._major_combo.set(name)
+                except Exception:
+                    raise
+                # Load saved values into the UI fields for the selected preset
+                _ms_load_from_combo()
+                # Draw majors after adding
+                try:
+                    self._update_all_majors()
+                except Exception:
+                    raise
+                # Force brand-new preset to default per-major slot/step/origin values
+                try:
+                    d = self._major_sizes.get(name) or {}
+                    d["step_x"] = str(DEFAULT_STEP_SIZE[0]); d["step_y"] = str(DEFAULT_STEP_SIZE[1])
+                    d["origin_x"] = str(DEFAULT_ORIGIN_POS[0]); d["origin_y"] = str(DEFAULT_ORIGIN_POS[1])
+                    d["slot_w"] = str(DEFAULT_SLOT_SIZE[0]); d["slot_h"] = str(DEFAULT_SLOT_SIZE[1])
+                    self._major_sizes[name] = d
+                    # Reflect in UI for immediate clarity
+                    self._suppress_major_traces = True
+                    try:
+                        self.step_x.set(d["step_x"]); self.step_y.set(d["step_y"])
+                        self.origin_x.set(d["origin_x"]); self.origin_y.set(d["origin_y"])
+                        self.slot_w.set(d["slot_w"]); self.slot_h.set(d["slot_h"])
+                    finally:
+                        self._suppress_major_traces = False
+                except Exception:
+                    raise
+                # Rebuild slots for all majors so others redraw consistently
+                try:
+                    self._place_slots_all_majors(silent=True)
+                    if hasattr(self, "_refresh_major_visibility"):
+                        self._refresh_major_visibility()
+                except Exception:
+                    raise
+                # Inform user
+                try:
+                    messagebox.showinfo("Major Size", f"Added preset '{name}'.")
+                except Exception:
+                    raise
+            except Exception:
+                raise
+
+        def _ms_remove():
+            try:
+                # Guard: keep at least one preset
+                if len(self._major_sizes) <= 1:
+                    _ms_refresh_values()
+                    return
+                name = (self.major_name.get() or "").strip()
+                # Remove this major's slots before dropping the preset
+                if hasattr(self, "_remove_slots_for_major"):
+                    self._remove_slots_for_major(name)
+                if name in self._major_sizes:
+                    self._major_sizes.pop(name, None)
+                    names = list(self._major_sizes.keys())
+                    next_name = names[0] if names else ""
+                    self.major_name.set(next_name)
+                    _ms_refresh_values()
+                    _ms_load_from_combo()
+                    try:
+                        self._update_all_majors()
+                    except Exception:
+                        raise
+                    # After removal, keep other majors as-is; just renumber groups
+                    try:
+                        self._renumber_slots()
+                    except Exception:
+                        raise
+            except Exception:
+                raise
+
+        # On selection change: save current values into previous preset, then load new
+        def _on_ms_combo(_e=None):
+            try:
+                prev = getattr(self, "_major_prev_name", None)
+                if prev:
+                    # Save UI values into previous preset
+                    try:
+                        p = self._major_sizes.get(prev)
+                        if p is not None:
+                            p["x"] = (self.major_x.get() or "0").strip()
+                            p["y"] = (self.major_y.get() or "0").strip()
+                            p["w"] = (self.major_w.get() or "0").strip()
+                            p["h"] = (self.major_h.get() or "0").strip()
+                            p["step_x"] = (self.step_x.get() or "0").strip()
+                            p["step_y"] = (self.step_y.get() or "0").strip()
+                            p["origin_x"] = (self.origin_x.get() or "0").strip()
+                            p["origin_y"] = (self.origin_y.get() or "0").strip()
+                            p["slot_w"] = (self.slot_w.get() or "0").strip()
+                            p["slot_h"] = (self.slot_h.get() or "0").strip()
+                    except Exception:
+                        raise
+            finally:
+                self._major_prev_name = (self.major_name.get() or "").strip()
+                _ms_load_from_combo()
+                # Update active major and visibility when selection changes
+                try:
+                    self._active_major = (self.major_name.get() or "").strip()
+                    if hasattr(self, "_refresh_major_visibility"):
+                        self._refresh_major_visibility()
+                except Exception:
+                    raise
+
+        self._major_combo.bind("<<ComboboxSelected>>", _on_ms_combo)
+        # Also react when the variable changes programmatically
+        self.major_name.trace_add("write", lambda *_: (_on_ms_combo(), setattr(self, "_active_major", (self.major_name.get() or "")), (getattr(self, "_screen_ready", False) and hasattr(self, "_refresh_major_visibility") and self._refresh_major_visibility()) or None))
+
+        ms_btns = tk.Frame(ms_preset_col, bg="black")
+        ms_btns.pack(side="top", pady=0, anchor="w")
+        _small_btn_style = ttk.Style()
+        _small_btn_style.configure("Small.TButton", font=("Myriad Pro", 9), padding=(0, 1))
+        self._ms_btn_add = ttk.Button(ms_btns, text="Add", command=_ms_add, style="Small.TButton", width=6, padding=(10, 0, 10, 0))
+        self._ms_btn_add.pack(side="left")
+        self._ms_btn_remove = ttk.Button(ms_btns, text="Remove", command=_ms_remove, style="Small.TButton", width=8, padding=(8, 0, 8, 0))
+        self._ms_btn_remove.pack(side="left", padx=(5, 0))
+        # Initialize remove button state
+        _ms_refresh_values()
+
+        # Keep preset in sync with field changes
+        def _ms_on_field_change(*_):
+            if getattr(self, "_suppress_major_traces", False):
+                return
+            try:
+                name = (self.major_name.get() or "").strip()
+                if not name:
+                    return
+                vals = self._major_sizes.get(name)
+                if vals is None:
+                    return
+                vals["x"] = (self.major_x.get() or "0").strip()
+                vals["y"] = (self.major_y.get() or "0").strip()
+                vals["w"] = (self.major_w.get() or "0").strip()
+                vals["h"] = (self.major_h.get() or "0").strip()
+                # live update the one that changed
+                self._update_major_rect(name)
+            except Exception:
+                raise
+            # Also reflect updates on the scene major rectangle
+            try:
+                self._update_major_rect()
+            except Exception:
+                raise
+            # Recreate slots for the active major only on field change; other majors intact
+            if hasattr(self, "_place_slots_for_major"):
+                self._place_slots_for_major(name, silent=True)
+                if hasattr(self, "_renumber_slots"):
+                    self._renumber_slots()
+
+
+        def _ms_on_scene_param_change(*_):
+            if getattr(self, "_suppress_major_traces", False):
+                return
+
+            name = (self.major_name.get() or "").strip()
+            if not name:
+                return
+            vals = self._major_sizes.get(name)
+            if vals is None:
+                return
+            # If values are empty, seed with defaults for this major instead of copying previous preset
+            sx = (self.step_x.get() or "").strip(); sy = (self.step_y.get() or "").strip()
+            ox = (self.origin_x.get() or "").strip(); oy = (self.origin_y.get() or "").strip()
+            sw = (self.slot_w.get() or "").strip(); sh = (self.slot_h.get() or "").strip()
+            vals["step_x"] = sx if sx != "" else str(DEFAULT_STEP_SIZE[0])
+            vals["step_y"] = sy if sy != "" else str(DEFAULT_STEP_SIZE[1])
+            vals["origin_x"] = ox if ox != "" else str(DEFAULT_ORIGIN_POS[0])
+            vals["origin_y"] = oy if oy != "" else str(DEFAULT_ORIGIN_POS[1])
+            vals["slot_w"] = sw if sw != "" else str(DEFAULT_SLOT_SIZE[0])
+            vals["slot_h"] = sh if sh != "" else str(DEFAULT_SLOT_SIZE[1])
+
+
+        # Bind after all inputs exist; guard missing attrs for early init paths
+        try:
+            self.major_x.trace_add("write", _ms_on_field_change)
+            self.major_y.trace_add("write", _ms_on_field_change)
+            self.major_w.trace_add("write", _ms_on_field_change)
+            self.major_h.trace_add("write", _ms_on_field_change)
+        except Exception:
+            raise
+        def _bind_scene_param_traces():
+            for _var_name in ("step_x", "step_y", "origin_x", "origin_y", "slot_w", "slot_h"):
+                _var = getattr(self, _var_name, None)
+                if _var is not None:
+                    try:
+                        _var.trace_add("write", _ms_on_scene_param_change)
+                    except Exception:
+                        raise
+        # Defer binding until after all StringVars are created
+        self.after(0, _bind_scene_param_traces)
+        # Also persist on focus-out to be extra safe
+        try:
+            # Bind globally on self to catch focus changes without referencing vars early
+            self.bind_all("<FocusOut>", lambda _e: _ms_on_scene_param_change(), add="+")
+        except Exception:
+            raise
+        # Mark screen as ready after canvas and managers are initialized
+        self._screen_ready = True
+        # Ensure current preset values populate the UI once all fields exist and screen is ready
+        try:
+            _ms_load_from_combo()
+        except Exception:
+            raise
+
+        # Column 5: white vertical separator after Major Size block
         tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
 
         # Slot size label and fields
-        tk.Label(bar, text="Slot size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left", padx=(0, 6))
+        tk.Label(left_bar, text="Slot size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="top", anchor="w", padx=(20, 6), pady=(10, 0))
         self.slot_w = tk.StringVar(value="40.66")
         self.slot_h = tk.StringVar(value="28.9")
-        slot_col = tk.Frame(bar, bg="black")
-        slot_col.pack(side="left", padx=8, pady=8)
+        slot_col = tk.Frame(left_bar, bg="black")
+        slot_col.pack(side="top", padx=8, pady=8, anchor="w")
         # Slot Width row
         _swbox = tk.Frame(slot_col, bg="#6f6f6f")
         _swbox.pack(side="top", pady=2)
-        tk.Label(_swbox, text="Width: ", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        tk.Entry(_swbox, textvariable=self.slot_w, width=8, bg="#d9d9d9", justify="center",
+        tk.Label(_swbox, text="Width: ", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_swbox, textvariable=self.slot_w, width=12, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_swbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         # Slot Height row
         _shbox = tk.Frame(slot_col, bg="#6f6f6f")
         _shbox.pack(side="top", pady=2)
-        tk.Label(_shbox, text="Height:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        tk.Entry(_shbox, textvariable=self.slot_h, width=8, bg="#d9d9d9", justify="center",
+        tk.Label(_shbox, text="Height:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_shbox, textvariable=self.slot_h, width=12, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_shbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
 
-        # White vertical separator
-        tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
+        # Horizontal separator
+        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
 
         # Origin Pos label and fields
-        tk.Label(bar, text="Origin Pos:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left", padx=(0, 6))
+        tk.Label(left_bar, text="Origin Pos:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="top", anchor="w", padx=(8, 6))
         self.origin_x = tk.StringVar(value="11.76")
         self.origin_y = tk.StringVar(value="12.52")
-        origin_col = tk.Frame(bar, bg="black")
-        origin_col.pack(side="left", padx=8, pady=8)
+        origin_col = tk.Frame(left_bar, bg="black")
+        origin_col.pack(side="top", padx=8, pady=8, anchor="w")
         # Origin X row
         _oxbox = tk.Frame(origin_col, bg="#6f6f6f")
         _oxbox.pack(side="top", pady=2)
-        tk.Label(_oxbox, text="X:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        tk.Entry(_oxbox, textvariable=self.origin_x, width=8, bg="#d9d9d9", justify="center",
+        tk.Label(_oxbox, text="X:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_oxbox, textvariable=self.origin_x, width=12, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_oxbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         # Origin Y row
         _oybox = tk.Frame(origin_col, bg="#6f6f6f")
         _oybox.pack(side="top", pady=2)
-        tk.Label(_oybox, text="Y:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        tk.Entry(_oybox, textvariable=self.origin_y, width=8, bg="#d9d9d9", justify="center",
+        tk.Label(_oybox, text="Y:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_oybox, textvariable=self.origin_y, width=12, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_oybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
 
-        tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
+        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
         # Step Size label and fields
-        tk.Label(bar, text="Step Size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left", padx=(0, 6))
+        tk.Label(left_bar, text="Step Size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="top", anchor="w", padx=(20, 6))
         self.step_x = tk.StringVar(value="72.55")
         self.step_y = tk.StringVar(value="47.85")
-        step_col = tk.Frame(bar, bg="black")
-        step_col.pack(side="left", padx=8, pady=8)
+        step_col = tk.Frame(left_bar, bg="black")
+        step_col.pack(side="top", padx=8, pady=8, anchor="w")
         # Step X row
         _sxbox = tk.Frame(step_col, bg="#6f6f6f")
         _sxbox.pack(side="top", pady=2)
-        tk.Label(_sxbox, text="X:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        tk.Entry(_sxbox, textvariable=self.step_x, width=8, bg="#d9d9d9", justify="center",
+        tk.Label(_sxbox, text="X:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_sxbox, textvariable=self.step_x, width=12, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_sxbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         # Step Y row
         _sybox = tk.Frame(step_col, bg="#6f6f6f")
         _sybox.pack(side="top", pady=2)
-        tk.Label(_sybox, text="Y:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        tk.Entry(_sybox, textvariable=self.step_y, width=8, bg="#d9d9d9", justify="center",
+        tk.Label(_sybox, text="Y:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_sybox, textvariable=self.step_y, width=12, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_sybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
 
-        # White vertical separator
-        tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
+        # Ensure first preset mirrors current default scene values (not zeros)
+        try:
+            if hasattr(self, "_major_sizes") and isinstance(self._major_sizes, dict):
+                base = self._major_sizes.get("Major size 1") or {}
+                base["step_x"] = (self.step_x.get() or "0").strip()
+                base["step_y"] = (self.step_y.get() or "0").strip()
+                base["origin_x"] = (self.origin_x.get() or "0").strip()
+                base["origin_y"] = (self.origin_y.get() or "0").strip()
+                base["slot_w"] = (self.slot_w.get() or "0").strip()
+                base["slot_h"] = (self.slot_h.get() or "0").strip()
+                # Keep existing major x/y/w/h if present
+                base.setdefault("x", (self.major_x.get() if hasattr(self, "major_x") else "0") or "0")
+                base.setdefault("y", (self.major_y.get() if hasattr(self, "major_y") else "0") or "0")
+                base.setdefault("w", (self.major_w.get() if hasattr(self, "major_w") else "0") or "0")
+                base.setdefault("h", (self.major_h.get() if hasattr(self, "major_h") else "0") or "0")
+                self._major_sizes["Major size 1"] = base
+                try:
+                    _ms_refresh_values()
+                    _ms_load_from_combo()
+                except Exception:
+                    raise
+                # Ensure initial majors are drawn after defaults
+                self._update_all_majors()
+        except Exception:
+            pass
 
         # 5) Tools next to the separator
         tools = tk.Frame(bar, bg="black")
@@ -230,6 +624,7 @@ class NStickerCanvasScreen(Screen):
         # Load tool icons (keep references on self to avoid GC)
         self._img_cursor = None
         self._img_stick = None
+        self._img_image = None
         try:
             self._img_cursor = tk.PhotoImage(file=str(IMAGES_PATH / "cursor.png"))
         except Exception:
@@ -238,6 +633,10 @@ class NStickerCanvasScreen(Screen):
             self._img_stick = tk.PhotoImage(file=str(IMAGES_PATH / "stick.png"))
         except Exception:
             self._img_stick = None
+        try:
+            self._img_image = tk.PhotoImage(file=str(IMAGES_PATH / "image.png"))
+        except Exception:
+            self._img_image = None
 
         # Tool tiles like in the screenshot
         # self._create_tool_tile(
@@ -247,12 +646,13 @@ class NStickerCanvasScreen(Screen):
         #     label_text="Select tool",
         #     command=lambda: None,
         # )
+        # New Image import tool tile
         self._create_tool_tile(
             tools,
-            icon_image=self._img_stick,
+            icon_image=self._img_image,
             icon_text=None,
-            label_text="AI arrange",
-            command=self._ai_arrange,
+            label_text="Image",
+            command=self._import_image,
         )
         # Slots are auto-created from inputs; no manual button needed
         self._create_tool_tile(
@@ -262,7 +662,22 @@ class NStickerCanvasScreen(Screen):
             label_text="Text",
             command=self._drop_text,
         )
+        self._create_tool_tile(
+            tools,
+            icon_image=self._img_stick,
+            icon_text=None,
+            label_text="Arrange\nobjects",
+            command=self._ai_arrange_objects,
+        )
+        self._create_tool_tile(
+            tools,
+            icon_image=self._img_stick,
+            icon_text=None,
+            label_text="Arrange\nmajors",
+            command=self._arrange_majors,
+        )
         # Help/shortcuts on the right end of the first line
+        # Shortcuts on the right end of the top bar
         shortcuts = tk.Frame(bar, bg="black")
         shortcuts.pack(side="right", padx=8, pady=8)
         # 2 columns x 3 rows grid of shortcuts
@@ -342,294 +757,8 @@ class NStickerCanvasScreen(Screen):
         self.sel_amazon_label.trace_add("write", _on_name_change)
 
         # ------- Text styling controls on the last black line -------
-        try:
-            FONTS_PATH.mkdir(exist_ok=True)
-        except Exception:
-            logger.exception("Failed to ensure fonts directory exists")
-
-        self._fonts_map_path = FONTS_PATH / "fonts.json"
-
-        def _load_fonts_map() -> dict:
-            try:
-                if self._fonts_map_path.exists():
-                    with open(self._fonts_map_path, "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                        if isinstance(data, dict):
-                            return data
-            except Exception:
-                logger.exception("Failed to load fonts mapping")
-            # default mapping
-            return {"Myriad Pro": "MyriadPro-Regular"}
-
-        def _save_fonts_map(mp: dict) -> None:
-            try:
-                with open(self._fonts_map_path, "w", encoding="utf-8") as f:
-                    json.dump(mp, f, ensure_ascii=False, indent=2)
-            except Exception:
-                logger.exception("Failed to save fonts map")
-
-        def _list_font_families(mp: dict) -> list[str]:
-            try:
-                return sorted(list(mp.keys()))
-            except Exception:
-                return ["Myriad Pro"]
-
-        self._fonts_map = _load_fonts_map()
-        self._font_families = _list_font_families(self._fonts_map)
-
-        # Separate row for text controls under the object menu
-        self.row_text = tk.Frame(self, bg="black")
-        self.text_bar = tk.Frame(self.row_text, bg="black")
-
-        tk.Label(self.text_bar, text="Text:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(4, 9))
-        # Font size (pt)
-        self.text_size = tk.StringVar(value="12")
-        _sb = self._chip(self.text_bar, "Size:", self.text_size, width=6)
-        tk.Label(_sb, text="pt", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-
-        # Color hex
-        self.text_color = tk.StringVar(value="#ffffff")
-        _cb = self._chip(self.text_bar, "Color:", self.text_color, width=10)
-
-        # Family combobox
-        fam_wrap = tk.Frame(self.text_bar, bg="#6f6f6f")
-        fam_wrap.pack(side="left", padx=6, pady=8)
-        tk.Label(fam_wrap, text="Family:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        self.text_family = tk.StringVar(value=(self._font_families[0] if self._font_families else "Myriad Pro"))
-        self._family_combo = ttk.Combobox(fam_wrap, textvariable=self.text_family, state="readonly", values=self._font_families, justify="center", width=18)
-        self._family_combo.pack(side="left")
-
-        # Import font button
-        def _on_import_font():
-            path = filedialog.askopenfilename(title="Import Font", filetypes=[("Font Files", "*.ttf *.otf")])
-            if not path:
-                return
-            try:
-                import shutil
-                dst = FONTS_PATH / os.path.basename(path)
-                shutil.copy(path, dst)
-            except Exception as e:
-                messagebox.showerror("Import failed", f"Could not import font:\n{e}")
-                return
-            # Ask for display name to map
-            try:
-                base_family = os.path.splitext(os.path.basename(path))[0]
-            except Exception:
-                base_family = "ImportedFont"
-            # Mini-window to enter display name
-            try:
-                win = tk.Toplevel(self)
-                win.title("Font name")
-                win.configure(bg=COLOR_BG_SCREEN)
-                win.transient(self)
-                win.grab_set()
-                # Content
-                frm = tk.Frame(win, bg=COLOR_BG_SCREEN); frm.pack(padx=12, pady=0)
-                tk.Label(frm, text="Enter display name for this font:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=("Myriad Pro", 12)).pack(anchor="w", pady=(8, 0))
-                tk.Label(frm, text="(as on Amazon)", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=("Myriad Pro", 8)).pack(anchor="center", pady=(0, 15))
-                # name_var = tk.StringVar(value=base_family)
-                # ent = tk.Entry(frm, textvariable=name_var, width=28, bg="#d9d9d9"); ent.pack(pady=(8, 12))
-                entry, entry_canvas = create_entry(
-                    EntryInfo(
-                        parent=frm,
-                        width=200,
-                        text_info=TextInfo(text=base_family, color=COLOR_TEXT, font_size=12),
-                        fill=COLOR_PILL,
-                        background_color=COLOR_BG_SCREEN,
-                        radius=10,
-                        padding_x=12,
-                        padding_y=6,
-                    )
-                )
-                btn_row = tk.Frame(frm, bg=COLOR_BG_SCREEN); btn_row.pack(fill="x", pady=(15, 12))
-                def _confirm():
-                    display = (entry.get() or base_family).strip() or base_family
-                    try:
-                        # Map "name" (display) -> file stem without extension
-                        self._fonts_map[display] = base_family
-                        _save_fonts_map(self._fonts_map)
-                        self._font_families = _list_font_families(self._fonts_map)
-                        self._family_combo.configure(values=self._font_families)
-                        self.text_family.set(display)
-                    except Exception:
-                        logger.exception("Failed to update fonts mapping after import")
-                    finally:
-                        try:
-                            win.grab_release()
-                        except Exception:
-                            pass
-                        win.destroy()
-                def _cancel():
-                    try:
-                        win.grab_release()
-                    except Exception:
-                        pass
-                    win.destroy()
-                ok_btn = create_button(
-                    ButtonInfo(
-                        parent=btn_row,
-                        text_info=TextInfo(text="OK", color=COLOR_TEXT, font_size=12),
-                        background_color=COLOR_BG_SCREEN,
-                        button_color="#737373",
-                        hover_color=COLOR_BG_DARK,
-                        active_color="#737373",
-                        padding_x=12, 
-                        padding_y=6,
-                        radius=10, 
-                        command=_confirm
-                    )
-                )
-                cancel_btn = create_button(
-                    ButtonInfo(
-                        parent=btn_row,
-                        text_info=TextInfo(text="Cancel", color=COLOR_TEXT, font_size=12),
-                        background_color=COLOR_BG_SCREEN,
-                        button_color="#737373",
-                        hover_color=COLOR_BG_DARK,
-                        active_color="#737373",
-                        padding_x=12,
-                        padding_y=6,
-                        radius=10,
-                        command=_cancel
-                    )
-                )
-                ok_btn.pack(side="left", padx=(48, 8))
-                cancel_btn.pack(side="left")
-                try:
-                    entry.focus_set()
-                except Exception:
-                    pass
-                # Center window over parent
-                try:
-                    self.update_idletasks(); win.update_idletasks()
-                    px = self.winfo_rootx() + (self.winfo_width() - win.winfo_width()) // 2
-                    py = self.winfo_rooty() + (self.winfo_height() - win.winfo_height()) // 2
-                    win.geometry(f"+{max(0, px)}+{max(0, py)}")
-                except Exception:
-                    pass
-                self.wait_window(win)
-            except Exception:
-                logger.exception("Failed to open font name mini-window")
-
-        imp_btn = create_button(
-            ButtonInfo(
-                parent=self.text_bar,
-                text_info=TextInfo(text="Import font", color=COLOR_TEXT, font_size=10),
-                command=_on_import_font,
-                background_color="#000000",
-                button_color=COLOR_PILL,
-                hover_color=COLOR_BG_DARK,
-                active_color=COLOR_PILL,
-                padding_x=8,
-                padding_y=4,
-                radius=10,
-            )
-        )
-        imp_btn.pack(side="left", padx=8)
-
-        # Initially hide text controls; will show when a text block is selected
-        try:
-            # keep text controls hidden initially
-            self.text_bar.pack_forget()
-            self.row_text.pack_forget()
-        except Exception:
-            logger.exception("Failed to initially hide text controls")
-
-        # ---- Apply text styling live ----
-        def _valid_hex(s: str) -> bool:
-            s = (s or "").strip()
-            if len(s) != 7 or not s.startswith("#"):
-                return False
-            try:
-                int(s[1:], 16)
-                return True
-            except Exception:
-                logger.exception("Invalid color hex string")
-                return False
-
-        def _apply_text_changes(*_):
-            # Prevent applying while refreshing UI from selection
-            if getattr(self, "_suppress_text_traces", False):
-                return
-            sel = getattr(self.selection, "_selected", None)
-            if not sel or sel not in self._items:
-                return
-            meta = self._items.get(sel, {})
-            t = meta.get("type")
-            # resolve target text item id
-            tid = meta.get("label_id") if t == "rect" else (meta.get("label_id") or sel)
-            # ensure text item is visible
-            try:
-                if tid:
-                    self.canvas.itemconfig(tid, state="normal")
-            except Exception:
-                logger.exception("Failed to ensure text item visible")
-            # Name field removed; do not update text content here
-            # Color
-            try:
-                col = self.text_color.get().strip()
-                if not col.startswith("#"):
-                    col = f"#{col}"
-                if _valid_hex(col) and tid:
-                    if t == "rect":
-                        meta["label_fill"] = col
-                        try:
-                            # Re-render rotated label image with new color
-                            self._update_rect_label_image(sel)
-                        except Exception:
-                            pass
-                    elif t == "text":
-                        self.canvas.itemconfig(tid, fill=col)
-                        meta["default_fill"] = col
-            except Exception:
-                logger.exception("Failed to set text color on canvas")
-            # Size (pt)
-            try:
-                raw_sz = (self.text_size.get() or "").strip()
-                if raw_sz != "":
-                    sz = int(float(raw_sz))
-                    sz = max(6, sz)
-                    if t == "rect":
-                        meta["label_font_size"] = int(sz)
-                        try:
-                            self._update_rect_label_image(sel)
-                        except Exception:
-                            pass
-                    elif t == "text":
-                        meta["font_size_pt"] = int(sz)
-            except Exception:
-                logger.exception("Failed to set text size metadata")
-            # Family
-            try:
-                fam = (self.text_family.get() or "Myriad Pro").strip()
-                if t == "rect":
-                    meta["label_font_family"] = fam
-                    try:
-                        self._update_rect_label_image(sel)
-                    except Exception:
-                        pass
-                elif t == "text":
-                    meta["font_family"] = fam
-            except Exception:
-                logger.exception("Failed to set text family metadata")
-            # Re-apply font metrics for zoom and keep state visible
-            try:
-                self._update_all_text_fonts()
-            except Exception:
-                logger.exception("Failed to update fonts after text changes")
-            # keep labels above after updates
-            try:
-                self._raise_all_labels()
-            except Exception:
-                logger.exception("Failed to raise labels after text changes")
-
-        # Trace-suppression flag to avoid applying changes while populating UI
-        self._suppress_text_traces = False
-
-        # Wire up live updates
-        self.text_size.trace_add("write", _apply_text_changes)
-        self.text_color.trace_add("write", _apply_text_changes)
-        self._family_combo.bind("<<ComboboxSelected>>", lambda _e: _apply_text_changes())
+        # Moved to FontsManager (UI + logic + storage)
+        self.fonts = FontsManager(self)
 
         # Selection controller (must be created before traces/bindings)
         self._zoom: float = 1.5
@@ -656,31 +785,15 @@ class NStickerCanvasScreen(Screen):
         self.canvas = tk.Canvas(self.board, bg="#5a5a5a", highlightthickness=0, takefocus=1)
         self.canvas.pack(expand=True, fill="both")
         # Managers and method delegations (must be set before bindings)
-        self.jig = JigController(self)
-        self.slots = SlotManager(self)
-        self.images = ImageManager(self)
-        self.exporter = PdfExporter(self)
-        # Delegate helpers to keep existing call sites
-        self._scaled_pt = self.jig.scaled_pt
-        self._update_all_text_fonts = self.jig.update_all_text_fonts
-        self._update_rect_overlay = self.jig.update_rect_overlay
-        self._jig_rect_px = self.jig.jig_rect_px
-        self._jig_inner_rect_px = self.jig.jig_inner_rect_px
-        self._item_outline_half_px = self.jig.item_outline_half_px
-        self._update_scrollregion = self.jig.update_scrollregion
-        self._center_view = self.jig.center_view
-        self._redraw_jig = self.jig.redraw_jig
-        self._zoom_step = self.jig.zoom_step
-        self._rotated_bounds_px = self.images.rotated_bounds_px
-        self._rotated_bounds_mm = self.images.rotated_bounds_mm
-        self._render_photo = self.images.render_photo
-        self.create_image_item = self.images.create_image_item
-        self._create_slot_at_mm = self.slots.create_slot_at_mm
-        self._place_slots = self.slots.place_slots
-        self._renumber_slots = self.slots.renumber_slots
-        self._render_scene_to_pdf = self.exporter.render_scene_to_pdf
-        self._render_jig_to_svg = self.exporter.render_jig_to_svg
-        self._render_single_pattern_svg = self.exporter.render_single_pattern_svg
+        # Core state maps used across handlers (must be initialized before any scheduled callbacks)
+        self._items: dict[int, CanvasObject] = {}   # canvas_id -> CanvasObject
+        # Track major rectangles by preset name -> canvas id
+        self._majors: dict[str, int] = {}
+        # Per-side scene storage
+        self._scene_store: dict[str, list[dict]] = {"front": [], "back": []}
+        self._current_side: str = "front"
+        # Active major name to filter visibility (items/slots belong to their major)
+        self._active_major: str = (self.major_name.get() if hasattr(self, "major_name") else "") or ""
         # Now bind using delegated methods
         self.canvas.bind("<Configure>", self._redraw_jig)
         self.canvas.bind("<Button-1>", self.selection.on_click)
@@ -709,139 +822,143 @@ class NStickerCanvasScreen(Screen):
             self.canvas.bind(seq, lambda _e: self._zoom_step(1))
         for seq in ("<KeyPress-minus>", "<KeyPress-KP_Subtract>"):
             self.canvas.bind(seq, lambda _e: self._zoom_step(-1))
-        # initial jig draw
+        # initial jig draw (also sets _update_scrollregion delegate before any slot placement)
         self.after(0, self._redraw_jig)
         # initialize jig size from Size fields when no saved size
         self._did_autosize = False
         self.after(0, self._ensure_initial_jig_size)
-        # Auto-recreate slots when inputs change (always)
-        self.slot_w.trace_add("write", lambda *_: self._maybe_recreate_slots())
-        self.slot_h.trace_add("write", lambda *_: self._maybe_recreate_slots())
-        self.origin_x.trace_add("write", lambda *_: self._maybe_recreate_slots())
-        self.origin_y.trace_add("write", lambda *_: self._maybe_recreate_slots())
-        self.step_x.trace_add("write", lambda *_: self._maybe_recreate_slots())
-        self.step_y.trace_add("write", lambda *_: self._maybe_recreate_slots())
-        # Initial auto placement
-        self.after(0, lambda: self._place_slots(silent=True))
-
-        self._items: dict[int, CanvasObject] = {}   # canvas_id -> CanvasObject
-        # Per-side scene storage
-        self._scene_store: dict[str, list[dict]] = {"front": [], "back": []}
-        self._current_side: str = "front"
+        # Auto-recreate slots: only for selected major to keep configs per major
+        def _recreate_slots_for_selected_major(*_):
+            # Skip while preset fields are batch-updated to avoid wiping others
+            if getattr(self, "_suppress_major_traces", False):
+                return
+            try:
+                sel = (self.major_name.get() or "").strip()
+                if not sel:
+                    return
+                # Update the selected preset's per-major params
+                vals = self._major_sizes.get(sel) or {}
+                vals["step_x"] = (self.step_x.get() or "0").strip()
+                vals["step_y"] = (self.step_y.get() or "0").strip()
+                vals["origin_x"] = (self.origin_x.get() or "0").strip()
+                vals["origin_y"] = (self.origin_y.get() or "0").strip()
+                vals["slot_w"] = (self.slot_w.get() or "0").strip()
+                vals["slot_h"] = (self.slot_h.get() or "0").strip()
+                self._major_sizes[sel] = vals
+            except Exception:
+                raise
+            # Recreate slots only for this major
+            try:
+                self._place_slots_for_major(sel, silent=True)
+                self._renumber_slots()
+                if hasattr(self, "_refresh_major_visibility"):
+                    self._refresh_major_visibility()
+            except Exception:
+                raise
+        self.slot_w.trace_add("write", _recreate_slots_for_selected_major)
+        self.slot_h.trace_add("write", _recreate_slots_for_selected_major)
+        self.origin_x.trace_add("write", _recreate_slots_for_selected_major)
+        self.origin_y.trace_add("write", _recreate_slots_for_selected_major)
+        self.step_x.trace_add("write", _recreate_slots_for_selected_major)
+        self.step_y.trace_add("write", _recreate_slots_for_selected_major)
+        # Draw majors first, then place per-major slots after jig draw/delegates are ready
+        def _after_jig_ready():
+            self._update_all_majors()
+            if hasattr(self, "_update_scrollregion"):
+                self._place_slots_all_majors(silent=True)
+            # Enforce initial visibility after majors/slots created
+            try:
+                self._active_major = (self.major_name.get() or "").strip()
+            except Exception:
+                self._active_major = ""
+            if hasattr(self, "_refresh_major_visibility"):
+                try:
+                    self._refresh_major_visibility()
+                except Exception:
+                    raise
+        self.after(15, _after_jig_ready)
 
         # Show popup on right-click only when an object is under cursor
         self.canvas.bind("<Button-3>", self.selection.maybe_show_context_menu)
 
         # Key bindings moved to canvas-level to require focus
-
-        # Bottom buttons styled like font_info
-        back_btn = create_button(
-            ButtonInfo(
-                parent=self,
-                text_info=TextInfo(
-                    text="Go Back",
-                    color=COLOR_TEXT,
-                    font_size=22,
-                ),
-                button_color=COLOR_BG_DARK,
-                hover_color="#3f3f3f",
-                active_color=COLOR_BG_DARK,
-                padding_x=20,
-                padding_y=12,
-                command=self.app.go_back,
+        
+        
+    def _refresh_major_visibility(self) -> None:
+        """Keep all majors and all owned items visible; do not hide by active major.
+        """
+        try:
+            for cid, meta in self._items.items():
+                t = str(meta.get("type", ""))
+                # Majors always visible
+                if t == "major":
+                    self.canvas.itemconfigure(cid, state="normal")
+                    lid = meta.get("label_id")
+                    if lid:
+                        self.canvas.itemconfigure(lid, state="normal")
+                    continue
+                # Show everything regardless of owner
+                self.canvas.itemconfigure(cid, state="normal")
+                lid = meta.get("label_id")
+                if lid:
+                    self.canvas.itemconfigure(lid, state="normal")
+                bid = meta.get("border_id")
+                if bid:
+                    self.canvas.itemconfigure(bid, state="normal")
+                rid = meta.get("rot_id")
+                if rid:
+                    self.canvas.itemconfigure(rid, state="normal")
+            # Maintain label stacking and Z order
+            self._raise_all_labels()
+            self.selection._reorder_by_z()
+        except Exception:
+            raise
+        # Ensure bottom buttons exist only once
+        if not getattr(self, "_bottom_buttons_ready", False):
+            back_btn = create_button(
+                ButtonInfo(
+                    parent=self,
+                    text_info=TextInfo(
+                        text="Go Back",
+                        color=COLOR_TEXT,
+                        font_size=22,
+                    ),
+                    button_color=COLOR_BG_DARK,
+                    hover_color="#3f3f3f",
+                    active_color=COLOR_BG_DARK,
+                    padding_x=20,
+                    padding_y=12,
+                    command=self.app.go_back,
+                )
             )
-        )
-        back_btn.place(relx=0.005, rely=0.99, anchor="sw")
+            back_btn.place(relx=0.005, rely=0.99, anchor="sw")
 
-        # Proceed (styled like font_info)
-        proceed_btn = create_button(
-            ButtonInfo(
-                parent=self,
-                text_info=TextInfo(
-                    text="Proceed",
-                    color=COLOR_TEXT,
-                    font_size=22,
-                ),
-                button_color=COLOR_BG_DARK,
-                hover_color="#3f3f3f",
-                active_color=COLOR_BG_DARK,
-                padding_x=20,
-                padding_y=12,
-                command=self._proceed,
+            proceed_btn = create_button(
+                ButtonInfo(
+                    parent=self,
+                    text_info=TextInfo(
+                        text="Proceed",
+                        color=COLOR_TEXT,
+                        font_size=22,
+                    ),
+                    button_color=COLOR_BG_DARK,
+                    hover_color="#3f3f3f",
+                    active_color=COLOR_BG_DARK,
+                    padding_x=20,
+                    padding_y=12,
+                    command=self._proceed,
+                )
             )
-        )
-        proceed_btn.place(relx=0.995, rely=0.99, anchor="se")
+            proceed_btn.place(relx=0.995, rely=0.99, anchor="se")
+            self._bottom_buttons_ready = True
 
-        # If coming from "Update existing product", restore saved scene
-        self.after(0, self._maybe_load_saved_product)
+        # Schedule product restore only once to avoid event-loop recursion
+        if not getattr(self, "_did_schedule_restore", False):
+            self.after(0, self._maybe_load_saved_product)
+            self._did_schedule_restore = True
 
     def _refresh_text_controls(self):
-        sel = getattr(self.selection, "_selected", None)
-        if not sel or sel not in self._items:
-            try:
-                self.text_size.set("")
-                self.text_color.set("")
-                # hide entire controls when nothing selected
-                self.text_bar.pack_forget()
-                self.row_text.pack_forget()
-            except Exception:
-                logger.exception("Failed to clear/hide text controls on deselect")
-            return
-        meta = self._items.get(sel, {})
-        t = meta.get("type")
-        # Show controls only for text items or rectangle with a label (treat as text block)
-        try:
-            is_text_block = (t == "text") or (t == "rect")
-        except Exception:
-            is_text_block = False
-        if not is_text_block:
-            try:
-                self.text_bar.pack_forget()
-                self.row_text.pack_forget()
-            except Exception:
-                logger.exception("Failed to hide text controls for non-text selection")
-            return
-        else:
-            try:
-                # re-pack if hidden
-                if not self.row_text.winfo_ismapped():
-                    try:
-                        self.row_text.pack(before=self.board, fill="x", padx=10, pady=(0, 6))
-                    except Exception:
-                        self.row_text.pack(fill="x", padx=10, pady=(0, 6))
-                if not self.text_bar.winfo_ismapped():
-                    self.text_bar.pack(side="left", padx=12)
-            except Exception:
-                logger.exception("Failed to show text controls for text selection")
-        # resolve text id
-        tid = meta.get("label_id") if t == "rect" else (meta.get("label_id") or sel)
-        # Name control removed; skip syncing name from canvas
-        try:
-            if t == "rect":
-                sz = int(round(float(meta.get("label_font_size", 10))))
-                fam = str(meta.get("label_font_family", "Myriad Pro"))
-                # Color from metadata; label is an image
-                col = str(meta.get("label_fill", "#17a24b"))
-            elif t == "text":
-                sz = int(round(float(meta.get("font_size_pt", 12))))
-                fam = str(meta.get("font_family", "Myriad Pro"))
-                col = str(meta.get("default_fill", self.canvas.itemcget(tid, "fill") or "#17a24b"))
-            else:
-                sz = 12; fam = "Myriad Pro"; col = "#17a24b"
-            self.text_size.set(str(int(sz)))
-            if fam not in self._font_families:
-                self._font_families.append(fam)
-                try:
-                    self._family_combo.configure(values=sorted(self._font_families))
-                except Exception:
-                    logger.exception("Failed to update family combo values")
-            self.text_family.set(fam)
-            if col:
-                self.text_color.set(col)
-        except Exception:
-            logger.exception("Failed to refresh text control values")
-        finally:
-            self._suppress_text_traces = False
+        return self.fonts.refresh_text_controls()
 
     # UI helpers
     def _snap_mm(self, value: float) -> float:
@@ -870,7 +987,7 @@ class NStickerCanvasScreen(Screen):
                 try:
                     if cid == meta.get("canvas_id") and meta.get("label_id"):
                         lbl_id = meta.get("label_id")
-                        if meta.get("type") == "rect":
+                        if meta.get("type") in ("rect", "major"):
                             # For rects, overlay polygon sits above base; raise label above overlay
                             try:
                                 rid = int(meta.get("rot_id", 0) or 0)
@@ -890,23 +1007,9 @@ class NStickerCanvasScreen(Screen):
                     logger.exception(f"Failed to raise label above base item: {e}")
         except Exception as e:
             logger.exception(f"Failed to raise all labels: {e}")
-            pass
 
     def _find_font_path(self, family: str) -> Optional[str]:
-        try:
-            file_stem = str(self._fonts_map.get(family, "MyriadPro-Regular"))
-        except Exception:
-            file_stem = "MyriadPro-Regular"
-        try:
-            ttf = (FONTS_PATH / f"{file_stem}.ttf")
-            if ttf.exists():
-                return str(ttf)
-            otf = (FONTS_PATH / f"{file_stem}.otf")
-            if otf.exists():
-                return str(otf)
-        except Exception:
-            pass
-        return None
+        return self.fonts.find_font_path(family)
 
     def _update_rect_label_image(self, rect_cid: int) -> None:
         """Render/update a rect's label as a rotated image and center it inside the rect."""
@@ -994,14 +1097,14 @@ class NStickerCanvasScreen(Screen):
                 try:
                     self.canvas.itemconfig(lid, image=photo)
                 except Exception:
-                    pass
+                    raise
                 self.canvas.coords(lid, cx, cy)
             else:
                 if lid:
                     try:
                         self.canvas.delete(lid)
                     except Exception:
-                        pass
+                        raise
                 new_lid = self.canvas.create_image(cx, cy, image=photo, anchor="center")
                 meta["label_id"] = new_lid
             # Keep above overlay/base
@@ -1017,7 +1120,7 @@ class NStickerCanvasScreen(Screen):
                     else:
                         self.canvas.tag_raise(lbl_id, rect_cid)
             except Exception:
-                pass
+                raise
         except Exception:
             logger.exception("Failed to update rotated label image")
 
@@ -1114,12 +1217,35 @@ class NStickerCanvasScreen(Screen):
     def _on_jig_change(self, *_):
         # Redraw jig and re-create slots to fill new area
         self._redraw_jig()
-        # Recreate slots based on current parameters
-        self._place_slots(silent=True)
-        self._renumber_slots()
+        # Recreate slots; prefer active major only
+        try:
+            sel = (self.major_name.get() or "").strip()
+        except Exception:
+            sel = ""
+        if sel and hasattr(self, "_place_slots_for_major"):
+            self._place_slots_for_major(sel, silent=True)
+            if hasattr(self, "_renumber_slots"):
+                self._renumber_slots()
+        else:
+            self._place_slots_all_majors(silent=True)
+            self._renumber_slots()
+        # Keep major rectangles clamped within jig
+        try:
+            self._update_all_majors()
+        except Exception:
+            raise
 
     def _maybe_recreate_slots(self):
-        self._place_slots(silent=True)
+        try:
+            sel = (self.major_name.get() or "").strip()
+        except Exception:
+            sel = ""
+        if sel and hasattr(self, "_place_slots_for_major"):
+            self._place_slots_for_major(sel, silent=True)
+            if hasattr(self, "_renumber_slots"):
+                self._renumber_slots()
+        else:
+            self._place_slots_all_majors(silent=True)
 
     def create_placeholder(
         self, 
@@ -1131,7 +1257,7 @@ class NStickerCanvasScreen(Screen):
         x_mm: Optional[float] = None,
         y_mm: Optional[float] = None
     ):
-        # place at the center of current viewport (like text)
+        # place at the center of selected major if available; otherwise center of viewport
         cw = max(1, self.canvas.winfo_width())
         ch = max(1, self.canvas.winfo_height())
         cx = self.canvas.canvasx(cw // 2)
@@ -1154,10 +1280,34 @@ class NStickerCanvasScreen(Screen):
         )
         # Persist position in mm relative to jig for stability on jig resize
         jx0, jy0, jx1, jy1 = self._jig_inner_rect_px()
-        if x_mm is None:
-            x_mm = (cx - scaled_w / 2 - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))
-        if y_mm is None:
-            y_mm = (cy - scaled_h / 2 - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))
+        clamp_left, clamp_top, clamp_right, clamp_bottom = jx0, jy0, jx1, jy1
+        # If a major is selected, clamp and center inside it
+        owner_try = ""
+        try:
+            owner_try = str(self.major_name.get()).strip()
+        except Exception:
+            owner_try = ""
+        if owner_try and owner_try in getattr(self, "_majors", {}):
+            try:
+                mid = int(self._majors.get(owner_try) or 0)
+            except Exception:
+                mid = 0
+            if mid:
+                try:
+                    mb = self.canvas.bbox(mid)
+                except Exception:
+                    mb = None
+                if mb:
+                    clamp_left, clamp_top, clamp_right, clamp_bottom = float(mb[0]), float(mb[1]), float(mb[2]), float(mb[3])
+                    cx = (clamp_left + clamp_right) / 2.0
+                    cy = (clamp_top + clamp_bottom) / 2.0
+        if x_mm is None or y_mm is None:
+            desired_left = cx - scaled_w / 2.0
+            desired_top = cy - scaled_h / 2.0
+            desired_left = max(clamp_left, min(desired_left, clamp_right - scaled_w))
+            desired_top = max(clamp_top, min(desired_top, clamp_bottom - scaled_h))
+            x_mm = (desired_left - (jx0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6))
+            y_mm = (desired_top - (jy0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6))
         # keep fractional mm and align rectangle to provided grid
         sx_mm = self._snap_mm(x_mm)
         sy_mm = self._snap_mm(y_mm)
@@ -1167,7 +1317,7 @@ class NStickerCanvasScreen(Screen):
         
         # compute next z to keep newer items above older ones
         max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
-        self._items[rect] = CanvasObject(
+        obj = CanvasObject(
             type="rect",
             w_mm=float(qw_mm),
             h_mm=float(qh_mm),
@@ -1178,10 +1328,36 @@ class NStickerCanvasScreen(Screen):
             canvas_id=rect,
             z=int(max_z + 1),
         )
+        # Tag ownership: prefer the major under the initial placement; fallback to selected major
+        try:
+            center_x = new_left + scaled_w / 2.0
+            center_y = new_top + scaled_h / 2.0
+            owner_hit = ""
+            for nm, rid in getattr(self, "_majors", {}).items():
+                try:
+                    mb = self.canvas.bbox(rid)
+                except Exception:
+                    mb = None
+                if not mb:
+                    continue
+                mx0, my0, mx1, my1 = float(mb[0]), float(mb[1]), float(mb[2]), float(mb[3])
+                if center_x >= mx0 and center_x <= mx1 and center_y >= my0 and center_y <= my1:
+                    owner_hit = str(nm)
+                    break
+            try:
+                owner_sel = str(self.major_name.get()).strip()
+            except Exception:
+                owner_sel = ""
+            final_owner = owner_hit or owner_sel
+            if final_owner:
+                obj["owner_major"] = final_owner
+        except Exception:
+            raise
+        self._items[rect] = obj
         try:
             self._items[rect]["label"] = str(label)
         except Exception:
-            pass
+            raise
         # Create rotated label image now
         try:
             self._update_rect_label_image(rect)
@@ -1196,6 +1372,12 @@ class NStickerCanvasScreen(Screen):
         self._update_scrollregion()
         self._raise_all_labels()
         self.selection._reorder_by_z()
+        # Enforce visibility per active major
+        if hasattr(self, "_refresh_major_visibility"):
+            try:
+                self._refresh_major_visibility()
+            except Exception:
+                raise
 
     def _drop_text(self):
         # Create a square rectangle with a text label inside, so it behaves like images
@@ -1205,6 +1387,10 @@ class NStickerCanvasScreen(Screen):
         self.create_placeholder("Text", default_w, default_h, text_fill="#17a24b", outline="#17a24b")
 
     def _ai_arrange(self):
+        # For backward compatibility, delegate to objects-only arrange within selected major
+        return self._ai_arrange_objects()
+
+    def _ai_arrange_objects(self):
         # Hide text menu and clear selection before arranging
         try:
             self.selection.select(None)
@@ -1212,17 +1398,27 @@ class NStickerCanvasScreen(Screen):
             logger.exception("Failed to deselect before AI arrange")
         try:
             self.text_bar.pack_forget()
-            self.row_text.pack_forget()
+            self.row_text.place_forget()
         except Exception:
             logger.exception("Failed to hide text menu before AI arrange")
         # Arrange non-slot items into existing slots.
         # Order for both slots and items: right-to-left within a row, bottom-to-top across rows
         # so the first item goes to the lower-right slot, then leftwards, then rows upwards.
 
-        # Collect and order slots by current canvas position
+        # Determine active/selected major for scoping
+        try:
+            active_major = str(self.major_name.get() or "").strip()
+        except Exception:
+            active_major = ""
+        # Collect and order slots by current canvas position, filtered by owner_major
         slot_entries: List[Tuple[float, float, int, CanvasObject]] = []  # (left_px, top_px, slot_cid, slot_meta)
         for scid, smeta in self._items.items():
             if smeta.get("type") != "slot":
+                continue
+            try:
+                if active_major and str(smeta.get("owner_major", "")) != active_major:
+                    continue
+            except Exception:
                 continue
             try:
                 bx = self.canvas.bbox(scid)
@@ -1239,10 +1435,15 @@ class NStickerCanvasScreen(Screen):
         if not slot_entries:
             return
 
-        # Collect placeable items (rect or image), ordered bottom->top, right->left
+        # Collect placeable items (rect or image), ordered bottom->top, right->left, filtered by owner_major
         item_entries: List[Tuple[float, float, int, CanvasObject]] = []  # (left_px, top_px, cid, meta)
         for cid, meta in self._items.items():
             if meta.get("type") not in ("rect", "image"):
+                continue
+            try:
+                if active_major and str(meta.get("owner_major", "")) != active_major:
+                    continue
+            except Exception:
                 continue
             try:
                 bx = self.canvas.bbox(cid)
@@ -1364,7 +1565,7 @@ class NStickerCanvasScreen(Screen):
                 try:
                     self._update_rect_label_image(cid)
                 except Exception:
-                    pass
+                    raise
                 self._raise_all_labels()
                 # Persist mm top-left
                 meta.x_mm = float(left_mm)
@@ -1375,9 +1576,201 @@ class NStickerCanvasScreen(Screen):
         # Ensure text controls remain hidden after arrange
         try:
             self.text_bar.pack_forget()
-            self.row_text.pack_forget()
+            self.row_text.place_forget()
         except Exception:
             logger.exception("Failed to hide text menu after AI arrange")
+
+    def _arrange_majors(self):
+        """Pack major rectangles within the jig area to avoid overlaps and refresh per-major slots.
+
+        Layout strategy: best-fit placement (largest first) into free space with 5mm jig margin
+        and 2mm inter-major padding. Each major can move; we compute a non-overlapping placement
+        per current sizes. Keeps each major's width/height, only updates x/y.
+        """
+        # Deselect and hide text controls for clarity
+        try:
+            self.selection.select(None)
+        except Exception:
+            pass
+        try:
+            self.text_bar.pack_forget()
+            self.row_text.place_forget()
+        except Exception:
+            pass
+        # Read jig size in mm
+        try:
+            jx = float(self.jig_x.get() or 0.0)
+            jy = float(self.jig_y.get() or 0.0)
+        except Exception:
+            jx, jy = 296.0, 394.5831
+        if jx <= 0.0 or jy <= 0.0:
+            return
+        # Jig boundary padding in mm
+        margin = 5.0
+        # Collect majors in natural order
+        try:
+            def _order_key(k: str) -> tuple:
+                import re as __re
+                m = __re.search(r"(\d+)$", k)
+                n = int(m.group(1)) if m else 10**9
+                return (n, k)
+            ordered = sorted(list(self._major_sizes.keys()), key=_order_key)
+        except Exception:
+            ordered = list(self._major_sizes.keys())
+        if not ordered:
+            return
+        # Inter-major padding
+        pad = 2.0
+
+        # Rect overlap check in mm
+        def _overlaps(ax, ay, aw, ah, bx, by, bw, bh) -> bool:
+            return not (ax + aw <= bx or bx + bw <= ax or ay + ah <= by or by + bh <= ay)
+
+        # Build discrete candidate positions based on already placed majors' edges
+        def _edge_candidates(mw: float, mh: float, placed_rects: list[tuple[str, float, float, float, float]]):
+            # existing position first (None)
+            yield None
+            x_cands = [margin]
+            y_cands = [margin]
+            for _nm, ox, oy, ow, oh in placed_rects:
+                x_cands.append(ox + ow + pad)
+                y_cands.append(oy + oh + pad)
+            # Deduplicate and sort
+            x_cands = sorted(set(round(v, 6) for v in x_cands))
+            y_cands = sorted(set(round(v, 6) for v in y_cands))
+            for y in y_cands:
+                for x in x_cands:
+                    yield (float(x), float(y))
+
+        # Build current rectangles from presets and sort by area (largest first)
+        all_rects: dict[str, tuple[float, float, float, float]] = {}
+        order_by_area: list[tuple[float, str]] = []
+        for nm in ordered:
+            vals = self._major_sizes.get(nm) or {}
+            try:
+                mw = float(vals.get("w", 0.0) or 0.0)
+                mh = float(vals.get("h", 0.0) or 0.0)
+                cx = float(vals.get("x", margin))
+                cy = float(vals.get("y", margin))
+            except Exception:
+                mw, mh, cx, cy = 0.0, 0.0, margin, margin
+            if mw <= 0.0 or mh <= 0.0:
+                continue
+            cx = max(margin, min(cx, max(margin, jx - margin - mw)))
+            cy = max(margin, min(cy, max(margin, jy - margin - mh)))
+            all_rects[nm] = (cx, cy, mw, mh)
+            order_by_area.append((-(mw * mh), nm))
+        order_by_area.sort()
+
+        # Occupied set starts with all current rectangles; we move one at a time without overlapping others
+        occupied: list[tuple[str, float, float, float, float]] = [(n, *all_rects[n]) for _area, n in order_by_area]
+
+        for _neg_area, nm in order_by_area:
+            cx, cy, mw, mh = all_rects[nm]
+            # Remove self from occupied before testing candidates
+            occupied = [(nn, x, y, w, h) for (nn, x, y, w, h) in occupied if nn != nm]
+            best = None
+            for cand in _edge_candidates(mw, mh, occupied):
+                if cand is None:
+                    px, py = cx, cy
+                else:
+                    px, py = cand
+                # Bounds check
+                if px < margin or py < margin or (px + mw) > (jx - margin + 1e-6) or (py + mh) > (jy - margin + 1e-6):
+                    continue
+                # Overlap check vs all others (with padding margin around candidate)
+                ok = True
+                for _onm, ox, oy, ow, oh in occupied:
+                    if _overlaps(px - pad, py - pad, mw + 2 * pad, mh + 2 * pad, ox, oy, ow, oh):
+                        ok = False
+                        break
+                if not ok:
+                    continue
+                best = (px, py)
+                break
+            # If nothing fits, keep original location; do not overlap because original was in occupied set
+            if best is None:
+                best = (cx, cy)
+            px, py = best
+            all_rects[nm] = (px, py, mw, mh)
+            occupied.append((nm, px, py, mw, mh))
+
+        # Capture old positions in mm BEFORE persisting new ones
+        old_mm: dict[str, tuple[float, float]] = {}
+        for nm in all_rects.keys():
+            try:
+                v0 = self._major_sizes.get(nm) or {}
+                ox = float(v0.get("x", 0.0) or 0.0)
+                oy = float(v0.get("y", 0.0) or 0.0)
+            except Exception:
+                ox, oy = 0.0, 0.0
+            old_mm[nm] = (ox, oy)
+        # Persist updated positions back to presets
+        for nm, (px, py, mw, mh) in all_rects.items():
+            vals = self._major_sizes.get(nm) or {}
+            vals["x"], vals["y"] = str(float(px)), str(float(py))
+            self._major_sizes[nm] = vals
+        # Apply updates to canvas and refresh slots per major
+        try:
+            # Temporarily suppress child shifts while we reposition majors in bulk
+            self._suppress_major_child_shift = True
+            self._update_all_majors()
+        finally:
+            try:
+                self._suppress_major_child_shift = False
+            except Exception:
+                pass
+
+        # Shift children of each major by the exact delta we applied to the major
+        try:
+            if hasattr(self, "selection") and hasattr(self.selection, "_shift_children_for_major"):
+                from src.core import MM_TO_PX as __MM_TO_PX
+                for nm, (nx, ny, mw, mh) in all_rects.items():
+                    ox, oy = old_mm.get(nm, (nx, ny))
+                    dx_mm = float(nx) - float(ox)
+                    dy_mm = float(ny) - float(oy)
+                    if abs(dx_mm) < 1e-9 and abs(dy_mm) < 1e-9:
+                        continue
+                    dx_px = float(dx_mm) * float(__MM_TO_PX) * float(getattr(self, "_zoom", 1.0))
+                    dy_px = float(dy_mm) * float(__MM_TO_PX) * float(getattr(self, "_zoom", 1.0))
+                    self.selection._shift_children_for_major(str(nm), dx_px, dy_px, dx_mm, dy_mm)
+        except Exception:
+            pass
+        # Update entries for currently selected major to reflect new x/y
+        try:
+            active_major = str(self.major_name.get() or "").strip()
+        except Exception:
+            active_major = ""
+        if active_major and active_major in self._major_sizes:
+            try:
+                vals = self._major_sizes.get(active_major) or {}
+                nx = str(vals.get("x", "0"))
+                ny = str(vals.get("y", "0"))
+                self._suppress_major_traces = True
+                if hasattr(self, "major_x"):
+                    self.major_x.set(str(nx))
+                if hasattr(self, "major_y"):
+                    self.major_y.set(str(ny))
+            except Exception:
+                pass
+            finally:
+                try:
+                    self._suppress_major_traces = False
+                except Exception:
+                    pass
+        try:
+            if hasattr(self, "_place_slots_all_majors"):
+                self._place_slots_all_majors(silent=True)
+                if hasattr(self, "_renumber_slots"):
+                    self._renumber_slots()
+        except Exception:
+            pass
+        try:
+            if hasattr(self, "_refresh_major_visibility"):
+                self._refresh_major_visibility()
+        except Exception:
+            pass
+        self.selection._reorder_by_z()
 
     def _compute_import_size_mm(self, path: str) -> Optional[Tuple[float, float]]:
         """Infer intrinsic image size in mm.
@@ -1706,6 +2099,8 @@ class NStickerCanvasScreen(Screen):
                                 "h_mm": float(it.get("h_mm", 0.0)),
                                 # Use the z value directly from the item to avoid key-mismatch defaulting to 0
                                 "z": int(it.get("z", 0)),
+                                # Preserve owner for grouping; will be removed in final JSON grouping
+                                "owner_major": str(it.get("owner_major", "") or ""),
                                 "objects": [],
                             }
                             slot_descs.append(slot_entry)
@@ -1841,9 +2236,6 @@ class NStickerCanvasScreen(Screen):
             slot_count = sum(1 for it in slots_only)
             scene_top = {
                 "jig": {"width_mm": float(jx), "height_mm": float(jy)},
-                "step": {"x_mm": float(step_x), "y_mm": float(step_y)},
-                "origin": {"x_mm": float(origin_x), "y_mm": float(origin_y)},
-                "slot_size": {"width_mm": float(slot_w), "height_mm": float(slot_h)},
                 "slot_count": int(slot_count),
                 "objects_count": {
                     "images": int(images_cnt_front + images_cnt_back),
@@ -1851,13 +2243,97 @@ class NStickerCanvasScreen(Screen):
                 },
             }
             state.nonsticker_image_count = int(images_cnt_front + images_cnt_back + text_cnt_front + text_cnt_back)
+            # Build Scene.Majors summary and group sides by major
+            def _ordered_major_names() -> list[str]:
+                try:
+                    import re as __re
+                    def _order_key(k: str) -> tuple:
+                        m = __re.search(r"(\d+)$", k)
+                        n = int(m.group(1)) if m else 10**9
+                        return (n, k)
+                    return sorted(list(self._major_sizes.keys()), key=_order_key)
+                except Exception:
+                    return list(self._major_sizes.keys())
+
+            ordered_names = _ordered_major_names()
+            name_to_label: dict[str, str] = {}
+            for idx, nm in enumerate(ordered_names, start=1):
+                name_to_label[nm] = f"Major {idx}"
+
+            # Scene.Majors entries
+            scene_majors: list[dict] = []
+            for nm in ordered_names:
+                vals = self._major_sizes.get(nm) or {}
+                try:
+                    mx = float(vals.get("x", 0.0)); my = float(vals.get("y", 0.0))
+                    mw = float(vals.get("w", 0.0)); mh = float(vals.get("h", 0.0))
+                except Exception:
+                    mx, my, mw, mh = 0.0, 0.0, 0.0, 0.0
+                try:
+                    ox = float(vals.get("origin_x", self.origin_x.get() or 0.0))
+                    oy = float(vals.get("origin_y", self.origin_y.get() or 0.0))
+                except Exception:
+                    ox, oy = 0.0, 0.0
+                try:
+                    swm = float(vals.get("slot_w", self.slot_w.get() or 0.0))
+                    shm = float(vals.get("slot_h", self.slot_h.get() or 0.0))
+                except Exception:
+                    swm, shm = 0.0, 0.0
+                try:
+                    sxm = float(vals.get("step_x", self.step_x.get() or 0.0))
+                    sym = float(vals.get("step_y", self.step_y.get() or 0.0))
+                except Exception:
+                    sxm, sym = 0.0, 0.0
+                try:
+                    per_major_slots = [s for s in slots_only if str(s.get("owner_major", "") or "") == str(nm)]
+                    scount = int(len(per_major_slots))
+                except Exception:
+                    scount = 0
+                scene_majors.append({
+                    "rect": {"x_mm": float(mx), "y_mm": float(my), "width_mm": float(mw), "height_mm": float(mh)},
+                    "origin": {"x_mm": float(ox), "y_mm": float(oy)},
+                    "slot_size": {"width_mm": float(swm), "height_mm": float(shm)},
+                    "step_size": {"x_mm": float(sxm), "y_mm": float(sym)},
+                    "slot_count": int(scount),
+                })
+            scene_top["Majors"] = scene_majors
+
+            # Group side slots by major owner
+            def _group_side_by_major(flat_side: dict) -> list[dict]:
+                groups_map: dict[str, dict] = {}
+                slots = list(flat_side.get("slots", []))
+                for sl in slots:
+                    try:
+                        owner = str(sl.get("owner_major", "") or "")
+                    except Exception:
+                        owner = ""
+                    label = name_to_label.get(owner) or (f"{owner}" if owner else "Major 1")
+                    grp = groups_map.get(label)
+                    if not grp:
+                        grp = {"label": label, "slots": []}
+                        groups_map[label] = grp
+                    s_copy = dict(sl)
+                    # remove owner_major in final JSON
+                    s_copy.pop("owner_major", None)
+                    grp["slots"].append(s_copy)
+                # preserve order of majors as in ordered_names if present, else insertion order
+                ordered_labels = [name_to_label.get(nm) for nm in ordered_names if name_to_label.get(nm) in groups_map]
+                # append any remaining labels (e.g., slots without owner)
+                for lbl in list(groups_map.keys()):
+                    if lbl not in ordered_labels:
+                        ordered_labels.append(lbl)
+                return [groups_map[lbl] for lbl in ordered_labels]
+
+            front_grouped = _group_side_by_major(_compose_side(front_items))
+            back_grouped = _group_side_by_major(_compose_side(back_items))
+
             combined = {
                 "Sku": state.sku or "",
                 "SkuName": state.sku_name or "",
                 "IsSticker": False,
                 "Scene": scene_top,
-                "Frontside": _compose_side(front_items),
-                "Backside": _compose_side(back_items),
+                "Frontside": front_grouped,
+                "Backside": back_grouped,
             }
         except Exception as e:
             logger.exception(f"Failed to build combined JSON: {e}")
@@ -1878,8 +2354,11 @@ class NStickerCanvasScreen(Screen):
                 try:
                     state.processing_message = "Rendering single pattern SVG..."
                     logger.debug(f"Rendering single pattern SVG...")
-                    front_desc = combined.get("Frontside", {})
-                    slots_desc = list(front_desc.get("slots", []))
+                    front_sections = combined.get("Frontside", [])
+                    slots_desc = []
+                    if isinstance(front_sections, list) and front_sections:
+                        first_section = front_sections[0] or {}
+                        slots_desc = list(first_section.get("slots", []))
                     if slots_desc:
                         state.processing_message = "Rendering single pattern SVG..."
                         self._render_single_pattern_svg(p_pattern, slots_desc[0])
@@ -1940,7 +2419,7 @@ class NStickerCanvasScreen(Screen):
     def _clear_scene(self, keep_slots: bool = False):
         try:
             for cid, meta in list(self._items.items()):
-                if keep_slots and meta.get("type") == "slot":
+                if keep_slots and meta.get("type") in ("slot", "major"):
                     continue
                 # Remove rotated overlay polygon for rects
                 try:
@@ -2018,7 +2497,7 @@ class NStickerCanvasScreen(Screen):
         try:
             self._items[rect]["label"] = str(label)
         except Exception:
-            pass
+            raise
         try:
             self._update_rect_label_image(rect)
         except Exception:
@@ -2069,6 +2548,8 @@ class NStickerCanvasScreen(Screen):
                         "label_fill": str(meta.get("label_fill", "#ffffff")),
                         "label_font_size": int(round(float(meta.get("label_font_size", 10)))),
                         "label_font_family": str(meta.get("label_font_family", "Myriad Pro")),
+                        # Persist ownership
+                        "owner_major": str(meta.get("owner_major", "")),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize rect item {cid}: {e}")
@@ -2086,6 +2567,7 @@ class NStickerCanvasScreen(Screen):
                         "y_mm": float(meta.get("y_mm", 0.0)),
                         "outline": str(meta.get("outline", "#9a9a9a")),
                         "z": int(meta.get("z", 0)),
+                        "owner_major": str(meta.get("owner_major", "")),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize slot item {cid}: {e}")
@@ -2105,6 +2587,7 @@ class NStickerCanvasScreen(Screen):
                         "y_mm": float(meta.get("y_mm", 0.0)),
                         "angle": float(meta.get("angle", 0.0) or 0.0),
                         "z": int(meta.get("z", 0)),
+                        "owner_major": str(meta.get("owner_major", "")),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize image item {cid}: {e}")
@@ -2128,6 +2611,7 @@ class NStickerCanvasScreen(Screen):
                         # Persist text styling for plain text items
                         "font_size_pt": int(round(float(meta.get("font_size_pt", 12)))),
                         "font_family": str(meta.get("font_family", "Myriad Pro")),
+                        "owner_major": str(meta.get("owner_major", "")),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize text item {cid}: {e}")
@@ -2181,6 +2665,7 @@ class NStickerCanvasScreen(Screen):
                     float(it.get("h_mm", 0.0)),
                     float(it.get("x_mm", 0.0)),
                     float(it.get("y_mm", 0.0)),
+                    owner_major=str(it.get("owner_major", "") or ""),
                 )
                 try:
                     if sid in self._items:
@@ -2240,7 +2725,7 @@ class NStickerCanvasScreen(Screen):
                                 mpath = mpath_val
                             meta["mask_path"] = mpath
                     except Exception:
-                        pass
+                        raise
                     meta["amazon_label"] = str(it.get("amazon_label", "") or "")
                     try:
                         meta["is_options"] = self._as_bool(it.get("is_options", False))
@@ -2261,6 +2746,13 @@ class NStickerCanvasScreen(Screen):
                         except Exception as e:
                             logger.exception(f"Failed to apply image z from JSON: {e}")
                             meta["z"] = int(max_z + 1)
+                        # Restore ownership if present
+                        try:
+                            owner = str(it.get("owner_major", "") or "")
+                            if owner:
+                                meta["owner_major"] = owner
+                        except Exception:
+                            raise
                         self._items[img_id] = meta
             elif t == "text":
                 # Two shapes are encoded as text in saved JSON:
@@ -2279,9 +2771,15 @@ class NStickerCanvasScreen(Screen):
                             try:
                                 self._items[tid]["is_options"] = self._as_bool(it.get("is_options", False))
                                 self._items[tid]["is_static"] = self._as_bool(it.get("is_static", False))
-                                print(f"Restored flags for text item: {self._items[tid]['is_options']}, {self._items[tid]['is_static']}")
                             except Exception:
                                 logger.exception("Failed to restore flags for text item")
+                            # Restore ownership
+                            try:
+                                owner = str(it.get("owner_major", "") or "")
+                                if owner:
+                                    self._items[tid]["owner_major"] = owner
+                            except Exception:
+                                raise
                             z_val = it.get("z")
                             if z_val is not None:
                                 self._items[tid]["z"] = int(z_val)
@@ -2319,6 +2817,13 @@ class NStickerCanvasScreen(Screen):
                                 self._items[rid]["is_static"] = self._as_bool(it.get("is_static", False))
                             except Exception:
                                 logger.exception("Failed to restore flags for text-rect item")
+                            # Restore ownership
+                            try:
+                                owner = str(it.get("owner_major", "") or "")
+                                if owner:
+                                    self._items[rid]["owner_major"] = owner
+                            except Exception:
+                                raise
                             z_val = it.get("z")
                             if z_val is not None:
                                 self._items[rid]["z"] = int(z_val)
@@ -2372,29 +2877,186 @@ class NStickerCanvasScreen(Screen):
                 s = str(val)
             var.set(s)
 
+        # Suppress trace-driven slot/major updates during bulk restore
+        _prev_suppress = getattr(self, "_suppress_major_traces", False)
+        self._suppress_major_traces = True
+
         _set_str(self.jig_x, jig.get("width_mm", self.jig_x.get()))
         _set_str(self.jig_y, jig.get("height_mm", self.jig_y.get()))
-        _set_str(self.step_x, step.get("x_mm", self.step_x.get()))
-        _set_str(self.step_y, step.get("y_mm", self.step_y.get()))
-        _set_str(self.origin_x, origin.get("x_mm", self.origin_x.get()))
-        _set_str(self.origin_y, origin.get("y_mm", self.origin_y.get()))
-        _set_str(self.slot_w, slot_size.get("width_mm", self.slot_w.get()))
-        _set_str(self.slot_h, slot_size.get("height_mm", self.slot_h.get()))
+        # Initialize scene-level fields from first major if present; fall back to legacy Scene fields
+        scene_majors_peek = list((scene.get("Majors") or []))
+        if scene_majors_peek:
+            try:
+                first = scene_majors_peek[0] or {}
+                _ox = (first.get("origin") or {}).get("x_mm", self.origin_x.get())
+                _oy = (first.get("origin") or {}).get("y_mm", self.origin_y.get())
+                _sw = (first.get("slot_size") or {}).get("width_mm", self.slot_w.get())
+                _sh = (first.get("slot_size") or {}).get("height_mm", self.slot_h.get())
+                _sx = (first.get("step_size") or {}).get("x_mm", self.step_x.get())
+                _sy = (first.get("step_size") or {}).get("y_mm", self.step_y.get())
+                _set_str(self.origin_x, _ox)
+                _set_str(self.origin_y, _oy)
+                _set_str(self.slot_w, _sw)
+                _set_str(self.slot_h, _sh)
+                _set_str(self.step_x, _sx)
+                _set_str(self.step_y, _sy)
+            except Exception:
+                # Fallback on any error
+                _set_str(self.origin_x, origin.get("x_mm", self.origin_x.get()))
+                _set_str(self.origin_y, origin.get("y_mm", self.origin_y.get()))
+                _set_str(self.slot_w, slot_size.get("width_mm", self.slot_w.get()))
+                _set_str(self.slot_h, slot_size.get("height_mm", self.slot_h.get()))
+                _set_str(self.step_x, step.get("x_mm", self.step_x.get()))
+                _set_str(self.step_y, step.get("y_mm", self.step_y.get()))
+        else:
+            _set_str(self.step_x, step.get("x_mm", self.step_x.get()))
+            _set_str(self.step_y, step.get("y_mm", self.step_y.get()))
+            _set_str(self.origin_x, origin.get("x_mm", self.origin_x.get()))
+            _set_str(self.origin_y, origin.get("y_mm", self.origin_y.get()))
+            _set_str(self.slot_w, slot_size.get("width_mm", self.slot_w.get()))
+            _set_str(self.slot_h, slot_size.get("height_mm", self.slot_h.get()))
 
         front = data.get("Frontside") or {}
         back = data.get("Backside") or {}
-        front_slots = list(front.get("slots") or [])
-        back_slots = list(back.get("slots") or [])
 
-        # Flatten objects for each side (items carry absolute mm coords)
-        front_items = []
-        for sl in front_slots:
-            front_items.extend(list(sl.get("objects") or []))
-        back_items = []
-        for sl in back_slots:
-            back_items.extend(list(sl.get("objects") or []))
+        # Build majors and slots depending on new or legacy format
+        scene_majors = list((data.get("Scene") or {}).get("Majors") or [])
+        major_sizes_new: dict[str, dict] = {}
+
+        def _collect_slots_and_items(side_val) -> tuple[list[dict], list[dict]]:
+            slots: list[dict] = []
+            items: list[dict] = []
+            if isinstance(side_val, list):
+                # New format: list of sections {label, slots}
+                for idx, section in enumerate(side_val):
+                    try:
+                        label = str((section or {}).get("label", f"Major size {idx+1}"))
+                    except Exception:
+                        label = f"Major size {idx+1}"
+                    # Collect this section's slots and objects locally first
+                    sec_slots = [dict(s) for s in list((section or {}).get("slots") or [])]
+                    sec_items = []
+                    for s in sec_slots:
+                        for obj in list(s.get("objects") or []):
+                            sec_items.append(dict(obj))
+                    # Build major rectangle from slot bounds for this section
+                    try:
+                        if sec_slots:
+                            min_x = min(float(s.get("x_mm", 0.0)) for s in sec_slots)
+                            min_y = min(float(s.get("y_mm", 0.0)) for s in sec_slots)
+                            max_x = max(float(s.get("x_mm", 0.0)) + float(s.get("w_mm", 0.0)) for s in sec_slots)
+                            max_y = max(float(s.get("y_mm", 0.0)) + float(s.get("h_mm", 0.0)) for s in sec_slots)
+                            w = max(0.0, max_x - min_x)
+                            h = max(0.0, max_y - min_y)
+                            # Use Scene.Majors per-index for rect/origin/slot/step if present
+                            try:
+                                sm = scene_majors[idx] if idx < len(scene_majors) else {}
+                            except Exception:
+                                sm = {}
+                            rx = float((sm.get("rect") or {}).get("x_mm", min_x))
+                            ry = float((sm.get("rect") or {}).get("y_mm", min_y))
+                            rw = float((sm.get("rect") or {}).get("width_mm", w))
+                            rh = float((sm.get("rect") or {}).get("height_mm", h))
+                            ox = float((sm.get("origin") or {}).get("x_mm", self.origin_x.get() or 0.0))
+                            oy = float((sm.get("origin") or {}).get("y_mm", self.origin_y.get() or 0.0))
+                            sw = float((sm.get("slot_size") or {}).get("width_mm", self.slot_w.get() or 0.0))
+                            sh = float((sm.get("slot_size") or {}).get("height_mm", self.slot_h.get() or 0.0))
+                            sx = float((sm.get("step_size") or {}).get("x_mm", self.step_x.get() or 0.0))
+                            sy = float((sm.get("step_size") or {}).get("y_mm", self.step_y.get() or 0.0))
+                            # Ensure preset name uses 'Major size N' scheme consistently
+                            preset_name = f"Major size {idx+1}"
+                            major_sizes_new[preset_name] = {
+                                "x": str(rx),
+                                "y": str(ry),
+                                "w": str(rw),
+                                "h": str(rh),
+                                "step_x": str(sx),
+                                "step_y": str(sy),
+                                "origin_x": str(ox),
+                                "origin_y": str(oy),
+                                "slot_w": str(sw),
+                                "slot_h": str(sh),
+                            }
+                            # Rewrite owner labels in this section only
+                            for s in sec_slots:
+                                try:
+                                    s["owner_major"] = preset_name
+                                except Exception:
+                                    pass
+                            for o in sec_items:
+                                try:
+                                    o["owner_major"] = preset_name
+                                except Exception:
+                                    pass
+                            # Append to global collections after owner assignment
+                            slots.extend(sec_slots)
+                            items.extend(sec_items)
+                    except Exception:
+                        # Best-effort; skip major rect if invalid
+                        pass
+            else:
+                # Legacy format: single object with slots
+                sec_slots = list((side_val or {}).get("slots") or [])
+                for s in sec_slots:
+                    slots.append(dict(s))
+                    for obj in list(s.get("objects") or []):
+                        items.append(dict(obj))
+            return slots, items
+
+        front_slots, front_items = _collect_slots_and_items(front)
+        back_slots, back_items = _collect_slots_and_items(back)
 
         def _do_restore():
+            # If majors present in new format, replace presets and render rectangles
+            try:
+                if major_sizes_new:
+                    self._major_sizes = dict(major_sizes_new)
+                    # Refresh preset combobox and select a valid entry
+                    try:
+                        # Rebuild combobox values and ensure selection is valid
+                        if hasattr(self, "_major_combo"):
+                            self._major_combo.configure(values=list(self._major_sizes.keys()))
+                        if (self.major_name.get() or "") not in self._major_sizes:
+                            # Pick first available preset if current is invalid
+                            next_name = next(iter(self._major_sizes.keys()), "")
+                            self.major_name.set(next_name)
+                        # Sync UI fields from the selected preset (inline to avoid nested scope name)
+                        sel_name = (self.major_name.get() or "").strip()
+                        vals = self._major_sizes.get(sel_name)
+                        if vals:
+                            self._suppress_major_traces = True
+                            try:
+                                self.major_x.set(str(vals.get("x", "0")))
+                                self.major_y.set(str(vals.get("y", "0")))
+                                self.major_w.set(str(vals.get("w", "0")))
+                                self.major_h.set(str(vals.get("h", "0")))
+                                if hasattr(self, "step_x"):
+                                    self.step_x.set(str(vals.get("step_x", self.step_x.get())))
+                                if hasattr(self, "step_y"):
+                                    self.step_y.set(str(vals.get("step_y", self.step_y.get())))
+                                if hasattr(self, "origin_x"):
+                                    self.origin_x.set(str(vals.get("origin_x", self.origin_x.get())))
+                                if hasattr(self, "origin_y"):
+                                    self.origin_y.set(str(vals.get("origin_y", self.origin_y.get())))
+                                if hasattr(self, "slot_w"):
+                                    self.slot_w.set(str(vals.get("slot_w", self.slot_w.get())))
+                                if hasattr(self, "slot_h"):
+                                    self.slot_h.set(str(vals.get("slot_h", self.slot_h.get())))
+                            finally:
+                                self._suppress_major_traces = False
+                        # Update active major and visibility after selection
+                        try:
+                            self._active_major = (self.major_name.get() or "").strip()
+                            if hasattr(self, "_refresh_major_visibility"):
+                                self._refresh_major_visibility()
+                        except Exception:
+                            pass
+                    except Exception:
+                        # Non-fatal UI sync issue
+                        pass
+            except Exception:
+                # Keep previous presets if replacement fails
+                pass
             # Clear anything auto-created and recreate slots from JSON for exact positions
             self._clear_scene(keep_slots=False)
             for sl in front_slots:
@@ -2404,6 +3066,7 @@ class NStickerCanvasScreen(Screen):
                     float(sl.get("h_mm", 0.0)),
                     float(sl.get("x_mm", 0.0)),
                     float(sl.get("y_mm", 0.0)),
+                    owner_major=str(sl.get("owner_major", "") or ""),
                 )
                 try:
                     if sid in self._items:
@@ -2420,6 +3083,13 @@ class NStickerCanvasScreen(Screen):
             self._redraw_jig(center=False)
             self._raise_all_labels()
             self.selection._reorder_by_z()
+            # Render or refresh majors based on restored presets
+            try:
+                self._update_all_majors()
+            except Exception:
+                raise
+            # Re-enable trace-driven updates after initial restore completes
+            self._suppress_major_traces = _prev_suppress
 
         # Let variable traces run first, then restore
         self.after(10, _do_restore)
@@ -2441,3 +3111,10 @@ class NStickerCanvasScreen(Screen):
         self._redraw_jig(center=False)
         # Ensure labels on top after switching sides
         self._raise_all_labels()
+        # Respect per-major visibility on side switch
+        if hasattr(self, "_refresh_major_visibility"):
+            try:
+                self._refresh_major_visibility()
+            except Exception:
+                raise
+        # Major rectangle management is delegated to MajorManager (see self.majors)

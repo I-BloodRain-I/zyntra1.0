@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import tkinter as tk
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from src.core import MM_TO_PX
 from src.canvas.object import CanvasObject
@@ -13,7 +13,7 @@ class SlotManager:
     def __init__(self, screen: tk.Widget) -> None:
         self.s = screen
 
-    def create_slot_at_mm(self, label: str, w_mm: float, h_mm: float, x_mm: float, y_mm: float):
+    def create_slot_at_mm(self, label: str, w_mm: float, h_mm: float, x_mm: float, y_mm: float, owner_major: Optional[str] = None):
         x0, y0, x1, y1 = self.s._jig_inner_rect_px()
         # For slots, allow touching jig border without the +1px inward offset
         ox = 0.0
@@ -42,7 +42,7 @@ class SlotManager:
             y_mm_i = self.s._snap_mm((new_top - (y0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6)))
         # next z: force slots to be at the very bottom. Use (current global min z - 1)
         min_z = min(int(m.get("z", 0)) for _cid, m in self.s._items.items()) if self.s._items else 0
-        self.s._items[rect] = CanvasObject(
+        obj = CanvasObject(
             type="slot",
             w_mm=float(w_mm_i),
             h_mm=float(h_mm_i),
@@ -53,6 +53,24 @@ class SlotManager:
             canvas_id=rect,
             z=int(min_z - 1),
         )
+        # Tag ownership by provided owner or currently selected major preset
+        try:
+            owner = str(owner_major or str(getattr(self.s, "major_name").get())).strip()
+        except Exception:
+            owner = str(owner_major or "").strip()
+        try:
+            if owner:
+                obj["owner_major"] = owner
+        except Exception:
+            raise
+        self.s._items[rect] = obj
+        # Respect visibility by active major
+        if hasattr(self.s, "_refresh_major_visibility"):
+            try:
+                self.s._refresh_major_visibility()
+            except Exception:
+                raise
+        return rect
 
     def place_slots(self, silent: bool = False):
         # Validate and read inputs
@@ -148,20 +166,22 @@ class SlotManager:
         self.renumber_slots()
 
     def renumber_slots(self):
-        # Build list of (left_px, top_px, rect_id, label_id) for slot rectangles using current canvas positions
-        slots = []
+        # Build owner->list of (left_px, top_px, rect_id, label_id)
+        groups: dict[str, List[Tuple[float, float, int, Optional[int]]]] = {}
         for cid, meta in self.s._items.items():
-            if meta.get("type") == "slot":
-                try:
-                    x1, y1, x2, y2 = self.s.canvas.bbox(cid)
-                except Exception:
-                    continue
-                slots.append((float(x1), float(y1), cid, meta.get("label_id")))
-        # Sort rows first: bottom-to-top (y desc), then within row right-to-left (x desc)
-        slots.sort(key=lambda t: (-t[1], -t[0]))
-        # Apply contiguous labels starting from 1
-        for idx, (_lx, _ty, _cid, lbl_id) in enumerate(slots, start=1):
-            if lbl_id:
-                self.s.canvas.itemconfig(lbl_id, text=f"Slot {idx}")
+            if meta.get("type") != "slot":
+                continue
+            try:
+                x1, y1, x2, y2 = self.s.canvas.bbox(cid)
+            except Exception:
+                continue
+            owner = str(meta.get("owner_major", ""))
+            groups.setdefault(owner, []).append((float(x1), float(y1), cid, meta.get("label_id")))
+        # For each owner group: sort bottom-to-top (y desc), within row right-to-left (x desc), then number from 1
+        for _owner, slots in groups.items():
+            slots.sort(key=lambda t: (-t[1], -t[0]))
+            for idx, (_lx, _ty, _cid, lbl_id) in enumerate(slots, start=1):
+                if lbl_id:
+                    self.s.canvas.itemconfig(lbl_id, text=f"Slot {idx}")
 
 

@@ -1,0 +1,346 @@
+{
+  "Sku": "Test",
+  "SkuName": "2423534",
+  "IsSticker": false,
+  "Scene": {
+    "jig": {
+      "width_mm": 296.0,
+      "height_mm": 394.5831
+    },
+    "slot_count": 11,
+    "objects_count": {
+      "images": 2,
+      "text": 2
+    },
+    "Majors": [
+      {
+        "rect": {
+          "x_mm": 0.0,
+          "y_mm": 0.0,
+          "width_mm": 55.0,
+          "height_mm": 150.0
+        },
+        "origin": {
+          "x_mm": 11.76,
+          "y_mm": 12.52
+        },
+        "slot_size": {
+          "width_mm": 40.66,
+          "height_mm": 28.9
+        },
+        "step_size": {
+          "x_mm": 72.55,
+          "y_mm": 47.85
+        },
+        "slot_count": 3
+      },
+      {
+        "rect": {
+          "x_mm": 100.0,
+          "y_mm": 15.0,
+          "width_mm": 150.0,
+          "height_mm": 200.0
+        },
+        "origin": {
+          "x_mm": 11.76,
+          "y_mm": 12.52
+        },
+        "slot_size": {
+          "width_mm": 40.66,
+          "height_mm": 28.9
+        },
+        "step_size": {
+          "x_mm": 72.55,
+          "y_mm": 47.85
+        },
+        "slot_count": 8
+      }
+    ]
+  },
+  "Frontside": [
+    {
+      "label": "Major 1",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 2.5800000000000054,
+          "y_mm": 108.57999999999998,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -9,
+          "objects": [
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "546",
+              "x_mm": 8.460000000000004,
+              "y_mm": 108.58,
+              "w_mm": 28.9,
+              "h_mm": 28.9,
+              "angle": 270.0,
+              "z": 1,
+              "label_fill": "#17a24b",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 2.5800000000000054,
+          "y_mm": 60.729999999999976,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -10,
+          "objects": []
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 2.5800000000000054,
+          "y_mm": 12.879999999999985,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -11,
+          "objects": []
+        }
+      ]
+    },
+    {
+      "label": "Major 2",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 197.58000000000004,
+          "y_mm": 173.58,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -12,
+          "objects": [
+            {
+              "type": "image",
+              "path": "2423534/cursor.png",
+              "x_mm": 201.91000000000003,
+              "y_mm": 178.53,
+              "w_mm": 19.0,
+              "h_mm": 32.0,
+              "angle": 270.0,
+              "z": -2,
+              "amazon_label": "htyj56",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "None"
+            }
+          ]
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 125.03000000000002,
+          "y_mm": 173.58,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -13,
+          "objects": [
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5345rht",
+              "x_mm": 130.91000000000003,
+              "y_mm": 173.58,
+              "w_mm": 28.9,
+              "h_mm": 28.9,
+              "angle": 270.0,
+              "z": 0,
+              "label_fill": "#17a24b",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 197.58000000000004,
+          "y_mm": 125.73,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -14,
+          "objects": [
+            {
+              "type": "image",
+              "path": "2423534/images.jpg",
+              "x_mm": 203.3954910714286,
+              "y_mm": 125.73,
+              "w_mm": 28.89999999999999,
+              "h_mm": 29.029017857142847,
+              "angle": 270.0,
+              "z": -1,
+              "amazon_label": "345",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "None"
+            }
+          ]
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 125.03000000000002,
+          "y_mm": 125.73,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -15,
+          "objects": []
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 197.58000000000004,
+          "y_mm": 77.88,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -16,
+          "objects": []
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 125.03000000000002,
+          "y_mm": 77.88,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -17,
+          "objects": []
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 197.58000000000004,
+          "y_mm": 30.02999999999999,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -18,
+          "objects": []
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 125.03000000000002,
+          "y_mm": 30.02999999999999,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -19,
+          "objects": []
+        }
+      ]
+    }
+  ],
+  "Backside": [
+    {
+      "label": "Major 1",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 2.5800000000000054,
+          "y_mm": 108.57999999999998,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -9,
+          "objects": []
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 2.5800000000000054,
+          "y_mm": 60.729999999999976,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -10,
+          "objects": []
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 2.5800000000000054,
+          "y_mm": 12.879999999999985,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -11,
+          "objects": []
+        }
+      ]
+    },
+    {
+      "label": "Major 2",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 197.58000000000004,
+          "y_mm": 173.58,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -12,
+          "objects": []
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 125.03000000000002,
+          "y_mm": 173.58,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -13,
+          "objects": []
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 197.58000000000004,
+          "y_mm": 125.73,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -14,
+          "objects": []
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 125.03000000000002,
+          "y_mm": 125.73,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -15,
+          "objects": []
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 197.58000000000004,
+          "y_mm": 77.88,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -16,
+          "objects": []
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 125.03000000000002,
+          "y_mm": 77.88,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -17,
+          "objects": []
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 197.58000000000004,
+          "y_mm": 30.02999999999999,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -18,
+          "objects": []
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 125.03000000000002,
+          "y_mm": 30.02999999999999,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -19,
+          "objects": []
+        }
+      ]
+    }
+  ]
+}

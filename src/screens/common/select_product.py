@@ -8,7 +8,7 @@ from src.core.state import PRODUCTS_PATH, FONTS_PATH, state, ALL_PRODUCTS, APP_T
 from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_PILL, COLOR_TEXT, scale_px, font_from_pt, UI_SCALE
 from src.utils import *
 from .order_range import OrderRangeScreen
-from .product_type import ProductTypeScreen
+from src.screens.nonsticker import NStickerCanvasScreen
 
 
 class SelectProductScreen(Screen):
@@ -701,7 +701,6 @@ class SelectProductScreen(Screen):
             from src.screens.sticker import StickerBasicInfoScreen
             self.app.show_screen(StickerBasicInfoScreen)
         else:
-            from src.screens.nonsticker import NStickerCanvasScreen
             self.app.show_screen(NStickerCanvasScreen)
 
     def _proceed(self):
@@ -716,7 +715,11 @@ class SelectProductScreen(Screen):
         self.app.show_screen(OrderRangeScreen)
 
     def _add_new(self):
-        self.app.show_screen(ProductTypeScreen)
+        state.saved_product = ""
+        state.sku = ""
+        state.sku_name = ""
+        state.prev_sku_name = ""
+        self.app.show_screen(NStickerCanvasScreen)
 
     def _remove_product(self):
         product = self.product_var.get()

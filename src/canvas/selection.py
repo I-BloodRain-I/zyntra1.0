@@ -55,13 +55,13 @@ class CanvasSelection:
             cid = hit[0]
             if cid in self.s._items:
                 # Ignore slots for selection
-                if self.s._items.get(cid, {}).get("type") != "slot":
+                if self.s._items.get(cid, {}).get("type") not in ("slot", "major"):
                     target = cid
             else:
                 for rid, meta in self.s._items.items():
                     if meta.get("label_id") == cid:
                         # Ignore slots for selection (even via their label)
-                        if meta.get("type") != "slot":
+                        if meta.get("type") not in ("slot", "major"):
                             target = rid
                             break
                 # Also allow clicking the rotated overlay polygon to select the rect
@@ -73,10 +73,16 @@ class CanvasSelection:
                                 break
                         except Exception:
                             logger.exception("Error while checking overlay hit for rect selection")
+        # Prevent selecting hidden items (belonging to other majors)
+        try:
+            if target and (str(self.s.canvas.itemcget(target, "state")).lower() == "hidden"):
+                target = None
+        except Exception:
+            raise
         self.select(target)
         if target:
             meta = self.s._items.get(target, {})
-            if meta.get("type") in ("rect", "image"):
+            if meta.get("type") in ("rect", "image", "major"):
                 x1, y1, x2, y2 = self.s.canvas.bbox(target)
                 self._drag_off = (e.x - x1, e.y - y1)
                 # Use bbox size for both rects and images
@@ -116,11 +122,31 @@ class CanvasSelection:
                 bw, bh = h, w
             else:
                 bw, bh = w, h
-            # clamp to inner jig bounds; allow rects/images/slots to touch jig edge
+            # clamp to owning major bounds if present; otherwise inner jig bounds
             ox = 0.0
             oy = 0.0
-            x1 = max(jx0 + ox, min(x1, jx1 - ox - bw))
-            y1 = max(jy0 + oy, min(y1, jy1 - oy - bh))
+            clamp_left = jx0 + ox
+            clamp_top = jy0 + oy
+            clamp_right = jx1 - ox
+            clamp_bottom = jy1 - oy
+            try:
+                owner = str(obj.get("owner_major", ""))
+            except Exception:
+                owner = ""
+            if owner and hasattr(self.s, "_majors") and owner in getattr(self.s, "_majors", {}):
+                try:
+                    mid = int(self.s._majors.get(owner) or 0)
+                except Exception:
+                    mid = 0
+                if mid:
+                    try:
+                        mb = self.s.canvas.bbox(mid)
+                    except Exception:
+                        mb = None
+                    if mb:
+                        clamp_left, clamp_top, clamp_right, clamp_bottom = float(mb[0]), float(mb[1]), float(mb[2]), float(mb[3])
+            x1 = max(clamp_left, min(x1, clamp_right - bw))
+            y1 = max(clamp_top, min(y1, clamp_bottom - bh))
             # compute raw mm from clamped px; keep fractional mm
             raw_x_mm = (x1 - (jx0 + ox)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             raw_y_mm = (y1 - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
@@ -141,7 +167,7 @@ class CanvasSelection:
             new_left = (jx0 + ox) + sx_mm * MM_TO_PX * self.s._zoom
             new_top = (jy0 + oy) + sy_mm * MM_TO_PX * self.s._zoom
 
-            if meta.get("type") in ("rect", "slot"):
+            if meta.get("type") in ("rect", "slot", "major"):
                 # Idk why, but without -4, the rect is slightly larger than the stored mm
                 self.s.canvas.coords(self._selected, new_left, new_top, new_left + w, new_top + h)
                 if meta.get("type") == "rect":
@@ -152,10 +178,11 @@ class CanvasSelection:
                 elif meta.get("label_id"):
                     self.s.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
                     self.s._raise_all_labels()
-                try:
-                    self.s._update_rect_overlay(self._selected, meta, new_left, new_top, w, h)
-                except Exception:
-                    logger.exception("Failed to update rect overlay during drag")
+                if meta.get("type") == "rect":
+                    try:
+                        self.s._update_rect_overlay(self._selected, meta, new_left, new_top, w, h)
+                    except Exception:
+                        logger.exception("Failed to update rect overlay during drag")
             elif meta.get("type") == "image":
                 # place using rotated bounds (visual top-left == new_left/new_top)
                 self.s.canvas.coords(self._selected, new_left, new_top)
@@ -173,6 +200,28 @@ class CanvasSelection:
                 meta["x_mm"], meta["y_mm"] = float(sx_mm), float(sy_mm)
             finally:
                 self._suppress_pos_trace = False
+            # If dragging a major, shift all owned non-slot items by the same delta
+            if str(meta.get("type", "")) == "major":
+                try:
+                    prev_left = (jx0 + 0.0) + float(prev_mm_x) * MM_TO_PX * self.s._zoom
+                    prev_top = (jy0 + 0.0) + float(prev_mm_y) * MM_TO_PX * self.s._zoom
+                    dx_px = float(new_left - prev_left)
+                    dy_px = float(new_top - prev_top)
+                    dx_mm = float(sx_mm - prev_mm_x)
+                    dy_mm = float(sy_mm - prev_mm_y)
+                except Exception:
+                    dx_px = 0.0; dy_px = 0.0; dx_mm = 0.0; dy_mm = 0.0
+                try:
+                    major_name = None
+                    if hasattr(self.s, "_majors"):
+                        for nm, rid in getattr(self.s, "_majors", {}).items():
+                            if int(rid) == int(self._selected):
+                                major_name = str(nm)
+                                break
+                    if major_name:
+                        self._shift_children_for_major(major_name, dx_px, dy_px, dx_mm, dy_mm)
+                except Exception:
+                    logger.exception("Failed to shift children while dragging major")
         elif self._drag_kind == "text":
             cx = e.x - self._drag_off[0]
             cy = e.y - self._drag_off[1]
@@ -187,6 +236,23 @@ class CanvasSelection:
                 logger.exception("Failed to persist text position during drag")
 
     def on_release(self, _):
+        # If releasing a major move, refresh its slots layout
+        try:
+            t_selected = self._selected if hasattr(self, "_selected") else None
+            selected_meta = self.s._items.get(t_selected, {}) if t_selected else {}
+            if t_selected and str(selected_meta.get("type", "")) == "major":
+                major_name = None
+                if hasattr(self.s, "_majors"):
+                    for nm, rid in getattr(self.s, "_majors", {}).items():
+                        if int(rid) == int(t_selected):
+                            major_name = str(nm)
+                            break
+                if major_name and hasattr(self.s, "_place_slots_for_major"):
+                    self.s._place_slots_for_major(major_name, silent=True)
+                    if hasattr(self.s, "_renumber_slots"):
+                        self.s._renumber_slots()
+        except Exception:
+            logger.exception("Failed to refresh slots after moving major")
         self._drag_kind = None
 
     def destroy_context_popup(self):
@@ -208,14 +274,14 @@ class CanvasSelection:
         if hit:
             cid = hit[0]
             if cid in self.s._items:
-                # Don't show menu for slots
-                if self.s._items.get(cid, {}).get("type") != "slot":
+                # Don't show menu for slots or majors
+                if self.s._items.get(cid, {}).get("type") not in ("slot", "major"):
                     target = cid
             else:
                 for rid, meta in self.s._items.items():
                     try:
                         if meta.get("label_id") == cid:
-                            if meta.get("type") != "slot":
+                            if meta.get("type") not in ("slot", "major"):
                                 target = rid
                                 break
                     except Exception:
@@ -350,7 +416,7 @@ class CanvasSelection:
         try:
             meta["mask_path"] = ""
         except Exception:
-            pass
+            raise
         try:
             x1, y1, x2, y2 = self.s.canvas.bbox(self._selected)
             w = max(1, int(x2 - x1))
@@ -398,6 +464,12 @@ class CanvasSelection:
             logger.exception("Failed to delete item label")
         self._selected = None
         self.s._update_scrollregion()
+        # Ensure text controls hide immediately after deletion of a text block
+        try:
+            if hasattr(self.s, "_refresh_text_controls"):
+                self.s._refresh_text_controls()
+        except Exception:
+            logger.exception("Failed to refresh text controls after delete")
 
     def on_duplicate(self, _evt=None):
         if not self._selected:
@@ -411,18 +483,19 @@ class CanvasSelection:
 
     # --- Z-index management ---
     def _reorder_by_z(self) -> None:
-        """Apply stacking order on the Tk canvas based on CanvasObject.z.
+        """Apply stacking order with fixed hierarchy and then by z for others.
 
-        Lower everything to bottom, then raise in ascending z.
-        Keep selection border (if any) on top and then re-raise labels.
+        Hierarchy (bottom → top): majors → slots → other objects (by ascending z).
+        Keep selection border (if any) on top and then re-raise labels above their base.
         """
         try:
             # Build list of (cid, meta) that have a primary canvas id
             items = [(cid, meta) for cid, meta in self.s._items.items() if cid == meta.get("canvas_id")]
-            # Partition: slots vs other items. Slots must always stay at the very bottom layer
+            # Partition: majors, slots, and other items.
+            major_items = [(cid, meta) for cid, meta in items if meta.get("type") == "major"]
             slot_items = [(cid, meta) for cid, meta in items if meta.get("type") == "slot"]
-            other_items = [(cid, meta) for cid, meta in items if meta.get("type") != "slot"]
-            # Sort non-slot items by z (ascending). If z is missing, treat as 0
+            other_items = [(cid, meta) for cid, meta in items if meta.get("type") not in ("slot", "major")]
+            # Sort non-slot/non-major items by z (ascending). If z is missing, treat as 0
             other_items.sort(key=lambda kv: int(kv[1].get("z", 0)))
             # Reset order by lowering everything
             for cid, _ in items:
@@ -430,13 +503,19 @@ class CanvasSelection:
                     self.s.canvas.tag_lower(cid)
                 except Exception:
                     logger.exception("Failed to lower canvas item while reordering by z")
-            # First raise all slots (they'll remain at bottom relative to subsequent raises)
+            # First raise all majors (they should remain below everything else)
+            for cid, _ in major_items:
+                try:
+                    self.s.canvas.tag_raise(cid)
+                except Exception:
+                    logger.exception("Failed to raise major while reordering by z")
+            # Then raise all slots so they stay above majors but below others
             for cid, _ in slot_items:
                 try:
                     self.s.canvas.tag_raise(cid)
                 except Exception:
                     logger.exception("Failed to raise slot while reordering by z")
-            # Then raise non-slots in sorted order so later ones end up on top
+            # Then raise non-slot/non-major in sorted order so later ones end up on top
             for cid, _ in other_items:
                 try:
                     self.s.canvas.tag_raise(cid)
@@ -489,9 +568,13 @@ class CanvasSelection:
             logger.exception("Failed to reorder items by z")
 
     def _normalize_z(self) -> None:
-        """Normalize z values to a compact 0..N-1 sequence for non-slot items only, preserving order."""
+        """Normalize z for 'other' items only (exclude slots and majors), preserving order."""
         try:
-            items = [(cid, meta) for cid, meta in self.s._items.items() if (cid == meta.get("canvas_id") and meta.get("type") != "slot")]
+            items = [
+                (cid, meta)
+                for cid, meta in self.s._items.items()
+                if (cid == meta.get("canvas_id") and meta.get("type") not in ("slot", "major"))
+            ]
             items.sort(key=lambda kv: int(kv[1].get("z", 0)))
             for idx, (cid, meta) in enumerate(items):
                 try:
@@ -506,16 +589,20 @@ class CanvasSelection:
         if not self._selected or self._selected not in self.s._items:
             return
         meta = self.s._items[self._selected]
-        # Never allow manipulating slot z via nudge; slots are fixed at bottom
-        if meta.get("type") == "slot":
+        # Never allow manipulating slot/major z via nudge; they are fixed by hierarchy
+        if meta.get("type") in ("slot", "major"):
             return
         try:
             z = int(meta.get("z", 0))
         except Exception:
             z = 0
-        # Compute bounds from current items
+        # Compute bounds from current items (exclude slots and majors)
         try:
-            all_items = [(cid, m) for cid, m in self.s._items.items() if (cid == m.get("canvas_id") and m.get("type") != "slot")]
+            all_items = [
+                (cid, m)
+                for cid, m in self.s._items.items()
+                if (cid == m.get("canvas_id") and m.get("type") not in ("slot", "major"))
+            ]
             if not all_items:
                 return
             max_z = max(int(m.get("z", 0)) for _cid, m in all_items)
@@ -527,11 +614,16 @@ class CanvasSelection:
         new_z = max(min_z, min(max_z, new_z))
         if new_z == z:
             return
-        # Find item currently occupying new_z and swap
+        # Find item currently occupying new_z and swap (exclude slots and majors)
         swap_cid = None
         for cid, m in self.s._items.items():
             try:
-                if cid == m.get("canvas_id") and m.get("type") != "slot" and int(m.get("z", 0)) == new_z and cid != self._selected:
+                if (
+                    cid == m.get("canvas_id")
+                    and m.get("type") not in ("slot", "major")
+                    and int(m.get("z", 0)) == new_z
+                    and cid != self._selected
+                ):
                     swap_cid = cid
                     break
             except Exception:
@@ -737,7 +829,7 @@ class CanvasSelection:
                     try:
                         self.s.canvas.delete(bid)
                     except Exception:
-                        pass
+                        raise
                     prev_meta["border_id"] = None
         self._selected = cid
         if not cid:
@@ -769,6 +861,22 @@ class CanvasSelection:
         if meta.get("type") == "slot":
             # slots: use base rectangle selection outline
             self.s.canvas.itemconfig(cid, outline="#6ec8ff", width=3)
+        elif meta.get("type") == "major":
+            # major: highlight base rect like slots; no overlay
+            self.s.canvas.itemconfig(cid, outline="#6ec8ff", width=3)
+            try:
+                self._suppress_size_trace = True
+                self.s.sel_w.set(str(float(meta.get("w_mm", 0.0))))
+                self.s.sel_h.set(str(float(meta.get("h_mm", 0.0))))
+                self.s.sel_angle.set("0")
+            finally:
+                self._suppress_size_trace = False
+            try:
+                self._suppress_pos_trace = True
+                self.s.sel_x.set(str(float(meta.get("x_mm", 0.0))))
+                self.s.sel_y.set(str(float(meta.get("y_mm", 0.0))))
+            finally:
+                self._suppress_pos_trace = False
         elif meta.get("type") == "rect":
             # rects: keep base invisible; use overlay polygon as selection border
             try:
@@ -789,9 +897,9 @@ class CanvasSelection:
                         if lbl:
                             self.s.canvas.tag_raise(lbl, rid)
                     except Exception:
-                        pass
+                        raise
                 except Exception:
-                    pass
+                    raise
             # set size fields without triggering live resize
             try:
                 self._suppress_size_trace = True
@@ -864,7 +972,7 @@ class CanvasSelection:
         if not self._selected:
             return
         meta = self.s._items.get(self._selected, {})
-        if meta.get("type") not in ("rect", "image", "slot"):
+        if meta.get("type") not in ("rect", "image", "slot", "major"):
             return
         # Treat empty inputs as 0mm without overwriting the entry text
         raw_w = (self.s.sel_w.get() or "").strip()
@@ -882,7 +990,7 @@ class CanvasSelection:
         cy = (y1 + y2) / 2
         w = int(w_mm * MM_TO_PX * self.s._zoom)
         h = int(h_mm * MM_TO_PX * self.s._zoom)
-        if meta.get("type") in ("rect", "slot"):
+        if meta.get("type") in ("rect", "slot", "major"):
             # account for rotation of rect: 90/270 swap
             try:
                 ang = float(meta.get("angle", 0.0) or 0.0)
@@ -899,7 +1007,7 @@ class CanvasSelection:
             try:
                 self.s._update_rect_overlay(self._selected, meta, cx - rw / 2, cy - rh / 2, rw, rh)
             except Exception:
-                pass
+                raise
         elif meta.get("type") == "image":
             # re-render image at new size and keep center
             photo = self.s._render_photo(meta, max(1, int(w)), max(1, int(h)))
@@ -937,7 +1045,7 @@ class CanvasSelection:
         if not self._selected:
             return
         meta = self.s._items.get(self._selected, {})
-        if meta.get("type") not in ("rect", "image", "slot"):
+        if meta.get("type") not in ("rect", "image", "slot", "major"):
             return
         raw_w = (self.s.sel_w.get() or "").strip()
         raw_h = (self.s.sel_h.get() or "").strip()
@@ -965,7 +1073,7 @@ class CanvasSelection:
                 try:
                     self.s._update_rect_label_image(self._selected)
                 except Exception:
-                    pass
+                    raise
             elif meta.get("label_id"):
                 self.s.canvas.coords(meta["label_id"], cx, cy)
                 self.s._raise_all_labels()
@@ -974,7 +1082,7 @@ class CanvasSelection:
                 try:
                     self.s._update_rect_overlay(self._selected, meta, cx - rw / 2, cy - rh / 2, rw, rh)
                 except Exception:
-                    pass
+                    raise
         else:
             # image: re-render at new size and keep center, honoring rotation for border and anchor
             w_px = max(1, int(w_mm * MM_TO_PX * self.s._zoom))
@@ -1034,11 +1142,31 @@ class CanvasSelection:
         desired_top = jy0 + oy + float(y_mm) * MM_TO_PX * self.s._zoom
         w = w_mm * MM_TO_PX * self.s._zoom
         h = h_mm * MM_TO_PX * self.s._zoom
-        # clamp within jig bounds
-        min_left = jx0 + ox
-        min_top = jy0 + oy
-        max_left = jx1 - ox - w
-        max_top = jy1 - oy - h
+        # clamp within owning major bounds if present; otherwise jig bounds
+        clamp_left = jx0 + ox
+        clamp_top = jy0 + oy
+        clamp_right = jx1 - ox
+        clamp_bottom = jy1 - oy
+        try:
+            owner = str(meta.get("owner_major", ""))
+        except Exception:
+            owner = ""
+        if owner and hasattr(self.s, "_majors") and owner in getattr(self.s, "_majors", {}):
+            try:
+                mid = int(self.s._majors.get(owner) or 0)
+            except Exception:
+                mid = 0
+            if mid:
+                try:
+                    mb = self.s.canvas.bbox(mid)
+                except Exception:
+                    mb = None
+                if mb:
+                    clamp_left, clamp_top, clamp_right, clamp_bottom = float(mb[0]), float(mb[1]), float(mb[2]), float(mb[3])
+        min_left = clamp_left
+        min_top = clamp_top
+        max_left = clamp_right - w
+        max_top = clamp_bottom - h
         new_left = max(min_left, min(desired_left, max_left))
         new_top = max(min_top, min(desired_top, max_top))
         # if clamped, update mm fields to reflect actual placed position
@@ -1052,7 +1180,7 @@ class CanvasSelection:
             finally:
                 self._suppress_pos_trace = False
         # move selection and label
-        if meta.get("type") in ("rect", "slot"):
+        if meta.get("type") in ("rect", "slot", "major"):
             self.s.canvas.coords(self._selected, new_left, new_top, new_left + w, new_top + h)
             if meta.get("label_id"):
                 self.s.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
@@ -1060,7 +1188,7 @@ class CanvasSelection:
             try:
                 self.s._update_rect_overlay(self._selected, meta, new_left, new_top, w, h)
             except Exception:
-                pass
+                raise
         elif meta.get("type") == "image":
             bw, bh = self.s._rotated_bounds_px(float(w), float(h), float(meta.get("angle", 0.0) or 0.0))
             place_left = new_left + (w - bw) / 2.0
@@ -1106,11 +1234,11 @@ class CanvasSelection:
             try:
                 self.s._update_rect_label_image(self._selected)
             except Exception:
-                pass
+                raise
             try:
                 self.s._update_rect_overlay(self._selected, meta, cx - w / 2, cy - h / 2, w, h)
             except Exception:
-                pass
+                raise
         else:
             w_px = int(float(meta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom)
             h_px = int(float(meta.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom)
@@ -1129,3 +1257,79 @@ class CanvasSelection:
             if bid:
                 self.s.canvas.coords(bid, tlx, tly, tlx + bw, tly + bh)
         self.s._update_scrollregion()
+
+    # --- Helpers for moving grouped items within a major ---
+    def _shift_children_for_major(self, major_name: str, dx_px: float, dy_px: float, dx_mm: float, dy_mm: float) -> None:
+        """Shift all non-slot items owned by the given major by the provided deltas.
+
+        - dx_px/dy_px: pixel deltas applied to canvas coordinates
+        - dx_mm/dy_mm: millimeter deltas persisted to object metadata
+        """
+        try:
+            for cid, m in list(self.s._items.items()):
+                if int(m.get("canvas_id", 0) or 0) != int(cid):
+                    continue
+                if str(m.get("type", "")) in ("slot", "major"):
+                    continue
+                if str(m.get("owner_major", "")) != str(major_name):
+                    continue
+                t = str(m.get("type", ""))
+                if t == "rect":
+                    try:
+                        x1, y1, x2, y2 = self.s.canvas.bbox(cid)
+                        nx1 = float(x1) + dx_px
+                        ny1 = float(y1) + dy_px
+                        nx2 = float(x2) + dx_px
+                        ny2 = float(y2) + dy_px
+                        self.s.canvas.coords(cid, nx1, ny1, nx2, ny2)
+                        lbl = m.get("label_id")
+                        if lbl:
+                            self.s.canvas.coords(lbl, (nx1 + nx2) / 2.0, (ny1 + ny2) / 2.0)
+                            self.s._raise_all_labels()
+                        self.s._update_rect_overlay(cid, m, nx1, ny1, nx2 - nx1, ny2 - ny1)
+                    except Exception:
+                        logger.exception("Failed to move rect child when shifting major")
+                    finally:
+                        try:
+                            m["x_mm"] = float(m.get("x_mm", 0.0) or 0.0) + float(dx_mm)
+                            m["y_mm"] = float(m.get("y_mm", 0.0) or 0.0) + float(dy_mm)
+                        except Exception:
+                            pass
+                elif t == "image":
+                    try:
+                        coords = self.s.canvas.coords(cid)
+                        if coords and len(coords) >= 2:
+                            self.s.canvas.coords(cid, float(coords[0]) + dx_px, float(coords[1]) + dy_px)
+                        bid = m.get("border_id")
+                        if bid:
+                            try:
+                                bx1, by1, bx2, by2 = self.s.canvas.bbox(bid)
+                                self.s.canvas.coords(bid, float(bx1) + dx_px, float(by1) + dy_px, float(bx2) + dx_px, float(by2) + dy_px)
+                            except Exception:
+                                try:
+                                    bcoords = self.s.canvas.coords(bid)
+                                    if bcoords and len(bcoords) >= 4:
+                                        self.s.canvas.coords(bid, float(bcoords[0]) + dx_px, float(bcoords[1]) + dy_px, float(bcoords[2]) + dx_px, float(bcoords[3]) + dy_px)
+                                except Exception:
+                                    pass
+                    except Exception:
+                        logger.exception("Failed to move image child when shifting major")
+                    finally:
+                        try:
+                            m["x_mm"] = float(m.get("x_mm", 0.0) or 0.0) + float(dx_mm)
+                            m["y_mm"] = float(m.get("y_mm", 0.0) or 0.0) + float(dy_mm)
+                        except Exception:
+                            pass
+                elif t == "text":
+                    try:
+                        self.s.canvas.move(cid, dx_px, dy_px)
+                    except Exception:
+                        logger.exception("Failed to move text child when shifting major")
+                    finally:
+                        try:
+                            m["x_mm"] = float(m.get("x_mm", 0.0) or 0.0) + float(dx_mm)
+                            m["y_mm"] = float(m.get("y_mm", 0.0) or 0.0) + float(dy_mm)
+                        except Exception:
+                            pass
+        except Exception:
+            logger.exception("Failed while shifting children for major")
