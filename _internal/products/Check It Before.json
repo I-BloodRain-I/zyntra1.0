@@ -1,0 +1,956 @@
+{
+  "Sku": "123-123-123",
+  "SkuName": "Check It Before",
+  "IsSticker": false,
+  "Scene": {
+    "jig": {
+      "width_mm": 296.0,
+      "height_mm": 394.5831
+    },
+    "slot_count": 40,
+    "objects_count": {
+      "images": 9,
+      "text": 1
+    },
+    "Majors": [
+      {
+        "rect": {
+          "x_mm": 0.0,
+          "y_mm": 0.0,
+          "width_mm": 100.0,
+          "height_mm": 394.5831
+        },
+        "origin": {
+          "x_mm": 25.0,
+          "y_mm": 25.0
+        },
+        "slot_size": {
+          "width_mm": 40.0,
+          "height_mm": 20.0
+        },
+        "step_size": {
+          "x_mm": 60.0,
+          "y_mm": 47.85
+        },
+        "slot_count": 8
+      },
+      {
+        "rect": {
+          "x_mm": 100.0,
+          "y_mm": 0.0,
+          "width_mm": 196.0,
+          "height_mm": 394.5831
+        },
+        "origin": {
+          "x_mm": 11.76,
+          "y_mm": 12.52
+        },
+        "slot_size": {
+          "width_mm": 15.0,
+          "height_mm": 40.0
+        },
+        "step_size": {
+          "x_mm": 50.0,
+          "y_mm": 47.85
+        },
+        "slot_count": 32
+      }
+    ]
+  },
+  "Frontside": [
+    {
+      "label": "Major 1",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 35.0,
+          "y_mm": 349.5831,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -58,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Check It Before/images.jpg",
+              "x_mm": 44.95535714285714,
+              "y_mm": 349.5831,
+              "w_mm": 19.999999999999996,
+              "h_mm": 20.08928571428571,
+              "angle": 270.0,
+              "z": 1,
+              "amazon_label": "Bild / Logo hochladen",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "Check It Before/images_png.png"
+            }
+          ]
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 35.0,
+          "y_mm": 301.7331,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -59,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Check It Before/images.jpg",
+              "x_mm": 44.95535714285714,
+              "y_mm": 301.7331,
+              "w_mm": 19.999999999999996,
+              "h_mm": 20.08928571428571,
+              "angle": 270.0,
+              "z": 44,
+              "amazon_label": "Bild / Logo hochladen",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "Check It Before/images_png.png"
+            }
+          ]
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 35.0,
+          "y_mm": 253.8831,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -60,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Check It Before/images.jpg",
+              "x_mm": 44.95535714285714,
+              "y_mm": 253.8831,
+              "w_mm": 19.999999999999996,
+              "h_mm": 20.08928571428571,
+              "angle": 270.0,
+              "z": 45,
+              "amazon_label": "Bild / Logo hochladen",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "Check It Before/images_png.png"
+            }
+          ]
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 35.0,
+          "y_mm": 206.0331,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -61,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Check It Before/images.jpg",
+              "x_mm": 44.95535714285714,
+              "y_mm": 206.0331,
+              "w_mm": 19.999999999999996,
+              "h_mm": 20.08928571428571,
+              "angle": 270.0,
+              "z": 46,
+              "amazon_label": "Bild / Logo hochladen",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "Check It Before/images_png.png"
+            }
+          ]
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 35.0,
+          "y_mm": 158.1831,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -62,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Check It Before/images.jpg",
+              "x_mm": 44.95535714285714,
+              "y_mm": 158.1831,
+              "w_mm": 19.999999999999996,
+              "h_mm": 20.08928571428571,
+              "angle": 270.0,
+              "z": 47,
+              "amazon_label": "Bild / Logo hochladen",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "Check It Before/images_png.png"
+            }
+          ]
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 35.0,
+          "y_mm": 110.3331,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -63,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Check It Before/images.jpg",
+              "x_mm": 44.95535714285714,
+              "y_mm": 110.3331,
+              "w_mm": 19.999999999999996,
+              "h_mm": 20.08928571428571,
+              "angle": 270.0,
+              "z": 48,
+              "amazon_label": "Bild / Logo hochladen",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "Check It Before/images_png.png"
+            }
+          ]
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 35.0,
+          "y_mm": 62.48309999999998,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -64,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Check It Before/images.jpg",
+              "x_mm": 44.95535714285714,
+              "y_mm": 62.48309999999998,
+              "w_mm": 19.999999999999996,
+              "h_mm": 20.08928571428571,
+              "angle": 270.0,
+              "z": 49,
+              "amazon_label": "Bild / Logo hochladen",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "Check It Before/images_png.png"
+            }
+          ]
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 35.0,
+          "y_mm": 14.633100000000013,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -65,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Check It Before/images.jpg",
+              "x_mm": 44.95535714285714,
+              "y_mm": 14.633100000000013,
+              "w_mm": 19.999999999999996,
+              "h_mm": 20.08928571428571,
+              "angle": 270.0,
+              "z": 50,
+              "amazon_label": "Bild / Logo hochladen",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "Check It Before/images_png.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Major 2",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 269.24,
+          "y_mm": 342.0631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -66,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Check It Before/cursor.png",
+              "x_mm": 269.24,
+              "y_mm": 357.609975,
+              "w_mm": 8.906249999999998,
+              "h_mm": 14.999999999999998,
+              "angle": 270.0,
+              "z": -1,
+              "amazon_label": "Pointer",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "None"
+            }
+          ]
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 219.24,
+          "y_mm": 342.0631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -67,
+          "objects": [
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Text",
+              "x_mm": 219.24,
+              "y_mm": 354.5631,
+              "w_mm": 15.0,
+              "h_mm": 15.0,
+              "angle": -270.0,
+              "z": -2,
+              "label_fill": "#17a24b",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 169.24,
+          "y_mm": 342.0631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -68,
+          "objects": []
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 119.24000000000001,
+          "y_mm": 342.0631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -69,
+          "objects": []
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 269.24,
+          "y_mm": 294.2131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -70,
+          "objects": []
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 219.24,
+          "y_mm": 294.2131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -71,
+          "objects": []
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 169.24,
+          "y_mm": 294.2131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -72,
+          "objects": []
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 119.24000000000001,
+          "y_mm": 294.2131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -73,
+          "objects": []
+        },
+        {
+          "label": "Slot 9",
+          "x_mm": 269.24,
+          "y_mm": 246.36310000000003,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -74,
+          "objects": []
+        },
+        {
+          "label": "Slot 10",
+          "x_mm": 219.24,
+          "y_mm": 246.36310000000003,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -75,
+          "objects": []
+        },
+        {
+          "label": "Slot 11",
+          "x_mm": 169.24,
+          "y_mm": 246.36310000000003,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -76,
+          "objects": []
+        },
+        {
+          "label": "Slot 12",
+          "x_mm": 119.24000000000001,
+          "y_mm": 246.36310000000003,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -77,
+          "objects": []
+        },
+        {
+          "label": "Slot 13",
+          "x_mm": 269.24,
+          "y_mm": 198.5131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -78,
+          "objects": []
+        },
+        {
+          "label": "Slot 14",
+          "x_mm": 219.24,
+          "y_mm": 198.5131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -79,
+          "objects": []
+        },
+        {
+          "label": "Slot 15",
+          "x_mm": 169.24,
+          "y_mm": 198.5131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -80,
+          "objects": []
+        },
+        {
+          "label": "Slot 16",
+          "x_mm": 119.24000000000001,
+          "y_mm": 198.5131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -81,
+          "objects": []
+        },
+        {
+          "label": "Slot 17",
+          "x_mm": 269.24,
+          "y_mm": 150.66310000000001,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -82,
+          "objects": []
+        },
+        {
+          "label": "Slot 18",
+          "x_mm": 219.24,
+          "y_mm": 150.66310000000001,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -83,
+          "objects": []
+        },
+        {
+          "label": "Slot 19",
+          "x_mm": 169.24,
+          "y_mm": 150.66310000000001,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -84,
+          "objects": []
+        },
+        {
+          "label": "Slot 20",
+          "x_mm": 119.24000000000001,
+          "y_mm": 150.66310000000001,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -85,
+          "objects": []
+        },
+        {
+          "label": "Slot 21",
+          "x_mm": 269.24,
+          "y_mm": 102.81310000000002,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -86,
+          "objects": []
+        },
+        {
+          "label": "Slot 22",
+          "x_mm": 219.24,
+          "y_mm": 102.81310000000002,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -87,
+          "objects": []
+        },
+        {
+          "label": "Slot 23",
+          "x_mm": 169.24,
+          "y_mm": 102.81310000000002,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -88,
+          "objects": []
+        },
+        {
+          "label": "Slot 24",
+          "x_mm": 119.24000000000001,
+          "y_mm": 102.81310000000002,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -89,
+          "objects": []
+        },
+        {
+          "label": "Slot 25",
+          "x_mm": 269.24,
+          "y_mm": 54.9631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -90,
+          "objects": []
+        },
+        {
+          "label": "Slot 26",
+          "x_mm": 219.24,
+          "y_mm": 54.9631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -91,
+          "objects": []
+        },
+        {
+          "label": "Slot 27",
+          "x_mm": 169.24,
+          "y_mm": 54.9631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -92,
+          "objects": []
+        },
+        {
+          "label": "Slot 28",
+          "x_mm": 119.24000000000001,
+          "y_mm": 54.9631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -93,
+          "objects": []
+        },
+        {
+          "label": "Slot 29",
+          "x_mm": 269.24,
+          "y_mm": 7.113100000000031,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -94,
+          "objects": []
+        },
+        {
+          "label": "Slot 30",
+          "x_mm": 219.24,
+          "y_mm": 7.113100000000031,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -95,
+          "objects": []
+        },
+        {
+          "label": "Slot 31",
+          "x_mm": 169.24,
+          "y_mm": 7.113100000000031,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -96,
+          "objects": []
+        },
+        {
+          "label": "Slot 32",
+          "x_mm": 119.24000000000001,
+          "y_mm": 7.113100000000031,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -97,
+          "objects": []
+        }
+      ]
+    }
+  ],
+  "Backside": [
+    {
+      "label": "Major 1",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 35.0,
+          "y_mm": 349.5831,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -58,
+          "objects": []
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 35.0,
+          "y_mm": 301.7331,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -59,
+          "objects": []
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 35.0,
+          "y_mm": 253.8831,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -60,
+          "objects": []
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 35.0,
+          "y_mm": 206.0331,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -61,
+          "objects": []
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 35.0,
+          "y_mm": 158.1831,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -62,
+          "objects": []
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 35.0,
+          "y_mm": 110.3331,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -63,
+          "objects": []
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 35.0,
+          "y_mm": 62.48309999999998,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -64,
+          "objects": []
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 35.0,
+          "y_mm": 14.633100000000013,
+          "w_mm": 40.0,
+          "h_mm": 20.0,
+          "z": -65,
+          "objects": []
+        }
+      ]
+    },
+    {
+      "label": "Major 2",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 269.24,
+          "y_mm": 342.0631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -66,
+          "objects": []
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 219.24,
+          "y_mm": 342.0631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -67,
+          "objects": []
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 169.24,
+          "y_mm": 342.0631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -68,
+          "objects": []
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 119.24000000000001,
+          "y_mm": 342.0631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -69,
+          "objects": []
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 269.24,
+          "y_mm": 294.2131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -70,
+          "objects": []
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 219.24,
+          "y_mm": 294.2131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -71,
+          "objects": []
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 169.24,
+          "y_mm": 294.2131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -72,
+          "objects": []
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 119.24000000000001,
+          "y_mm": 294.2131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -73,
+          "objects": []
+        },
+        {
+          "label": "Slot 9",
+          "x_mm": 269.24,
+          "y_mm": 246.36310000000003,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -74,
+          "objects": []
+        },
+        {
+          "label": "Slot 10",
+          "x_mm": 219.24,
+          "y_mm": 246.36310000000003,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -75,
+          "objects": []
+        },
+        {
+          "label": "Slot 11",
+          "x_mm": 169.24,
+          "y_mm": 246.36310000000003,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -76,
+          "objects": []
+        },
+        {
+          "label": "Slot 12",
+          "x_mm": 119.24000000000001,
+          "y_mm": 246.36310000000003,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -77,
+          "objects": []
+        },
+        {
+          "label": "Slot 13",
+          "x_mm": 269.24,
+          "y_mm": 198.5131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -78,
+          "objects": []
+        },
+        {
+          "label": "Slot 14",
+          "x_mm": 219.24,
+          "y_mm": 198.5131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -79,
+          "objects": []
+        },
+        {
+          "label": "Slot 15",
+          "x_mm": 169.24,
+          "y_mm": 198.5131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -80,
+          "objects": []
+        },
+        {
+          "label": "Slot 16",
+          "x_mm": 119.24000000000001,
+          "y_mm": 198.5131,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -81,
+          "objects": []
+        },
+        {
+          "label": "Slot 17",
+          "x_mm": 269.24,
+          "y_mm": 150.66310000000001,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -82,
+          "objects": []
+        },
+        {
+          "label": "Slot 18",
+          "x_mm": 219.24,
+          "y_mm": 150.66310000000001,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -83,
+          "objects": []
+        },
+        {
+          "label": "Slot 19",
+          "x_mm": 169.24,
+          "y_mm": 150.66310000000001,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -84,
+          "objects": []
+        },
+        {
+          "label": "Slot 20",
+          "x_mm": 119.24000000000001,
+          "y_mm": 150.66310000000001,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -85,
+          "objects": []
+        },
+        {
+          "label": "Slot 21",
+          "x_mm": 269.24,
+          "y_mm": 102.81310000000002,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -86,
+          "objects": []
+        },
+        {
+          "label": "Slot 22",
+          "x_mm": 219.24,
+          "y_mm": 102.81310000000002,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -87,
+          "objects": []
+        },
+        {
+          "label": "Slot 23",
+          "x_mm": 169.24,
+          "y_mm": 102.81310000000002,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -88,
+          "objects": []
+        },
+        {
+          "label": "Slot 24",
+          "x_mm": 119.24000000000001,
+          "y_mm": 102.81310000000002,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -89,
+          "objects": []
+        },
+        {
+          "label": "Slot 25",
+          "x_mm": 269.24,
+          "y_mm": 54.9631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -90,
+          "objects": []
+        },
+        {
+          "label": "Slot 26",
+          "x_mm": 219.24,
+          "y_mm": 54.9631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -91,
+          "objects": []
+        },
+        {
+          "label": "Slot 27",
+          "x_mm": 169.24,
+          "y_mm": 54.9631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -92,
+          "objects": []
+        },
+        {
+          "label": "Slot 28",
+          "x_mm": 119.24000000000001,
+          "y_mm": 54.9631,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -93,
+          "objects": []
+        },
+        {
+          "label": "Slot 29",
+          "x_mm": 269.24,
+          "y_mm": 7.113100000000031,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -94,
+          "objects": []
+        },
+        {
+          "label": "Slot 30",
+          "x_mm": 219.24,
+          "y_mm": 7.113100000000031,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -95,
+          "objects": []
+        },
+        {
+          "label": "Slot 31",
+          "x_mm": 169.24,
+          "y_mm": 7.113100000000031,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -96,
+          "objects": []
+        },
+        {
+          "label": "Slot 32",
+          "x_mm": 119.24000000000001,
+          "y_mm": 7.113100000000031,
+          "w_mm": 15.0,
+          "h_mm": 40.0,
+          "z": -97,
+          "objects": []
+        }
+      ]
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import logging
 from typing import Optional
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, colorchooser
 
 from src.core import COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL
 from src.core.app import COLOR_BG_SCREEN
@@ -53,6 +53,32 @@ class FontsManager:
         # Text color (hex)
         self.s.text_color = tk.StringVar(value="#ffffff")
         _cb = self.s._chip(self.s.text_bar, "Color:", self.s.text_color, width=10)
+        # Bind color picker to the entry inside the chip
+        try:
+            entry_widget = None
+            for _w in _cb.winfo_children():
+                if isinstance(_w, tk.Entry):
+                    entry_widget = _w
+                    break
+            if entry_widget is not None:
+                def _open_color_picker(_e=None):
+                    try:
+                        initial = (self.s.text_color.get() or "#ffffff").strip()
+                    except Exception:
+                        initial = "#ffffff"
+                    try:
+                        _rgb, hx = colorchooser.askcolor(color=initial, title="Select color")
+                    except Exception:
+                        hx = None
+                    if hx:
+                        try:
+                            self.s.text_color.set(hx)
+                        except Exception:
+                            pass
+                    return "break"
+                entry_widget.bind("<Button-1>", _open_color_picker)
+        except Exception:
+            logger.exception("Failed to bind color picker to color entry")
         # Family combobox
         fam_wrap = tk.Frame(self.s.text_bar, bg="#6f6f6f")
         fam_wrap.pack(side="left", padx=6, pady=8)

@@ -18,6 +18,10 @@ IMAGES_PATH   = INTERNAL_PATH / "images"
 FONTS_PATH    = INTERNAL_PATH / "fonts"
 PRODUCTS_PATH = INTERNAL_PATH / "products"
 PRODUCTS_PATH.mkdir(exist_ok=True)
+OUTPUT_PATH   = Path.cwd() / "output"
+OUTPUT_PATH.mkdir(exist_ok=True)
+LOGS_PATH     = Path.cwd() / "logs"
+LOGS_PATH.mkdir(exist_ok=True)
 
 ALL_PRODUCTS = [f.stem for f in INTERNAL_PATH.glob("products/*.json") if f.is_file()]
 
@@ -55,6 +59,7 @@ class AppState:
     nonsticker_image_count: int = 0
 
     # Background processing status for non-blocking generation
+    is_cancelled: bool = False
     is_processing: bool = False
     processing_message: str = ""
     is_failed: bool = False

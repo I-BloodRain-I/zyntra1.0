@@ -118,8 +118,9 @@ class CanvasSelection:
                 ang = 0.0
             if obj.get("type") == "image":
                 bw, bh = self.s._rotated_bounds_px(float(w), float(h), ang)
-            elif obj.get("type") == "rect" and int(abs(ang)) % 180 == 90:
-                bw, bh = h, w
+            elif obj.get("type") == "rect":
+                # Use rotated bounding box for rects as well
+                bw, bh = self.s._rotated_bounds_px(float(w), float(h), ang)
             else:
                 bw, bh = w, h
             # clamp to owning major bounds if present; otherwise inner jig bounds
@@ -167,22 +168,26 @@ class CanvasSelection:
             new_left = (jx0 + ox) + sx_mm * MM_TO_PX * self.s._zoom
             new_top = (jy0 + oy) + sy_mm * MM_TO_PX * self.s._zoom
 
-            if meta.get("type") in ("rect", "slot", "major"):
-                # Idk why, but without -4, the rect is slightly larger than the stored mm
+            if meta.get("type") == "rect":
+                # Size base rect to rotated bounds and update overlay using those extents
+                self.s.canvas.coords(self._selected, new_left, new_top, new_left + bw, new_top + bh)
+                try:
+                    self.s._update_rect_label_image(self._selected)
+                except Exception:
+                    logger.exception("Failed to update rect label image during drag")
+                try:
+                    self.s._update_rect_overlay(self._selected, meta, new_left, new_top, bw, bh)
+                except Exception:
+                    logger.exception("Failed to update rect overlay during drag")
+                if meta.get("label_id"):
+                    self.s.canvas.coords(meta["label_id"], new_left + bw / 2, new_top + bh / 2)
+                    self.s._raise_all_labels()
+            elif meta.get("type") in ("slot", "major"):
+                # Slots and majors are never rotated; use raw w/h
                 self.s.canvas.coords(self._selected, new_left, new_top, new_left + w, new_top + h)
-                if meta.get("type") == "rect":
-                    try:
-                        self.s._update_rect_label_image(self._selected)
-                    except Exception:
-                        logger.exception("Failed to update rect label image during drag")
-                elif meta.get("label_id"):
+                if meta.get("label_id"):
                     self.s.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
                     self.s._raise_all_labels()
-                if meta.get("type") == "rect":
-                    try:
-                        self.s._update_rect_overlay(self._selected, meta, new_left, new_top, w, h)
-                    except Exception:
-                        logger.exception("Failed to update rect overlay during drag")
             elif meta.get("type") == "image":
                 # place using rotated bounds (visual top-left == new_left/new_top)
                 self.s.canvas.coords(self._selected, new_left, new_top)
@@ -412,18 +417,33 @@ class CanvasSelection:
         meta = self.s._items.get(self._selected, {})
         if str(meta.get("type", "")) != "image":
             return
-        # Clear mask and re-render current image size
+        # Clear mask and re-render using base size with current angle; preserve top-left
         try:
             meta["mask_path"] = ""
         except Exception:
             raise
+        # Preserve current visual top-left from rotated bbox
         try:
-            x1, y1, x2, y2 = self.s.canvas.bbox(self._selected)
-            w = max(1, int(x2 - x1))
-            h = max(1, int(y2 - y1))
-            photo = self.s._render_photo(meta, w, h)
+            tlx, tly, _x2, _y2 = self.s.canvas.bbox(self._selected)
+        except Exception:
+            tlx, tly = None, None
+        try:
+            w_px = max(1, int(round(float(meta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom)))
+            h_px = max(1, int(round(float(meta.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom)))
+            photo = self.s._render_photo(meta, w_px, h_px)
             if photo is not None:
                 self.s.canvas.itemconfig(self._selected, image=photo)
+                # Restore placement and update selection border based on angle
+                try:
+                    ang = float(meta.get("angle", 0.0) or 0.0)
+                except Exception:
+                    ang = 0.0
+                bw, bh = self.s._rotated_bounds_px(float(w_px), float(h_px), float(ang))
+                if tlx is not None and tly is not None:
+                    self.s.canvas.coords(self._selected, float(tlx), float(tly))
+                    bid = meta.get("border_id")
+                    if bid:
+                        self.s.canvas.coords(bid, float(tlx), float(tly), float(tlx) + float(bw), float(tly) + float(bh))
         except Exception:
             logger.exception("Failed to refresh image after removing mask")
 
@@ -476,10 +496,144 @@ class CanvasSelection:
             return
         cid = self._selected
         obj: CanvasObject = self.s._items.get(cid, {})
-        if obj.type == "image":
-            self.s.create_image_item(obj.path, obj.w_mm, obj.h_mm, obj.x_mm, obj.y_mm)
-        elif obj.type == "rect":
-            self.s.create_placeholder("Text", obj.w_mm, obj.h_mm, obj.outline, obj.outline, obj.x_mm, obj.y_mm)
+        t = str(obj.get("type", ""))
+        # Duplicate images: preserve size, position, angle, mask, and labels/flags
+        if t == "image":
+            try:
+                self.s.create_image_item(str(obj.get("path", "")), float(obj.get("w_mm", 0.0)), float(obj.get("h_mm", 0.0)), float(obj.get("x_mm", 0.0)), float(obj.get("y_mm", 0.0)))
+            except Exception:
+                return
+            # New item becomes selected by create_image_item
+            nid = self._selected
+            if not nid or nid not in self.s._items:
+                return
+            nmeta = self.s._items.get(nid, {})
+            # Copy metadata
+            try:
+                nmeta["amazon_label"] = str(obj.get("amazon_label", "") or "")
+                nmeta["is_options"] = bool(obj.get("is_options", False))
+                nmeta["is_static"] = bool(obj.get("is_static", False))
+                if obj.get("mask_path"):
+                    nmeta["mask_path"] = str(obj.get("mask_path"))
+                if obj.get("owner_major"):
+                    nmeta["owner_major"] = str(obj.get("owner_major"))
+                # Angle and re-render
+                try:
+                    ang = float(obj.get("angle", 0.0) or 0.0)
+                except Exception:
+                    ang = 0.0
+                nmeta["angle"] = float(ang)
+                # Re-render image at current size and keep visual top-left
+                w_px = max(1, int(round(float(nmeta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom)))
+                h_px = max(1, int(round(float(nmeta.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom)))
+                try:
+                    tlx, tly, _x2, _y2 = self.s.canvas.bbox(nid)
+                except Exception:
+                    coords = self.s.canvas.coords(nid)
+                    tlx, tly = (float(coords[0]), float(coords[1])) if coords and len(coords) >= 2 else (0.0, 0.0)
+                photo = self.s._render_photo(nmeta, w_px, h_px)
+                if photo is not None:
+                    self.s.canvas.itemconfig(nid, image=photo)
+                bw, bh = self.s._rotated_bounds_px(float(w_px), float(h_px), float(ang))
+                self.s.canvas.coords(nid, float(tlx), float(tly))
+                bid = nmeta.get("border_id")
+                if bid:
+                    self.s.canvas.coords(bid, float(tlx), float(tly), float(tlx) + float(bw), float(tly) + float(bh))
+            finally:
+                self.s._update_scrollregion()
+                self._reorder_by_z()
+        # Duplicate text-rects (type==rect): preserve label, colors, font, angle, amazon_label
+        elif t == "rect":
+            try:
+                label_text = str(obj.get("label", "Text"))
+            except Exception:
+                label_text = "Text"
+            outline = str(obj.get("outline", "#d0d0d0"))
+            try:
+                self.s.create_placeholder(label_text, float(obj.get("w_mm", 0.0)), float(obj.get("h_mm", 0.0)), str(obj.get("label_fill", "#ffffff")), outline, float(obj.get("x_mm", 0.0)), float(obj.get("y_mm", 0.0)))
+            except Exception:
+                return
+            nid = self._selected
+            if not nid or nid not in self.s._items:
+                return
+            nmeta = self.s._items.get(nid, {})
+            # Copy rect-specific styling and flags
+            try:
+                nmeta["amazon_label"] = str(obj.get("amazon_label", "") or "")
+                nmeta["is_options"] = bool(obj.get("is_options", False))
+                nmeta["is_static"] = bool(obj.get("is_static", False))
+                if obj.get("owner_major"):
+                    nmeta["owner_major"] = str(obj.get("owner_major"))
+                if obj.get("label_fill", None) is not None:
+                    nmeta["label_fill"] = str(obj.get("label_fill"))
+                if obj.get("label_font_size", None) is not None:
+                    try:
+                        nmeta["label_font_size"] = int(round(float(obj.get("label_font_size", 10))))
+                    except Exception:
+                        pass
+                if obj.get("label_font_family", None) is not None:
+                    nmeta["label_font_family"] = str(obj.get("label_font_family"))
+                if obj.get("outline", None) is not None:
+                    nmeta["outline"] = str(obj.get("outline"))
+                # Angle and overlay refresh
+                try:
+                    ang = float(obj.get("angle", 0.0) or 0.0)
+                except Exception:
+                    ang = 0.0
+                nmeta["angle"] = float(ang)
+                # Refresh label image and rotated overlay for new rect
+                try:
+                    x1, y1, x2, y2 = self.s.canvas.bbox(nid)
+                    self.s._update_rect_label_image(nid)
+                    self.s._update_rect_overlay(nid, nmeta, float(x1), float(y1), float(x2 - x1), float(y2 - y1))
+                except Exception:
+                    pass
+            finally:
+                self.s._update_scrollregion()
+                self._reorder_by_z()
+        # Duplicate plain text items
+        elif t == "text":
+            try:
+                txt_val = str(self.s.canvas.itemcget(cid, "text"))
+            except Exception:
+                txt_val = ""
+            try:
+                fill_val = str(obj.get("default_fill", self.s.canvas.itemcget(cid, "fill") or "white"))
+            except Exception:
+                fill_val = "white"
+            try:
+                tid = self.s._create_text_at_mm(txt_val, float(obj.get("x_mm", 0.0)), float(obj.get("y_mm", 0.0)), fill=fill_val)
+            except Exception:
+                return
+            if tid in self.s._items:
+                tmeta = self.s._items.get(tid, {})
+                try:
+                    tmeta["amazon_label"] = str(obj.get("amazon_label", "") or "")
+                    tmeta["is_options"] = bool(obj.get("is_options", False))
+                    tmeta["is_static"] = bool(obj.get("is_static", False))
+                    if obj.get("owner_major"):
+                        tmeta["owner_major"] = str(obj.get("owner_major"))
+                    # Font styling
+                    if obj.get("font_family", None) is not None:
+                        tmeta["font_family"] = str(obj.get("font_family"))
+                    if obj.get("font_size_pt", None) is not None:
+                        try:
+                            tmeta["font_size_pt"] = int(round(float(obj.get("font_size_pt", 12))))
+                        except Exception:
+                            pass
+                    use_fam = str(tmeta.get("font_family", "Myriad Pro"))
+                    use_pt = int(round(float(tmeta.get("font_size_pt", 12))))
+                    self.s.canvas.itemconfig(tid, font=(use_fam, self.s._scaled_pt(use_pt), "bold"))
+                    # Put on top
+                    try:
+                        max_z = max(int(m.get("z", 0)) for _cid, m in self.s._items.items()) if self.s._items else 0
+                    except Exception:
+                        max_z = 0
+                    tmeta["z"] = int(max_z + 1)
+                    self._reorder_by_z()
+                    self.select(tid)
+                finally:
+                    self.s._update_scrollregion()
 
     # --- Z-index management ---
     def _reorder_by_z(self) -> None:
@@ -907,7 +1061,7 @@ class CanvasSelection:
                 self.s.sel_h.set(str(float(meta["h_mm"] or 0)))
                 # angle (if available in UI)
                 try:
-                    self.s.sel_angle.set(str(int(round(float(meta.get("angle", 0.0) or 0.0)))))
+                    self.s.sel_angle.set(str(abs(int(round(float(meta.get("angle", 0.0) or 0.0))))))
                 except Exception:
                     self.s.sel_angle.set("0")
             finally:
@@ -932,7 +1086,7 @@ class CanvasSelection:
                 self.s.sel_w.set(str(float(meta["w_mm"] or 0)))
                 self.s.sel_h.set(str(float(meta["h_mm"] or 0)))
                 try:
-                    self.s.sel_angle.set(str(int(round(float(meta.get("angle", 0.0) or 0.0)))))
+                    self.s.sel_angle.set(str(abs(int(round(float(meta.get("angle", 0.0) or 0.0))))))
                 except Exception:
                     self.s.sel_angle.set("0")
             finally:
@@ -991,23 +1145,25 @@ class CanvasSelection:
         w = int(w_mm * MM_TO_PX * self.s._zoom)
         h = int(h_mm * MM_TO_PX * self.s._zoom)
         if meta.get("type") in ("rect", "slot", "major"):
-            # account for rotation of rect: 90/270 swap
+            # account for rotation for rects using rotated bounds like images
             try:
                 ang = float(meta.get("angle", 0.0) or 0.0)
             except Exception:
                 ang = 0.0
-            rw, rh = w, h
-            if int(abs(ang)) % 180 == 90:
-                rw, rh = h, w
+            if meta.get("type") == "rect":
+                rw, rh = self.s._rotated_bounds_px(float(w), float(h), float(ang))
+            else:
+                rw, rh = w, h
             self.s.canvas.coords(self._selected, cx - rw / 2, cy - rh / 2, cx + rw / 2, cy + rh / 2)
             if meta.get("label_id"):
                 self.s.canvas.coords(meta["label_id"], cx, cy)
                 self.s._raise_all_labels()
             # If overlay polygon exists for rotated rects, keep it in sync
-            try:
-                self.s._update_rect_overlay(self._selected, meta, cx - rw / 2, cy - rh / 2, rw, rh)
-            except Exception:
-                raise
+            if meta.get("type") == "rect":
+                try:
+                    self.s._update_rect_overlay(self._selected, meta, cx - rw / 2, cy - rh / 2, rw, rh)
+                except Exception:
+                    raise
         elif meta.get("type") == "image":
             # re-render image at new size and keep center
             photo = self.s._render_photo(meta, max(1, int(w)), max(1, int(h)))
@@ -1142,6 +1298,13 @@ class CanvasSelection:
         desired_top = jy0 + oy + float(y_mm) * MM_TO_PX * self.s._zoom
         w = w_mm * MM_TO_PX * self.s._zoom
         h = h_mm * MM_TO_PX * self.s._zoom
+        # Use live bbox for clamping to reflect current visual size
+        try:
+            bx1, by1, bx2, by2 = self.s.canvas.bbox(self._selected)
+            clamp_w = float(bx2 - bx1)
+            clamp_h = float(by2 - by1)
+        except Exception:
+            clamp_w, clamp_h = w, h
         # clamp within owning major bounds if present; otherwise jig bounds
         clamp_left = jx0 + ox
         clamp_top = jy0 + oy
@@ -1165,8 +1328,8 @@ class CanvasSelection:
                     clamp_left, clamp_top, clamp_right, clamp_bottom = float(mb[0]), float(mb[1]), float(mb[2]), float(mb[3])
         min_left = clamp_left
         min_top = clamp_top
-        max_left = clamp_right - w
-        max_top = clamp_bottom - h
+        max_left = clamp_right - clamp_w
+        max_top = clamp_bottom - clamp_h
         new_left = max(min_left, min(desired_left, max_left))
         new_top = max(min_top, min(desired_top, max_top))
         # if clamped, update mm fields to reflect actual placed position
@@ -1180,15 +1343,26 @@ class CanvasSelection:
             finally:
                 self._suppress_pos_trace = False
         # move selection and label
-        if meta.get("type") in ("rect", "slot", "major"):
+        if meta.get("type") == "rect":
+            # Use rotated bounds for rect placement and overlay update
+            try:
+                ang = float(meta.get("angle", 0.0) or 0.0)
+            except Exception:
+                ang = 0.0
+            rw, rh = self.s._rotated_bounds_px(float(w), float(h), float(ang))
+            self.s.canvas.coords(self._selected, new_left, new_top, new_left + rw, new_top + rh)
+            if meta.get("label_id"):
+                self.s.canvas.coords(meta["label_id"], new_left + rw / 2, new_top + rh / 2)
+                self.s._raise_all_labels()
+            try:
+                self.s._update_rect_overlay(self._selected, meta, new_left, new_top, rw, rh)
+            except Exception:
+                raise
+        elif meta.get("type") in ("slot", "major"):
             self.s.canvas.coords(self._selected, new_left, new_top, new_left + w, new_top + h)
             if meta.get("label_id"):
                 self.s.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
                 self.s._raise_all_labels()
-            try:
-                self.s._update_rect_overlay(self._selected, meta, new_left, new_top, w, h)
-            except Exception:
-                raise
         elif meta.get("type") == "image":
             bw, bh = self.s._rotated_bounds_px(float(w), float(h), float(meta.get("angle", 0.0) or 0.0))
             place_left = new_left + (w - bw) / 2.0
@@ -1216,7 +1390,14 @@ class CanvasSelection:
             angle = 0.0 if raw_a == "" else float(raw_a)
         except ValueError:
             return
-        meta["angle"] = float(angle)
+        # Invert direction for text blocks (rect) when rotating via entry
+        if str(meta.get("type", "")) == "rect":
+            if float(angle) < 0:
+                meta["angle"] = float(angle)
+            else:
+                meta["angle"] = -float(angle)
+        else:
+            meta["angle"] = float(angle)
         # Keep center point, update drawing
         try:
             x1, y1, x2, y2 = self.s.canvas.bbox(self._selected)
@@ -1256,6 +1437,49 @@ class CanvasSelection:
             bid = meta.get("border_id")
             if bid:
                 self.s.canvas.coords(bid, tlx, tly, tlx + bw, tly + bh)
+        # Persist x_mm/y_mm as the visual top-left of the rotated bounds and sync UI
+        try:
+            jx0, jy0, _jx1, _jy1 = self.s._jig_inner_rect_px()
+        except Exception:
+            jx0, jy0 = 0.0, 0.0
+        try:
+            ang = float(meta.get("angle", 0.0) or 0.0)
+        except Exception:
+            ang = 0.0
+        try:
+            w_mm = float(meta.get("w_mm", 0.0) or 0.0)
+            h_mm = float(meta.get("h_mm", 0.0) or 0.0)
+        except Exception:
+            w_mm, h_mm = 0.0, 0.0
+        w_px_f = float(w_mm) * MM_TO_PX * self.s._zoom
+        h_px_f = float(h_mm) * MM_TO_PX * self.s._zoom
+        bw_f, bh_f = self.s._rotated_bounds_px(float(w_px_f), float(h_px_f), float(ang))
+        # Recompute center from current bbox, then derive rotated top-left from center/bounds
+        try:
+            x1b, y1b, x2b, y2b = self.s.canvas.bbox(self._selected)
+            cx_now = (float(x1b) + float(x2b)) / 2.0
+            cy_now = (float(y1b) + float(y2b)) / 2.0
+        except Exception:
+            # Fallback: use current coords top-left + half rotated bounds
+            try:
+                coords_now = self.s.canvas.coords(self._selected)
+                cx_now = float(coords_now[0]) + float(bw_f) / 2.0
+                cy_now = float(coords_now[1]) + float(bh_f) / 2.0
+            except Exception:
+                cx_now, cy_now = 0.0, 0.0
+        tlx_f = float(cx_now) - float(bw_f) / 2.0
+        tly_f = float(cy_now) - float(bh_f) / 2.0
+        x_mm_new = self.s._snap_mm((float(tlx_f) - float(jx0)) / (MM_TO_PX * max(self.s._zoom, 1e-6)))
+        y_mm_new = self.s._snap_mm((float(tly_f) - float(jy0)) / (MM_TO_PX * max(self.s._zoom, 1e-6)))
+        try:
+            self._suppress_pos_trace = True
+            if hasattr(self.s, "sel_x"):
+                self.s.sel_x.set(str(x_mm_new))
+            if hasattr(self.s, "sel_y"):
+                self.s.sel_y.set(str(y_mm_new))
+            meta["x_mm"], meta["y_mm"] = float(x_mm_new), float(y_mm_new)
+        finally:
+            self._suppress_pos_trace = False
         self.s._update_scrollregion()
 
     # --- Helpers for moving grouped items within a major ---

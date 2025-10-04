@@ -69,6 +69,7 @@ def apply_styles(root):
     style.configure("Label.TLabel",  background=COLOR_BG_LIGHT, foreground="black", font=("Myriad Pro", 12))
     style.configure("Muted.TLabel",  background=COLOR_BG_LIGHT, foreground="#333")
     style.configure("Choice.TRadiobutton", background="#a6a6a6")
+    style.configure("Thick.Horizontal.TProgressbar", thickness=300)
     # Combobox style for launcher
     style.configure(
         "Prod.TCombobox",
@@ -109,7 +110,17 @@ class App(tk.Tk):
                     self._history.append(self.current.__class__)
                 except Exception:
                     logger.exception("Failed to push previous screen to history")
-            self.current.destroy()
+            # Unbind any global handlers that previous screens may have attached
+            try:
+                self.unbind_all("<FocusOut>")
+            except Exception:
+                # Non-fatal; continue cleanup
+                pass
+            # Destroy previous screen; ignore Tcl errors during teardown
+            try:
+                self.current.destroy()
+            except Exception:
+                logger.exception("Failed to destroy previous screen cleanly; continuing")
         # clear global hotkeys between screens
         try:
             self.unbind("<Return>")

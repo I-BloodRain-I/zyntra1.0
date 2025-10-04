@@ -258,7 +258,8 @@ class ImageManager:
                 owner_sel = str(getattr(self.s, "major_name").get()).strip()
             except Exception:
                 owner_sel = ""
-            final_owner = owner_hit or owner_sel
+            # Prioritize explicitly selected major over hit-detected one to avoid overlap issues
+            final_owner = owner_sel or owner_hit
             if final_owner:
                 meta["owner_major"] = final_owner
         except Exception:

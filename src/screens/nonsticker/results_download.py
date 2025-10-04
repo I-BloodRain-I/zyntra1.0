@@ -85,15 +85,15 @@ class NStickerResultsDownloadScreen(Screen):
                  font=("Myriad Pro", 18)).pack(side="left", padx=(8, 0))
 
         # Bottom-right "Back to home" dark button (no Go Back)
-        next_text = "Back to home"
-        next_font_obj = tkfont.Font(font=("Myriad Pro", 14))
+        next_text = "Cancel"
+        next_font_obj = tkfont.Font(font=("Myriad Pro", 22))
         next_width_px = int(next_font_obj.measure(next_text) + scale_px(16))
         next_height_px = int(next_font_obj.metrics("linespace") + scale_px(20))
         btn_next_canvas = tk.Canvas(self, width=next_width_px, height=next_height_px, bg=COLOR_BG_DARK,
                                     highlightthickness=0, bd=0, cursor="hand2")
         nx_left = 8
         ny_center = next_height_px // 2
-        next_text_id = btn_next_canvas.create_text(nx_left, ny_center, text=next_text, font=("Myriad Pro", 14), fill=COLOR_TEXT, anchor="w")
+        next_text_id = btn_next_canvas.create_text(nx_left, ny_center, text=next_text, font=("Myriad Pro", 22), fill=COLOR_TEXT, anchor="w")
         state.saved_product = ""
 
         def _next_press(_e, canvas=btn_next_canvas, tid=next_text_id):
@@ -105,6 +105,7 @@ class NStickerResultsDownloadScreen(Screen):
             except Exception:
                 inside = True
             if getattr(canvas, "_pressed", False) and inside:
+                state.is_cancelled = True
                 canvas.after(10, self._back_home)
             canvas._pressed = False
             

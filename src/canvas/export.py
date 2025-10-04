@@ -6,7 +6,7 @@ from typing import List
 
 from src.core import MM_TO_PX
 import math
-from src.core.state import FONTS_PATH
+from src.core.state import FONTS_PATH, PRODUCTS_PATH
 from src.utils import svg_to_png
 
 
@@ -130,9 +130,9 @@ class PdfExporter:
             temp_draw.text((-bb[0], -bb[1]), text, font=font, fill=fill)
             if abs(float(angle_deg)) > 1e-6:
                 try:
-                    temp_img = temp_img.rotate(-float(angle_deg), expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0, 0, 0, 0))
+                    temp_img = temp_img.rotate(float(angle_deg), expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0, 0, 0, 0))
                 except Exception:
-                    temp_img = temp_img.rotate(-float(angle_deg), expand=True)
+                    temp_img = temp_img.rotate(float(angle_deg), expand=True)
             left = int(round(center_x - temp_img.width / 2.0))
             top = int(round(center_y - temp_img.height / 2.0))
             try:
@@ -206,14 +206,14 @@ class PdfExporter:
                     )
                     label = str(it.get("label", "")).strip()
                     if label:
-                        W = max(1, r - l)
-                        H = max(1, btm - top)
+                        # Use rotated bounds to compute correct center from stored top-left
                         # Desired styling (with sensible defaults)
                         fam = str(it.get("label_font_family", "Myriad Pro"))
                         try:
                             size_pt = int(round(float(it.get("label_font_size", 10))))
                         except Exception:
                             size_pt = 10
+                            raise
                         col = _parse_hex_rgba(it.get("label_fill", "#ffffff"), default=(255, 255, 255, 255))
                         # Convert pt -> px at target DPI and honor exactly (no shrink)
                         # size_px = max(1, int(round(size_pt * float(dpi) / 72.0 * TEXT_PT_TO_PX_SCALE)))
@@ -223,9 +223,22 @@ class PdfExporter:
                             ang = float(it.get("angle", 0.0) or 0.0)
                         except Exception:
                             ang = 0.0
-
-                        cx = l + W // 2
-                        cy = top + H // 2
+                            raise
+                        # Rotated bounds (mm) based on original block size
+                        try:
+                            w_mm_orig = float(it.get("w_mm", 0.0) or 0.0)
+                            h_mm_orig = float(it.get("h_mm", 0.0) or 0.0)
+                        except Exception:
+                            w_mm_orig, h_mm_orig = 0.0, 0.0
+                            raise
+                        try:
+                            bw_mm, bh_mm = self.s._rotated_bounds_mm(float(w_mm_orig), float(h_mm_orig), float(ang))
+                        except Exception:
+                            bw_mm, bh_mm = float(w_mm_orig), float(h_mm_orig)
+                            raise
+                        # Center in pixels from stored top-left of rotated bounds
+                        cx = jx0 + mm_to_px(float(it.get("x_mm", 0.0) or 0.0) + (bw_mm / 2.0))
+                        cy = jy0 + mm_to_px(float(it.get("y_mm", 0.0) or 0.0) + (bh_mm / 2.0))
                         _draw_rotated_text_center(label, int(cx), int(cy), fnt, col, ang)
 
                 elif typ == "image":
@@ -249,13 +262,23 @@ class PdfExporter:
                     ext = os.path.splitext(path_img)[1].lower()
 
                     try:
-                        if ext == ".svg":
+                        if it.get("loaded_image", None):
+                            im: _PIL_Image.Image = it.get("loaded_image")
+
+                        elif ext == ".svg":
                             im = svg_to_png(str(path_img), width=int(w_px), height=int(h_px), device_pixel_ratio=1.0)
                             # ожидаем RGBA
                             if im.mode != "RGBA":
                                 im = im.convert("RGBA")
                         else:
-                            im = _PIL_Image.open(path_img).convert("RGBA")
+                            try:
+                                im = _PIL_Image.open(path_img).convert("RGBA")
+                            except FileNotFoundError:
+                                try:
+                                    im = _PIL_Image.open(PRODUCTS_PATH / path_img).convert("RGBA")
+                                except Exception:
+                                    logger.exception(f"Failed to open image file {path_img}")
+                                    raise
 
                         im_resized = im.resize((int(w_px), int(h_px)), _PIL_Image.LANCZOS)
                         # Apply mask selection if provided (treat near-transparent as transparent)
@@ -306,6 +329,7 @@ class PdfExporter:
                         ang = float(it.get("angle", 0.0) or 0.0)
                     except Exception:
                         ang = 0.0
+                        raise
 
                     has_block_size = ("w_mm" in it) and ("h_mm" in it)
                     if has_block_size:
@@ -318,6 +342,7 @@ class PdfExporter:
                             size_pt = int(round(float(it.get("label_font_size", 10))))
                         except Exception:
                             size_pt = 10
+                            raise
                         col = _parse_hex_rgba(it.get("label_fill", "#17a24b"), default=(23, 162, 75, 255))
                         size_px = max(1, int(round(size_pt * float(dpi) / 25.4 * TEXT_PT_TO_PX_SCALE)))
                         fnt = _truetype_for_family(fam, size_px)
@@ -329,6 +354,7 @@ class PdfExporter:
                             y_mm = float(it.get("y_mm", 0.0))
                         except Exception:
                             w_mm, h_mm, x_mm, y_mm = 0.0, 0.0, 0.0, 0.0
+                            raise
                         cx = jx0 + mm_to_px(x_mm + w_mm / 2.0)
                         cy = jy0 + mm_to_px(y_mm + h_mm / 2.0)
                         _draw_rotated_text_center(txt, int(cx), int(cy), fnt, col, ang)
@@ -342,6 +368,7 @@ class PdfExporter:
                             size_pt = int(round(float(it.get("font_size_pt", 12))))
                         except Exception:
                             size_pt = 12
+                            raise
                         col = _parse_hex_rgba(it.get("fill", "#17a24b"), default=(23, 162, 75, 255))
                         size_px = max(1, int(round(size_pt * float(dpi) / 72.0 * TEXT_PT_TO_PX_SCALE)))
                         fnt = _truetype_for_family(fam, size_px)

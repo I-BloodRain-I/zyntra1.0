@@ -226,8 +226,38 @@ class NStickerCanvasScreen(Screen):
                     try:
                         self.major_x.set(str(vals.get("x", "0")))
                         self.major_y.set(str(vals.get("y", "0")))
-                        self.major_w.set(str(vals.get("w", "0")))
-                        self.major_h.set(str(vals.get("h", "0")))
+                        # Clamp major size to current jig size on preset load
+                        try:
+                            jx = float(self.jig_x.get() or 0.0)
+                            jy = float(self.jig_y.get() or 0.0)
+                        except Exception:
+                            jx, jy = DEFAULT_JIG_SIZE
+                        try:
+                            w_val = float((vals.get("w", "0") or "0").strip())
+                        except Exception:
+                            w_val = 0.0
+                        try:
+                            h_val = float((vals.get("h", "0") or "0").strip())
+                        except Exception:
+                            h_val = 0.0
+                        # Respect current x,y for this preset when clamping
+                        try:
+                            x_val = float((vals.get("x", "0") or "0").strip())
+                        except Exception:
+                            x_val = 0.0
+                        try:
+                            y_val = float((vals.get("y", "0") or "0").strip())
+                        except Exception:
+                            y_val = 0.0
+                        w_max = max(0.0, float(jx) - max(0.0, x_val))
+                        h_max = max(0.0, float(jy) - max(0.0, y_val))
+                        w_clamped = max(0.0, min(w_val, w_max))
+                        h_clamped = max(0.0, min(h_val, h_max))
+                        self.major_w.set(str(w_clamped))
+                        self.major_h.set(str(h_clamped))
+                        # Persist clamped values back to preset
+                        vals["w"] = str(w_clamped)
+                        vals["h"] = str(h_clamped)
                         # Load per-major parameters into left bar fields
                         if hasattr(self, "step_x"):
                             self.step_x.set(str(vals.get("step_x", self.step_x.get())))
@@ -370,6 +400,57 @@ class NStickerCanvasScreen(Screen):
                 # Remove this major's slots before dropping the preset
                 if hasattr(self, "_remove_slots_for_major"):
                     self._remove_slots_for_major(name)
+                # Remove all objects (images, rects, text, etc.) owned by this major
+                try:
+                    owned_object_ids = [
+                        cid for cid, meta in list(self._items.items())
+                        if str(meta.get("owner_major", "")) == str(name)
+                        and str(meta.get("type", "")) not in ("slot", "major")
+                    ]
+                    for cid in owned_object_ids:
+                        meta = self._items.get(cid, {})
+                        # Remove rotated overlay polygon for rects
+                        try:
+                            rid = int(meta.get("rot_id", 0) or 0)
+                        except Exception:
+                            rid = 0
+                        if rid:
+                            try:
+                                self.canvas.delete(rid)
+                            except Exception:
+                                pass
+                            meta["rot_id"] = None
+                        # Remove selection border for images
+                        try:
+                            bid = int(meta.get("border_id", 0) or 0)
+                        except Exception:
+                            bid = 0
+                        if bid:
+                            try:
+                                self.canvas.delete(bid)
+                            except Exception:
+                                pass
+                            meta["border_id"] = None
+                        try:
+                            lbl = meta.get("label_id")
+                            if lbl:
+                                self.canvas.delete(lbl)
+                        except Exception:
+                            pass
+                        try:
+                            self.canvas.delete(cid)
+                        except Exception:
+                            pass
+                        self._items.pop(cid, None)
+                except Exception:
+                    raise
+                # Also purge owned objects from stored scenes for both sides so they don't reappear on toggle
+                try:
+                    for side in ("front", "back"):
+                        items = list(self._scene_store.get(side) or [])
+                        self._scene_store[side] = [it for it in items if str(it.get("owner_major", "") or "") != str(name)]
+                except Exception:
+                    raise
                 if name in self._major_sizes:
                     self._major_sizes.pop(name, None)
                     names = list(self._major_sizes.keys())
@@ -381,6 +462,12 @@ class NStickerCanvasScreen(Screen):
                         self._update_all_majors()
                     except Exception:
                         raise
+                    # Keep visual order sane after deletions
+                    try:
+                        self._raise_all_labels()
+                        self.selection._reorder_by_z()
+                    except Exception:
+                        pass
                     # After removal, keep other majors as-is; just renumber groups
                     try:
                         self._renumber_slots()
@@ -447,10 +534,50 @@ class NStickerCanvasScreen(Screen):
                 vals = self._major_sizes.get(name)
                 if vals is None:
                     return
-                vals["x"] = (self.major_x.get() or "0").strip()
-                vals["y"] = (self.major_y.get() or "0").strip()
-                vals["w"] = (self.major_w.get() or "0").strip()
-                vals["h"] = (self.major_h.get() or "0").strip()
+                # Clamp width/height to current jig size before persisting
+                try:
+                    jx = float(self.jig_x.get() or 0.0)
+                    jy = float(self.jig_y.get() or 0.0)
+                except Exception:
+                    jx, jy = DEFAULT_JIG_SIZE
+                x_txt = (self.major_x.get() or "0").strip()
+                y_txt = (self.major_y.get() or "0").strip()
+                w_txt = (self.major_w.get() or "0").strip()
+                h_txt = (self.major_h.get() or "0").strip()
+                try:
+                    w_val = float(w_txt)
+                except Exception:
+                    w_val = 0.0
+                try:
+                    h_val = float(h_txt)
+                except Exception:
+                    h_val = 0.0
+                # Respect the current x,y entries when clamping w,h
+                try:
+                    x_val = float(x_txt)
+                except Exception:
+                    x_val = 0.0
+                try:
+                    y_val = float(y_txt)
+                except Exception:
+                    y_val = 0.0
+                w_max = max(0.0, float(jx) - max(0.0, x_val))
+                h_max = max(0.0, float(jy) - max(0.0, y_val))
+                w_clamped = max(0.0, min(w_val, w_max))
+                h_clamped = max(0.0, min(h_val, h_max))
+                # Avoid recursive trace triggers while normalizing
+                self._suppress_major_traces = True
+                try:
+                    if str(w_clamped) != w_txt:
+                        self.major_w.set(str(w_clamped))
+                    if str(h_clamped) != h_txt:
+                        self.major_h.set(str(h_clamped))
+                finally:
+                    self._suppress_major_traces = False
+                vals["x"] = x_txt
+                vals["y"] = y_txt
+                vals["w"] = str(w_clamped)
+                vals["h"] = str(h_clamped)
                 # live update the one that changed
                 self._update_major_rect(name)
             except Exception:
@@ -1083,7 +1210,7 @@ class NStickerCanvasScreen(Screen):
             d2.text((pad + off_x, pad + off_y), label_text, font=font, fill=color_rgba)
             try:
                 # Rotate label image in the same (clockwise) direction as overlay math
-                rotated = img.rotate(-angle, expand=True, resample=Image.BICUBIC)
+                rotated = img.rotate(angle, expand=True, resample=Image.BICUBIC)
             except Exception:
                 rotated = img
             try:
@@ -1217,6 +1344,47 @@ class NStickerCanvasScreen(Screen):
     def _on_jig_change(self, *_):
         # Redraw jig and re-create slots to fill new area
         self._redraw_jig()
+        # Clamp all majors to the new jig size and refresh layout
+        try:
+            try:
+                jx = float(self.jig_x.get() or 0.0)
+                jy = float(self.jig_y.get() or 0.0)
+            except Exception:
+                jx, jy = DEFAULT_JIG_SIZE
+            for nm, vals in list(self._major_sizes.items()):
+                try:
+                    w_val = float((vals.get("w", "0") or "0").strip())
+                except Exception:
+                    w_val = 0.0
+                try:
+                    h_val = float((vals.get("h", "0") or "0").strip())
+                except Exception:
+                    h_val = 0.0
+                # Respect each preset's x,y
+                try:
+                    x_val = float((vals.get("x", "0") or "0").strip())
+                except Exception:
+                    x_val = 0.0
+                try:
+                    y_val = float((vals.get("y", "0") or "0").strip())
+                except Exception:
+                    y_val = 0.0
+                w_max = max(0.0, float(jx) - max(0.0, x_val))
+                h_max = max(0.0, float(jy) - max(0.0, y_val))
+                w_clamped = max(0.0, min(w_val, w_max))
+                h_clamped = max(0.0, min(h_val, h_max))
+                if str(w_clamped) != str(vals.get("w", "0")) or str(h_clamped) != str(vals.get("h", "0")):
+                    vals["w"] = str(w_clamped)
+                    vals["h"] = str(h_clamped)
+            # Refresh all majors and re-place slots respecting new bounds
+            if hasattr(self, "_update_all_majors"):
+                self._update_all_majors()
+            if hasattr(self, "_place_slots_all_majors"):
+                self._place_slots_all_majors(silent=True)
+                if hasattr(self, "_renumber_slots"):
+                    self._renumber_slots()
+        except Exception:
+            pass
         # Recreate slots; prefer active major only
         try:
             sel = (self.major_name.get() or "").strip()
@@ -1328,7 +1496,7 @@ class NStickerCanvasScreen(Screen):
             canvas_id=rect,
             z=int(max_z + 1),
         )
-        # Tag ownership: prefer the major under the initial placement; fallback to selected major
+        # Tag ownership: prioritize the selected major; fallback to major under initial placement
         try:
             center_x = new_left + scaled_w / 2.0
             center_y = new_top + scaled_h / 2.0
@@ -1348,7 +1516,8 @@ class NStickerCanvasScreen(Screen):
                 owner_sel = str(self.major_name.get()).strip()
             except Exception:
                 owner_sel = ""
-            final_owner = owner_hit or owner_sel
+            # Prefer explicitly selected major to avoid wrong ownership when majors overlap
+            final_owner = owner_sel or owner_hit
             if final_owner:
                 obj["owner_major"] = final_owner
         except Exception:
@@ -1435,6 +1604,331 @@ class NStickerCanvasScreen(Screen):
         if not slot_entries:
             return
 
+        # --- New behavior: if slot 1 (by label) in the current major has objects,
+        # copy those objects to all other slots in the current major preserving
+        # their relative position inside the slot ---
+        try:
+            slot1_entry = None
+            slot1_numeric_candidates: list[tuple[int, tuple]] = []
+            for entry in slot_entries:
+                _sx, _sy, sid, smeta = entry
+                try:
+                    lbl_id = smeta.get("label_id")
+                    lbl_txt = self.canvas.itemcget(lbl_id, "text") if lbl_id else ""
+                except Exception:
+                    lbl_txt = ""
+                lbl_txt_s = str(lbl_txt).strip()
+                num = None
+                try:
+                    # allow labels like "01"
+                    num = int(lbl_txt_s)
+                except Exception:
+                    num = None
+                if num is not None:
+                    slot1_numeric_candidates.append((num, entry))
+                    if num == 1:
+                        slot1_entry = entry
+                        break
+            if slot1_entry is None and slot1_numeric_candidates:
+                # choose the smallest numeric label if no explicit "1" exists
+                slot1_entry = sorted(slot1_numeric_candidates, key=lambda p: p[0])[0][1]
+            if slot1_entry is None and slot_entries:
+                # fallback: first in visual order
+                slot1_entry = slot_entries[0]
+        except Exception:
+            slot1_entry = slot_entries[0] if slot_entries else None
+
+        # Collect template objects currently inside slot 1 (rect/image only)
+        did_duplicate = False
+        if slot1_entry is not None:
+            try:
+                _sx, _sy, slot1_id, slot1_meta = slot1_entry
+                s1_x = float(slot1_meta.get("x_mm", 0.0))
+                s1_y = float(slot1_meta.get("y_mm", 0.0))
+                s1_w = float(slot1_meta.get("w_mm", 0.0))
+                s1_h = float(slot1_meta.get("h_mm", 0.0))
+
+                def _inside_slot_center_mm(obj_meta: CanvasObject) -> bool:
+                    try:
+                        ox = float(obj_meta.get("x_mm", 0.0))
+                        oy = float(obj_meta.get("y_mm", 0.0))
+                        ow = float(obj_meta.get("w_mm", 0.0))
+                        oh = float(obj_meta.get("h_mm", 0.0))
+                        cx = ox + ow / 2.0
+                        cy = oy + oh / 2.0
+                        return (s1_x <= cx <= s1_x + s1_w) and (s1_y <= cy <= s1_y + s1_h)
+                    except Exception:
+                        return False
+
+                template: list[tuple[int, CanvasObject]] = []  # (cid, meta)
+                for cid, meta in self._items.items():
+                    if meta.get("type") not in ("rect", "image", "text"):
+                        continue
+                    try:
+                        if active_major and str(meta.get("owner_major", "")) != active_major:
+                            continue
+                    except Exception:
+                        continue
+                    if _inside_slot_center_mm(meta):
+                        template.append((cid, meta))
+
+                if template:
+                    # Duplicate each template object into all other slots of this major
+                    jx0, jy0, jx1, jy1 = self._jig_inner_rect_px()
+                    oxp = self._item_outline_half_px(); oyp = self._item_outline_half_px()
+                    z_base = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
+                    z_next = int(z_base + 1)
+                    for _dx, _dy, dest_sid, dest_meta in slot_entries:
+                        if dest_sid != slot1_id:
+                            dx = float(dest_meta.get("x_mm", 0.0))
+                            dy = float(dest_meta.get("y_mm", 0.0))
+                            # Clear existing non-slot objects inside this destination slot before cloning
+                            try:
+                                dsx = float(dest_meta.get("x_mm", 0.0))
+                                dsy = float(dest_meta.get("y_mm", 0.0))
+                                dsw = float(dest_meta.get("w_mm", 0.0))
+                                dsh = float(dest_meta.get("h_mm", 0.0))
+                            except Exception as e:
+                                logger.exception("Failed to read destination slot bounds before clearing")
+                                raise
+                            try:
+                                to_delete_ids: list[int] = []
+                                for del_cid, del_meta in list(self._items.items()):
+                                    t = del_meta.get("type")
+                                    # Only consider objects, not slots or majors
+                                    consider = (t == "rect") or (t == "image") or (t == "text")
+                                    if consider:
+                                        if active_major and str(del_meta.get("owner_major", "")) != active_major:
+                                            consider = False
+                                    if consider:
+                                        try:
+                                            if t == "text":
+                                                cx = float(del_meta.get("x_mm", 0.0))
+                                                cy = float(del_meta.get("y_mm", 0.0))
+                                            else:
+                                                oxm = float(del_meta.get("x_mm", 0.0))
+                                                oym = float(del_meta.get("y_mm", 0.0))
+                                                wmm = float(del_meta.get("w_mm", 0.0))
+                                                hmm = float(del_meta.get("h_mm", 0.0))
+                                                cx = oxm + wmm / 2.0
+                                                cy = oym + hmm / 2.0
+                                            inside = (dsx <= cx <= dsx + dsw) and (dsy <= cy <= dsy + dsh)
+                                        except Exception as e:
+                                            logger.exception("Failed to check object position against destination slot")
+                                            raise
+                                        if inside:
+                                            to_delete_ids.append(del_cid)
+                                for del_id in to_delete_ids:
+                                    m = self._items.get(del_id, {})
+                                    try:
+                                        # Remove rotated overlay polygon for rects
+                                        try:
+                                            rid = int(m.get("rot_id", 0) or 0)
+                                        except Exception:
+                                            rid = 0
+                                        if rid:
+                                            try:
+                                                self.canvas.delete(rid)
+                                            except Exception as e:
+                                                logger.exception("Failed to delete rect overlay during slot clear")
+                                                raise
+                                        # Remove selection border for images
+                                        try:
+                                            bid = int(m.get("border_id", 0) or 0)
+                                        except Exception:
+                                            bid = 0
+                                        if bid:
+                                            try:
+                                                self.canvas.delete(bid)
+                                            except Exception as e:
+                                                logger.exception("Failed to delete image border during slot clear")
+                                                raise
+                                        # Remove label image if exists
+                                        try:
+                                            lbl = m.get("label_id")
+                                            if lbl:
+                                                self.canvas.delete(lbl)
+                                        except Exception as e:
+                                            logger.exception("Failed to delete label during slot clear")
+                                            raise
+                                        # Remove base item and purge from registry
+                                        self.canvas.delete(del_id)
+                                        self._items.pop(del_id, None)
+                                    except Exception as e:
+                                        logger.exception("Failed to clear object inside destination slot")
+                                        raise
+                            except Exception as e:
+                                logger.exception("Failed while clearing destination slot before cloning")
+                                raise
+                            for _cid, om in template:
+                                try:
+                                    rel_x = float(om.get("x_mm", 0.0)) - s1_x
+                                    rel_y = float(om.get("y_mm", 0.0)) - s1_y
+                                    nx_mm = dx + rel_x
+                                    ny_mm = dy + rel_y
+                                    if om.get("type") == "image":
+                                        # Create image clone at nx_mm, ny_mm with same size/angle/path
+                                        path = str(om.get("path", ""))
+                                        if not path:
+                                            logger.error("Image source path missing during duplication")
+                                            raise RuntimeError("Image source path missing during duplication")
+                                        w_mm = float(om.get("w_mm", 0.0))
+                                        h_mm = float(om.get("h_mm", 0.0))
+                                        ang = float(om.get("angle", 0.0) or 0.0)
+                                        w_px = int(round(w_mm * MM_TO_PX * self._zoom))
+                                        h_px = int(round(h_mm * MM_TO_PX * self._zoom))
+                                        left = jx0 + oxp + nx_mm * MM_TO_PX * self._zoom
+                                        top = jy0 + oyp + ny_mm * MM_TO_PX * self._zoom
+                                        new_meta = CanvasObject(
+                                            type="image",
+                                            path=path,
+                                            w_mm=float(self._snap_mm(w_mm)),
+                                            h_mm=float(self._snap_mm(h_mm)),
+                                            x_mm=float(self._snap_mm(nx_mm)),
+                                            y_mm=float(self._snap_mm(ny_mm)),
+                                            angle=float(ang),
+                                        )
+                                        # Optional mask
+                                        try:
+                                            if om.get("mask_path"):
+                                                new_meta["mask_path"] = str(om.get("mask_path", ""))
+                                        except Exception as e:
+                                            logger.exception("Failed to copy mask_path for image clone")
+                                            raise
+                                        new_meta["amazon_label"] = str(om.get("amazon_label", "") or "")
+                                        try:
+                                            new_meta["is_options"] = bool(om.get("is_options", False))
+                                            new_meta["is_static"] = bool(om.get("is_static", False))
+                                        except Exception as e:
+                                            logger.exception("Failed to copy image flags for clone")
+                                            raise
+                                        new_meta["owner_major"] = active_major
+                                        photo = self._render_photo(new_meta, max(1, int(w_px)), max(1, int(h_px)))
+                                        if photo is None:
+                                            logger.error("Failed to render photo for cloned image")
+                                            raise RuntimeError("Failed to render photo for cloned image")
+                                        try:
+                                            bw, bh = self._rotated_bounds_px(w_px, h_px, ang)
+                                        except Exception as e:
+                                            logger.exception("Failed to compute rotated bounds for cloned image")
+                                            raise
+                                        place_left = left + (w_px - bw) / 2.0
+                                        place_top = top + (h_px - bh) / 2.0
+                                        img_id = self.canvas.create_image(place_left, place_top, image=photo, anchor="nw")
+                                        new_meta.canvas_id = img_id
+                                        new_meta["z"] = z_next; z_next += 1
+                                        self._items[img_id] = new_meta
+                                        did_duplicate = True
+                                    elif om.get("type") == "text":
+                                        # Plain text label clone (center-based coordinates)
+                                        try:
+                                            txt_val = str(self.canvas.itemcget(_cid, "text"))
+                                        except Exception as e:
+                                            logger.exception("Failed to read source text for cloning")
+                                            raise
+                                        try:
+                                            fill_val = str(om.get("default_fill", self.canvas.itemcget(_cid, "fill") or "white"))
+                                        except Exception:
+                                            fill_val = "white"
+                                        tid = self._create_text_at_mm(
+                                            txt_val,
+                                            nx_mm,
+                                            ny_mm,
+                                            fill=fill_val,
+                                        )
+                                        if tid in self._items:
+                                            try:
+                                                self._items[tid]["amazon_label"] = str(om.get("amazon_label", "") or "")
+                                                self._items[tid]["is_options"] = bool(om.get("is_options", False))
+                                                self._items[tid]["is_static"] = bool(om.get("is_static", False))
+                                            except Exception as e:
+                                                logger.exception("Failed to copy text flags for clone")
+                                                raise
+                                            self._items[tid]["owner_major"] = active_major
+                                            # Copy font styling if present on source
+                                            try:
+                                                fam = str(om.get("font_family", "Myriad Pro")) if om.get("font_family", None) is not None else None
+                                                fpt = int(round(float(om.get("font_size_pt", 12)))) if om.get("font_size_pt", None) is not None else None
+                                                if fam is not None:
+                                                    self._items[tid]["font_family"] = fam
+                                                if fpt is not None:
+                                                    self._items[tid]["font_size_pt"] = int(fpt)
+                                                if fam is not None or fpt is not None:
+                                                    use_fam = fam if fam is not None else self._items[tid].get("font_family", "Myriad Pro")
+                                                    use_pt = fpt if fpt is not None else int(self._items[tid].get("font_size_pt", 12))
+                                                    self.canvas.itemconfig(tid, font=(use_fam, self._scaled_pt(use_pt), "bold"))
+                                            except Exception as e:
+                                                logger.exception("Failed to apply text font on clone")
+                                                raise
+                                            # z-order
+                                            self._items[tid]["z"] = z_next; z_next += 1
+                                            did_duplicate = True
+                                    else:
+                                        # Rectangle/text block clone
+                                        try:
+                                            label_text = str(om.get("label", "Text"))
+                                        except Exception:
+                                            label_text = "Text"
+                                        outline = str(om.get("outline", "#d0d0d0"))
+                                        ang = float(om.get("angle", 0.0) or 0.0)
+                                        rw = float(om.get("w_mm", 0.0))
+                                        rh = float(om.get("h_mm", 0.0))
+                                        rid = self._create_rect_at_mm(
+                                            label_text,
+                                            rw,
+                                            rh,
+                                            nx_mm,
+                                            ny_mm,
+                                            outline=outline,
+                                            text_fill=str(om.get("label_fill", "#ffffff")),
+                                            angle=ang,
+                                        )
+                                        if rid in self._items:
+                                            self._items[rid]["z"] = z_next; z_next += 1
+                                            self._items[rid]["amazon_label"] = str(om.get("amazon_label", "") or "")
+                                            try:
+                                                self._items[rid]["is_options"] = bool(om.get("is_options", False))
+                                                self._items[rid]["is_static"] = bool(om.get("is_static", False))
+                                            except Exception as e:
+                                                logger.exception("Failed to copy rect flags for clone")
+                                                raise
+                                            self._items[rid]["owner_major"] = active_major
+                                            # Copy label styling for text-rects
+                                            try:
+                                                label_fill_val = om.get("label_fill", None)
+                                                if label_fill_val is not None:
+                                                    self._items[rid]["label_fill"] = str(label_fill_val)
+                                                label_font_size_val = om.get("label_font_size", None)
+                                                if label_font_size_val is not None:
+                                                    self._items[rid]["label_font_size"] = int(round(float(label_font_size_val)))
+                                                label_font_family_val = om.get("label_font_family", None)
+                                                if label_font_family_val is not None:
+                                                    self._items[rid]["label_font_family"] = str(label_font_family_val)
+                                                # Also copy rect outline color
+                                                outline_val = om.get("outline", None)
+                                                if outline_val is not None:
+                                                    self._items[rid]["outline"] = str(outline_val)
+                                                self._update_rect_label_image(rid)
+                                            except Exception as e:
+                                                logger.exception("Failed to copy rect styling for clone")
+                                                raise
+                                        did_duplicate = True
+                                except Exception:
+                                    logger.exception("Failed while duplicating an object into a slot")
+                                    raise
+            except Exception:
+                did_duplicate = False
+
+        if did_duplicate:
+            self._update_scrollregion()
+            self._raise_all_labels()
+            self.selection._reorder_by_z()
+            self._redraw_jig(center=False)
+            # Keep text menu hidden
+            self.text_bar.pack_forget()
+            self.row_text.place_forget()
+            return
+
         # Collect placeable items (rect or image), ordered bottom->top, right->left, filtered by owner_major
         item_entries: List[Tuple[float, float, int, CanvasObject]] = []  # (left_px, top_px, cid, meta)
         for cid, meta in self._items.items():
@@ -1485,9 +1979,12 @@ class NStickerCanvasScreen(Screen):
             except Exception:
                 ang = 0.0
             # Force images and text blocks (rect) to be rotated to 270 degrees before processing/placement
-            if meta.get("type") in ("image", "rect"):
+            if meta.get("type") == "image":
                 ang = 270.0
                 meta["angle"] = 270.0
+            elif meta.get("type") == "rect":
+                ang = -270.0
+                meta["angle"] = -270.0
 
             if meta.get("type") == "image":
                 # Fit rotated bbox into slot in mm
@@ -1547,7 +2044,7 @@ class NStickerCanvasScreen(Screen):
                     jx = float(self.jig_x.get() or 0.0)
                     jy = float(self.jig_y.get() or 0.0)
                 except Exception:
-                    jx, jy = 296.0, 394.5831
+                    jx, jy = DEFAULT_JIG_SIZE
                 left_mm = max(0.0, min(left_mm, jx - disp_w_mm))
                 top_mm = max(0.0, min(top_mm, jy - disp_h_mm))
                 # Draw with px
@@ -1911,27 +2408,31 @@ class NStickerCanvasScreen(Screen):
                         if not src_path_str:
                             continue
                         src_path = _Path(src_path_str)
-                        if not src_path.exists() or str(src_path).startswith(str(PRODUCTS_PATH)):
-                            # Nothing to copy; leave as-is
+                        if not src_path.exists():
                             continue
-                        dst_path = product_folder / src_path.name
+                        # Copy if not under products, or under a different product folder
                         try:
-                            # if os.path.exists(dst_path):
-                                # logger.debug(f"Removing existing image from product folder: %s", dst_path)
-                                # os.remove(dst_path)
-                            _shutil.copy2(src_path, dst_path / "_new")
-                            _shutil.move(dst_path / "_new", dst_path)
-                            logger.debug(f"Copied image to product folder: %s -> %s", src_path, dst_path)
+                            is_under_products = str(src_path).startswith(str(PRODUCTS_PATH))
                         except Exception:
-                            logger.exception(f"Failed to first copy image to product folder: {src_path}")
+                            is_under_products = False
+                        needs_copy = (not is_under_products) or (src_path.parent != product_folder)
+                        if needs_copy:
+                            dst_path = product_folder / src_path.name
                             try:
-                                _shutil.copyfile(src_path, dst_path)
-                            except shutil.SameFileError:
-                                logger.debug(f"Image already exists in product folder: %s", dst_path)
+                                # Attempt atomic copy via temp then move
+                                _shutil.copy2(src_path, dst_path / "_new")
+                                _shutil.move(dst_path / "_new", dst_path)
+                                logger.debug(f"Copied image to product folder: %s -> %s", src_path, dst_path)
                             except Exception:
-                                logger.exception(f"Failed to second copy image to product folder: {src_path}")
-                                continue
-                        _it["path"] = str(dst_path)
+                                logger.exception(f"Failed to first copy image to product folder: {src_path}")
+                                try:
+                                    _shutil.copyfile(src_path, dst_path)
+                                except shutil.SameFileError:
+                                    logger.debug(f"Image already exists in product folder: %s", dst_path)
+                                except Exception:
+                                    logger.exception(f"Failed to second copy image to product folder: {src_path}")
+                                    continue
+                            _it["path"] = str(dst_path)
                         # Optional mask copy if present and valid
                         try:
                             mask_path_str = str(_it.get("mask_path", "") or "").strip()
@@ -1940,18 +2441,32 @@ class NStickerCanvasScreen(Screen):
                         if mask_path_str and mask_path_str.lower() != "none":
                             msrc = _Path(mask_path_str)
                             if msrc.exists():
-                                mdst = product_folder / msrc.name
                                 try:
-                                    _shutil.copy2(msrc, mdst)
-                                except Exception:
+                                    # Copy if not under products, or under a different product folder
                                     try:
-                                        _shutil.copyfile(msrc, mdst)
+                                        m_under_products = str(msrc).startswith(str(PRODUCTS_PATH))
                                     except Exception:
-                                        logger.exception(f"Failed to copy mask to product folder: {msrc}")
+                                        m_under_products = False
+                                    m_needs_copy = (not m_under_products) or (msrc.parent != product_folder)
+                                    if m_needs_copy:
+                                        mdst = product_folder / msrc.name
+                                        try:
+                                            _shutil.copy2(msrc, mdst / "_new")
+                                            _shutil.move(mdst / "_new", mdst)
+                                        except Exception:
+                                            try:
+                                                _shutil.copyfile(msrc, mdst)
+                                            except Exception:
+                                                logger.exception(f"Failed to copy mask to product folder: {msrc}")
+                                            else:
+                                                _it["mask_path"] = str(mdst)
+                                        else:
+                                            _it["mask_path"] = str(mdst)
                                     else:
-                                        _it["mask_path"] = str(mdst)
-                                else:
-                                    _it["mask_path"] = str(mdst)
+                                        # Already in current product folder
+                                        _it["mask_path"] = str(msrc)
+                                except Exception:
+                                    logger.exception("Failed processing mask for internalization")
                     except Exception as e:
                         logger.exception(f"Failed processing image item for internalization: {e}")
 
@@ -2149,14 +2664,20 @@ class NStickerCanvasScreen(Screen):
                             sl["objects"].append(obj)
                             break
 
+                # Plain text labels (no size): include styling
                 for it in items_for_side:
                     if str(it.get("type", "")) != "text":
+                        continue
+                    # Skip sized text blocks; handled below
+                    if ("w_mm" in it) or ("h_mm" in it):
                         continue
                     try:
                         obj = {
                             "type": "text",
                             "text": str(it.get("text", "")),
                             "fill": str(it.get("fill", "white")),
+                            "font_family": str(it.get("font_family", "Myriad Pro")),
+                            "font_size_pt": int(round(float(it.get("font_size_pt", 12)))),
                             "x_mm": float(it.get("x_mm", 0.0)),
                             "y_mm": float(it.get("y_mm", 0.0)),
                             "z": int(it.get("z", 0)),
@@ -2184,6 +2705,49 @@ class NStickerCanvasScreen(Screen):
                                 sl["objects"].append(obj)
                             except Exception as e:
                                 logger.exception(f"Failed to append object to slot: {e}")
+                            break
+
+                # Sized text blocks (type "text" + size): treat as text-rects and include label styling
+                for it in items_for_side:
+                    if str(it.get("type", "")) != "text":
+                        continue
+                    if not (("w_mm" in it) and ("h_mm" in it)):
+                        continue
+                    try:
+                        obj = {
+                            "type": "text",
+                            "label": str(it.get("label", "")),
+                            "amazon_label": it.get("amazon_label", ""),
+                            "x_mm": float(it.get("x_mm", 0.0)),
+                            "y_mm": float(it.get("y_mm", 0.0)),
+                            "w_mm": float(it.get("w_mm", 0.0)),
+                            "h_mm": float(it.get("h_mm", 0.0)),
+                            "angle": float(it.get("angle", 0.0) or 0.0),
+                            "z": int(it.get("z", 0)),
+                            "label_fill": str(it.get("label_fill", "#17a24b")),
+                            "label_font_size": int(round(float(it.get("label_font_size", 10)))),
+                            "label_font_family": str(it.get("label_font_family", "Myriad Pro")),
+                            "is_options": bool(it.get("is_options", False)),
+                            "is_static": bool(it.get("is_static", False)),
+                        }
+                    except Exception as e:
+                        logger.exception(f"Failed to process sized text for slot: {e}")
+                        continue
+                    for sl in slot_descs:
+                        try:
+                            sx = float(sl.get("x_mm", 0.0))
+                            sy = float(sl.get("y_mm", 0.0))
+                            sw = float(sl.get("w_mm", 0.0))
+                            sh = float(sl.get("h_mm", 0.0))
+                            inside = (sx <= obj["x_mm"] <= sx + sw) and (sy <= obj["y_mm"] <= sy + sh)
+                        except Exception as e:
+                            logger.exception(f"Failed to check if sized text is inside slot: {e}")
+                            inside = False
+                        if inside:
+                            try:
+                                sl["objects"].append(obj)
+                            except Exception as e:
+                                logger.exception(f"Failed to append sized text to slot: {e}")
                             break
 
                 for it in items_for_side:
@@ -2349,6 +2913,9 @@ class NStickerCanvasScreen(Screen):
                 logger.debug(f"Rendering jig SVG...")
                 state.processing_message = "Rendering jig SVG..."
                 # For the jig cut file we only need the outer jig frame and slot rectangles
+                if state.is_cancelled:
+                    logger.debug(f"Processing cancelled")
+                    return
                 self._render_jig_to_svg(p_jig, slots_only, jx, jy)
                 # Render Single Pattern (first slot with its objects from front side)
                 try:
@@ -2361,6 +2928,9 @@ class NStickerCanvasScreen(Screen):
                         slots_desc = list(first_section.get("slots", []))
                     if slots_desc:
                         state.processing_message = "Rendering single pattern SVG..."
+                        if state.is_cancelled:
+                            logger.debug(f"Processing cancelled")
+                            return
                         self._render_single_pattern_svg(p_pattern, slots_desc[0])
                 except Exception as e:
                     state.is_failed = True
@@ -2369,13 +2939,22 @@ class NStickerCanvasScreen(Screen):
 
                 logger.debug(f"Rendering front PDF...")
                 state.processing_message = "Rendering front PDF..."
+                if state.is_cancelled:
+                    logger.debug(f"Processing cancelled")
+                    return
                 self._render_scene_to_pdf(p_front, front_items, jx, jy, dpi=1200)
                 logger.debug(f"Rendering back PDF...")
                 state.processing_message = "Rendering back PDF..."
+                if state.is_cancelled:
+                    logger.debug(f"Processing cancelled")
+                    return
                 self._render_scene_to_pdf(p_back, back_items, jx, jy, dpi=1200)
                 # Write JSON
                 try:
                     logger.debug(f"Writing JSON file...")
+                    if state.is_cancelled:
+                        logger.debug(f"Processing cancelled")
+                        return
                     state.processing_message = "Writing JSON file..."
                     with open(json_path, "w", encoding="utf-8") as _f:
                         json.dump(combined, _f, ensure_ascii=False, indent=2)
@@ -2388,11 +2967,15 @@ class NStickerCanvasScreen(Screen):
 
                 state.processing_message = ""
                 # Add new product to list if not already present
+                if state.is_cancelled:
+                    logger.debug(f"Processing cancelled")
+                    return
                 for p in ALL_PRODUCTS:
                     if p == state.sku_name:
                         break
                 else:
                     ALL_PRODUCTS.append(state.sku_name)
+
 
                 if state.prev_sku_name and state.prev_sku_name != state.sku_name:
                     logger.debug(f"Removing previous product: %s", state.prev_sku_name)
@@ -2410,6 +2993,7 @@ class NStickerCanvasScreen(Screen):
             finally:
                 state.is_processing = False
 
+        state.is_cancelled = False
         threading.Thread(target=_worker, daemon=True).start()
 
         # Navigate immediately; results screen will poll state and update UI
@@ -2451,7 +3035,17 @@ class NStickerCanvasScreen(Screen):
         finally:
             self.selection.select(None)
 
-    def _create_rect_at_mm(self, label: str, w_mm: float, h_mm: float, x_mm: float, y_mm: float, outline: str = "#d0d0d0", text_fill: str = "white", angle: float = 0.0):
+    def _create_rect_at_mm(
+        self, 
+        label: str, 
+        w_mm: float,
+        h_mm: float,
+        x_mm: float,
+        y_mm: float,
+        outline: str = "#d0d0d0",
+        text_fill: str = "white",
+        angle: float = 0.0
+    ):
         x0, y0, x1, y1 = self._jig_inner_rect_px()
         ox = self._item_outline_half_px()
         oy = self._item_outline_half_px()
@@ -3051,6 +3645,15 @@ class NStickerCanvasScreen(Screen):
                                 self._refresh_major_visibility()
                         except Exception:
                             pass
+                        # Ensure Remove button reflects the actual number of majors after restore
+                        try:
+                            if hasattr(self, "_ms_btn_remove"):
+                                if len(self._major_sizes) <= 1:
+                                    self._ms_btn_remove.configure(state="disabled")
+                                else:
+                                    self._ms_btn_remove.configure(state="normal")
+                        except Exception:
+                            raise
                     except Exception:
                         # Non-fatal UI sync issue
                         pass

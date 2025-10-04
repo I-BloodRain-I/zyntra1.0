@@ -47,6 +47,30 @@ class MajorManager:
                 mw = float(vals.get("w", 0.0)); mh = float(vals.get("h", 0.0))
             except Exception:
                 continue
+            # Clamp major width/height to jig inner size minus current x,y offsets (in mm)
+            try:
+                jig_w_mm = (jx1 - jx0) / (MM_TO_PX * max(self.s._zoom, 1e-6))
+                jig_h_mm = (jy1 - jy0) / (MM_TO_PX * max(self.s._zoom, 1e-6))
+            except Exception:
+                jig_w_mm = max(0.0, (jx1 - jx0) / max(self.s._zoom, 1e-6))
+                jig_h_mm = max(0.0, (jy1 - jy0) / max(self.s._zoom, 1e-6))
+            # Respect current x,y: max width = jig_width - x; max height = jig_height - y
+            try:
+                w_max_mm = max(0.0, float(jig_w_mm) - max(0.0, float(mx)))
+            except Exception:
+                w_max_mm = max(0.0, float(jig_w_mm))
+            try:
+                h_max_mm = max(0.0, float(jig_h_mm) - max(0.0, float(my)))
+            except Exception:
+                h_max_mm = max(0.0, float(jig_h_mm))
+            mw = float(max(0.0, min(mw, w_max_mm)))
+            mh = float(max(0.0, min(mh, h_max_mm)))
+            # Persist clamped dimensions back to preset for consistency
+            try:
+                vals["w"] = str(mw)
+                vals["h"] = str(mh)
+            except Exception:
+                raise
             wpx = max(0.0, mw) * MM_TO_PX * self.s._zoom
             hpx = max(0.0, mh) * MM_TO_PX * self.s._zoom
             try:
