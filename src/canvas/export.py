@@ -4,8 +4,11 @@ import os
 import logging
 from typing import List
 
-from src.core import MM_TO_PX
 import math
+import arabic_reshaper
+from bidi.algorithm import get_display
+
+from src.core import MM_TO_PX
 from src.core.state import FONTS_PATH, PRODUCTS_PATH
 from src.utils import svg_to_png
 
@@ -120,6 +123,8 @@ class PdfExporter:
             fill: tuple[int, int, int, int],
             angle_deg: float,
         ) -> None:
+            reshaped_text = arabic_reshaper.reshape(text)
+            text = get_display(reshaped_text)
             # Measure text bbox to create tight canvas
             bb = draw.textbbox((0, 0), text, font=font)
             tw = max(1, bb[2] - bb[0])
@@ -139,6 +144,57 @@ class PdfExporter:
                 img.alpha_composite(temp_img, (left, top))
             except Exception:
                 img.paste(temp_img, (left, top), temp_img.split()[-1])
+
+        def _measure_rotated_text_size_px(text: str, font, angle_deg: float) -> tuple[int, int]:
+            """Measure rendered (rotated) text raster size in pixels.
+
+            Uses same shaping and drawing logic as _draw_rotated_text_center.
+            """
+            reshaped_text = arabic_reshaper.reshape(text)
+            text_disp = get_display(reshaped_text)
+            bb = draw.textbbox((0, 0), text_disp, font=font)
+            tw = max(1, bb[2] - bb[0])
+            th = max(1, bb[3] - bb[1])
+            tmp = _PIL_Image.new("RGBA", (int(tw), int(th)), (0, 0, 0, 0))
+            td = _PIL_Draw.Draw(tmp, "RGBA")
+            td.text((-bb[0], -bb[1]), text_disp, font=font, fill=(0, 0, 0, 255))
+            if abs(float(angle_deg)) > 1e-6:
+                try:
+                    tmp = tmp.rotate(float(angle_deg), expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0, 0, 0, 0))
+                except Exception:
+                    tmp = tmp.rotate(float(angle_deg), expand=True)
+            return int(tmp.width), int(tmp.height)
+
+        def _fit_font_to_block(text: str, family: str, initial_size_px: int, max_w_px: int, max_h_px: int, angle_deg: float):
+            """Return a truetype font scaled down so rotated text fits within max_w_px x max_h_px."""
+            size_px = max(1, int(initial_size_px))
+            font = _truetype_for_family(family, size_px)
+            rw, rh = _measure_rotated_text_size_px(text, font, angle_deg)
+            # Fast path already fits
+            if rw <= max_w_px and rh <= max_h_px:
+                return font, size_px
+            # Compute first estimate by proportional scaling
+            # Guard against zero to avoid division by zero
+            scale_w = max_w_px / float(max(1, rw))
+            scale_h = max_h_px / float(max(1, rh))
+            scale = min(scale_w, scale_h, 1.0)
+            new_size = max(1, int(math.floor(size_px * scale)))
+            if new_size == size_px and scale < 1.0:
+                new_size = max(1, size_px - 1)
+            # Refine with a small loop due to raster rounding
+            attempts = 0
+            while attempts < 10:
+                attempts += 1
+                size_px = new_size
+                font = _truetype_for_family(family, size_px)
+                rw, rh = _measure_rotated_text_size_px(text, font, angle_deg)
+                if rw <= max_w_px and rh <= max_h_px:
+                    return font, size_px
+                # reduce size and retry
+                new_size = max(1, size_px - 1)
+                if new_size == size_px:
+                    break
+            return font, size_px
 
         # Empirical scale so exported text matches on-canvas perceived size
         # TEXT_PT_TO_PX_SCALE = 1.33
@@ -215,10 +271,9 @@ class PdfExporter:
                             size_pt = 10
                             raise
                         col = _parse_hex_rgba(it.get("label_fill", "#ffffff"), default=(255, 255, 255, 255))
-                        # Convert pt -> px at target DPI and honor exactly (no shrink)
+                        # Convert pt -> px at target DPI
                         # size_px = max(1, int(round(size_pt * float(dpi) / 72.0 * TEXT_PT_TO_PX_SCALE)))
                         size_px = max(1, int(round(size_pt * float(dpi) / 25.4 * TEXT_PT_TO_PX_SCALE)))
-                        fnt = _truetype_for_family(fam, size_px)
                         try:
                             ang = float(it.get("angle", 0.0) or 0.0)
                         except Exception:
@@ -236,9 +291,18 @@ class PdfExporter:
                         except Exception:
                             bw_mm, bh_mm = float(w_mm_orig), float(h_mm_orig)
                             raise
-                        # Center in pixels from stored top-left of rotated bounds
-                        cx = jx0 + mm_to_px(float(it.get("x_mm", 0.0) or 0.0) + (bw_mm / 2.0))
-                        cy = jy0 + mm_to_px(float(it.get("y_mm", 0.0) or 0.0) + (bh_mm / 2.0))
+                        # Fit font to rotated bounds in pixel space
+                        bw_px = max(1, int(round(float(bw_mm) * px_per_mm)))
+                        bh_px = max(1, int(round(float(bh_mm) * px_per_mm)))
+                        fnt, _ = _fit_font_to_block(label, fam, size_px, bw_px, bh_px, ang)
+                        # Center from stored top-left of rotated bounds to match on-canvas position
+                        try:
+                            x_mm = float(it.get("x_mm", 0.0) or 0.0)
+                            y_mm = float(it.get("y_mm", 0.0) or 0.0)
+                        except Exception:
+                            x_mm, y_mm = 0.0, 0.0
+                        cx = jx0 + mm_to_px(x_mm + bw_mm / 2.0)
+                        cy = jy0 + mm_to_px(y_mm + bh_mm / 2.0)
                         _draw_rotated_text_center(label, int(cx), int(cy), fnt, col, ang)
 
                 elif typ == "image":
@@ -281,34 +345,25 @@ class PdfExporter:
                                     raise
 
                         im_resized = im.resize((int(w_px), int(h_px)), _PIL_Image.LANCZOS)
-                        # Apply mask selection if provided (treat near-transparent as transparent)
+                        # Apply window-based mask composition (same as canvas & orders)
                         try:
                             mpath = str(it.get("mask_path", "") or "")
-                            if mpath and os.path.exists(mpath):
-                                mimg = _PIL_Image.open(mpath).convert("RGBA")
-                                mimg = mimg.resize((int(w_px), int(h_px)), _PIL_Image.LANCZOS)
-                                mask_alpha = mimg.split()[-1]
-                                thr = 12
-                                # Keep transparent areas of mask
-                                keep = mask_alpha.point(lambda a: 255 if int(a) <= thr else 0, "L")
+                            if mpath:
+                                mabs = mpath
                                 try:
-                                    from PIL import ImageChops as _ImageChops, ImageFilter as _ImageFilter  # type: ignore
+                                    if not os.path.isabs(mpath):
+                                        cand = PRODUCTS_PATH / mpath
+                                        if os.path.exists(cand):
+                                            mabs = str(cand)
                                 except Exception:
-                                    _ImageChops = None  # type: ignore
-                                    _ImageFilter = None  # type: ignore
-                                try:
-                                    if _ImageFilter is not None:
-                                        keep = keep.filter(_ImageFilter.MaxFilter(3))
-                                except Exception:
-                                    raise
-                                if _ImageChops is not None:
-                                    orig_a = im_resized.split()[-1]
-                                    new_a = _ImageChops.multiply(orig_a, keep)
-                                    im_resized.putalpha(new_a)
-                                else:
-                                    im_resized.putalpha(keep)
+                                    pass
+                                if os.path.exists(mabs) and hasattr(self.s, "images"):
+                                    try:
+                                        im_resized = self.s.images._apply_mask_window_compose(im_resized, mabs, int(w_px), int(h_px))
+                                    except Exception:
+                                        logger.exception("Failed applying window-based mask for PDF render")
                         except Exception:
-                            logger.exception("Failed to apply mask selection for PDF render")
+                            logger.exception("Failed to handle mask for PDF render")
                         if abs(ang) > 1e-6:
                             im_resized = im_resized.rotate(-ang, expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0, 0, 0, 0))
 
@@ -333,7 +388,7 @@ class PdfExporter:
 
                     has_block_size = ("w_mm" in it) and ("h_mm" in it)
                     if has_block_size:
-                        # Text block serialized in slot: use label_* fields and block center
+                        # Text block serialized in slot: use label_* fields
                         txt = str(it.get("label", "")).strip()
                         if not txt:
                             continue
@@ -345,7 +400,6 @@ class PdfExporter:
                             raise
                         col = _parse_hex_rgba(it.get("label_fill", "#17a24b"), default=(23, 162, 75, 255))
                         size_px = max(1, int(round(size_pt * float(dpi) / 25.4 * TEXT_PT_TO_PX_SCALE)))
-                        fnt = _truetype_for_family(fam, size_px)
 
                         try:
                             w_mm = float(it.get("w_mm", 0.0))
@@ -355,8 +409,18 @@ class PdfExporter:
                         except Exception:
                             w_mm, h_mm, x_mm, y_mm = 0.0, 0.0, 0.0, 0.0
                             raise
-                        cx = jx0 + mm_to_px(x_mm + w_mm / 2.0)
-                        cy = jy0 + mm_to_px(y_mm + h_mm / 2.0)
+                        # Compute rotated block bounds and fit text to it
+                        try:
+                            bw_mm, bh_mm = self.s._rotated_bounds_mm(float(w_mm), float(h_mm), float(ang))
+                        except Exception:
+                            bw_mm, bh_mm = float(w_mm), float(h_mm)
+                            raise
+                        bw_px = max(1, int(round(float(bw_mm) * px_per_mm)))
+                        bh_px = max(1, int(round(float(bh_mm) * px_per_mm)))
+                        fnt, fitted_px = _fit_font_to_block(txt, fam, size_px, bw_px, bh_px, ang)
+                        # Center using rotated bounds (matches on-canvas block placement semantics)
+                        cx = jx0 + mm_to_px(x_mm + bw_mm / 2.0)
+                        cy = jy0 + mm_to_px(y_mm + bh_mm / 2.0)
                         _draw_rotated_text_center(txt, int(cx), int(cy), fnt, col, ang)
                     else:
                         # Plain free text object, centered at (x_mm, y_mm)

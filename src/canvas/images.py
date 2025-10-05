@@ -68,35 +68,13 @@ class ImageManager:
                     pil = pil.convert("RGBA")
                 except Exception as e:
                     logger.exception(f"Failed to convert SVG image to RGBA: {e}")
-                # Apply mask selection if provided (treat near-transparent as fully transparent)
+                # Apply mask using window-based composition (order_range._apply_mask logic)
                 try:
                     mpath = str(meta.get("mask_path", "") or "")
                     if mpath and os.path.exists(mpath):
-                        mimg = Image.open(mpath).convert("RGBA")
-                        mimg = mimg.resize((int(w_px), int(h_px)), Image.LANCZOS)
-                        mask_alpha = mimg.split()[-1]
-                        # Keep-map for TRANSPARENT areas: 255 where alpha <= threshold
-                        thr = 12
-                        keep = mask_alpha.point(lambda a: 255 if int(a) <= thr else 0, "L")
-                        try:
-                            from PIL import ImageChops as _ImageChops, ImageFilter as _ImageFilter  # type: ignore
-                        except Exception:
-                            _ImageChops = None  # type: ignore
-                            _ImageFilter = None  # type: ignore
-                        # Slightly dilate keep region to cover anti-aliased edges
-                        try:
-                            if _ImageFilter is not None:
-                                keep = keep.filter(_ImageFilter.MaxFilter(3))
-                        except Exception:
-                            raise
-                        if _ImageChops is not None:
-                            orig_a = pil.split()[-1]
-                            new_a = _ImageChops.multiply(orig_a, keep)
-                            pil.putalpha(new_a)
-                        else:
-                            pil.putalpha(keep)
+                        pil = self._apply_mask_window_compose(pil, mpath, int(w_px), int(h_px))
                 except Exception:
-                    logger.exception("Failed to apply mask selection to SVG rasterization")
+                    logger.exception("Failed to apply window-based mask to SVG rasterization")
                 try:
                     angle = float(meta.get("angle", 0.0) or 0.0)
                 except Exception:
@@ -121,34 +99,13 @@ class ImageManager:
                 except Exception as e:
                     logger.exception(f"Failed to convert raster image to RGBA: {e}")
                 resized = pil.resize((int(w_px), int(h_px)), Image.LANCZOS)
-                # Apply mask selection if provided (treat near-transparent as fully transparent)
+                # Apply mask using window-based composition (order_range._apply_mask logic)
                 try:
                     mpath = str(meta.get("mask_path", "") or "")
                     if mpath and os.path.exists(mpath):
-                        mimg = Image.open(mpath).convert("RGBA")
-                        mimg = mimg.resize((int(w_px), int(h_px)), Image.LANCZOS)
-                        mask_alpha = mimg.split()[-1]
-                        thr = 12
-                        # Keep transparent areas
-                        keep = mask_alpha.point(lambda a: 255 if int(a) <= thr else 0, "L")
-                        try:
-                            from PIL import ImageChops as _ImageChops, ImageFilter as _ImageFilter  # type: ignore
-                        except Exception:
-                            _ImageChops = None  # type: ignore
-                            _ImageFilter = None  # type: ignore
-                        try:
-                            if _ImageFilter is not None:
-                                keep = keep.filter(_ImageFilter.MaxFilter(3))
-                        except Exception:
-                            raise
-                        if _ImageChops is not None:
-                            orig_a = resized.split()[-1]
-                            new_a = _ImageChops.multiply(orig_a, keep)
-                            resized.putalpha(new_a)
-                        else:
-                            resized.putalpha(keep)
+                        resized = self._apply_mask_window_compose(resized, mpath, int(w_px), int(h_px))
                 except Exception as e:
-                    logger.exception(f"Failed to apply mask selection: {e}")
+                    logger.exception(f"Failed to apply window-based mask: {e}")
                 # Apply rotation if any (clockwise degrees)
                 angle = 0.0
                 try:
@@ -294,4 +251,100 @@ class ImageManager:
             except Exception:
                 raise
 
+
+
+    def _apply_mask_window_compose(self, content_rgba, mask_path: str, target_w: int, target_h: int):
+        """Apply mask like order_range._apply_mask: use largest transparent window in mask
+        to place cover-fitted content. Returns RGBA image of size (target_w, target_h).
+        """
+        try:
+            from PIL import Image
+            import numpy as np  # type: ignore
+        except Exception:
+            return content_rgba
+
+        try:
+            mask_img = Image.open(mask_path).convert("RGBA")
+        except Exception:
+            return content_rgba
+
+        # Resize mask to target using nearest to preserve edges
+        if mask_img.size != (int(target_w), int(target_h)):
+            try:
+                mask_img = mask_img.resize((int(target_w), int(target_h)), Image.NEAREST)
+            except Exception:
+                mask_img = mask_img.resize((int(target_w), int(target_h)))
+
+        # Ensure content is RGBA and sized to target canvas for bbox/alpha ops
+        try:
+            content_rgba = content_rgba.convert("RGBA")
+        except Exception:
+            pass
+
+        alpha = np.array(mask_img.split()[-1], dtype=np.uint8)
+        inv_alpha = (255 - alpha).astype(np.uint8)
+        window = inv_alpha > 0
+        if not window.any():
+            return content_rgba
+
+        # Keep only largest 4-connected component
+        h, w = window.shape
+        visited = np.zeros((h, w), dtype=bool)
+        best_coords = None
+        best_len = 0
+        for i in range(h):
+            for j in range(w):
+                if window[i, j] and not visited[i, j]:
+                    stack = [(i, j)]
+                    visited[i, j] = True
+                    coords = []
+                    while stack:
+                        y, x = stack.pop()
+                        coords.append((y, x))
+                        if y > 0 and window[y - 1, x] and not visited[y - 1, x]:
+                            visited[y - 1, x] = True; stack.append((y - 1, x))
+                        if y + 1 < h and window[y + 1, x] and not visited[y + 1, x]:
+                            visited[y + 1, x] = True; stack.append((y + 1, x))
+                        if x > 0 and window[y, x - 1] and not visited[y, x - 1]:
+                            visited[y, x - 1] = True; stack.append((y, x - 1))
+                        if x + 1 < w and window[y, x + 1] and not visited[y, x + 1]:
+                            visited[y, x + 1] = True; stack.append((y, x + 1))
+                    if len(coords) > best_len:
+                        best_len = len(coords)
+                        best_coords = coords
+        if not best_coords:
+            return content_rgba
+
+        ys, xs = zip(*best_coords)
+        top, left = int(min(ys)), int(min(xs))
+        bottom, right = int(max(ys)) + 1, int(max(xs)) + 1
+        bw, bh = max(1, right - left), max(1, bottom - top)
+
+        # Compute active bbox of content alpha and cover-fit into (bw, bh)
+        try:
+            a = np.array(content_rgba.split()[-1], dtype=np.uint8)
+            ys2, xs2 = np.where(a > 1)
+            if ys2.size == 0:
+                fitted = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
+            else:
+                c_top, c_left = int(ys2.min()), int(xs2.min())
+                c_bottom, c_right = int(ys2.max()) + 1, int(xs2.max()) + 1
+                core = content_rgba.crop((c_left, c_top, c_right, c_bottom))
+                cw, ch = core.size
+                s = max(bw / max(1, cw), bh / max(1, ch))
+                nw, nh = max(1, int(round(cw * s))), max(1, int(round(ch * s)))
+                scaled = core.resize((nw, nh), Image.LANCZOS)
+                x0 = max(0, (nw - bw) // 2)
+                y0 = max(0, (nh - bh) // 2)
+                fitted = scaled.crop((x0, y0, x0 + bw, y0 + bh))
+        except Exception:
+            fitted = content_rgba.resize((bw, bh), Image.LANCZOS)
+
+        matte = (window[top:bottom, left:right].astype(np.uint8) * 255)
+        out = Image.new("RGBA", (int(target_w), int(target_h)), (0, 0, 0, 0))
+        try:
+            out.paste(fitted, (left, top), Image.fromarray(matte, mode="L"))
+        except Exception:
+            out.paste(fitted, (left, top))
+        return out
 

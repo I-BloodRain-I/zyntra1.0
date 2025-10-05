@@ -18,10 +18,10 @@ IMAGES_PATH   = INTERNAL_PATH / "images"
 FONTS_PATH    = INTERNAL_PATH / "fonts"
 PRODUCTS_PATH = INTERNAL_PATH / "products"
 PRODUCTS_PATH.mkdir(exist_ok=True)
+LOGS_PATH     = INTERNAL_PATH / "logs"
+LOGS_PATH.mkdir(exist_ok=True)
 OUTPUT_PATH   = Path.cwd() / "output"
 OUTPUT_PATH.mkdir(exist_ok=True)
-LOGS_PATH     = Path.cwd() / "logs"
-LOGS_PATH.mkdir(exist_ok=True)
 
 ALL_PRODUCTS = [f.stem for f in INTERNAL_PATH.glob("products/*.json") if f.is_file()]
 

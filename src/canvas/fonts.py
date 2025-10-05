@@ -378,7 +378,7 @@ class FontsManager:
                     self._save_fonts_map(self._fonts_map)
                     self._font_families = self._list_font_families(self._fonts_map)
                     self.s._family_combo.configure(values=self._font_families)
-                    self.s.text_family.set(display)
+                    # self.s.text_family.set(display)
                 except Exception:
                     logger.exception("Failed to update fonts mapping after import")
                 finally:

@@ -1,6 +1,8 @@
 import os
 import shutil
 import logging
+import threading
+import time
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import ttk, messagebox, filedialog
@@ -53,7 +55,7 @@ class NStickerResultsDownloadScreen(Screen):
 
         # Three file rows with pill-style Download buttons
         self._file_row(content, "Cut Jig", lambda: self._download_pdf("jig")).pack(pady=(10, 8))
-        self._file_row(content, "Single Pattern", lambda: self._download_pdf("pattern")).pack(pady=(8, 8))
+        # self._file_row(content, "Single Pattern", lambda: self._download_pdf("pattern")).pack(pady=(8, 8))
         self._file_row(content, "Test File Frontside", lambda: self._download_pdf("front")).pack(pady=(8, 8))
         self._file_row(content, "Test File Backside", lambda: self._download_pdf("back")).pack(pady=(8, 8))
 
@@ -85,7 +87,7 @@ class NStickerResultsDownloadScreen(Screen):
                  font=("Myriad Pro", 18)).pack(side="left", padx=(8, 0))
 
         # Bottom-right "Back to home" dark button (no Go Back)
-        next_text = "Cancel"
+        next_text = "Back to home"
         next_font_obj = tkfont.Font(font=("Myriad Pro", 22))
         next_width_px = int(next_font_obj.measure(next_text) + scale_px(16))
         next_height_px = int(next_font_obj.metrics("linespace") + scale_px(20))
@@ -118,10 +120,7 @@ class NStickerResultsDownloadScreen(Screen):
             self._apply_processing_state()
         except Exception:
             logger.exception("Failed to apply initial processing state")
-        try:
-            self.after(300, self._poll_processing)
-        except Exception:
-            logger.exception("Failed to schedule processing poll")
+        threading.Thread(target=self._poll_processing).start()
 
     # ---------- helpers ----------
     def _pill_button(self, parent, text: str, command):
@@ -291,23 +290,24 @@ class NStickerResultsDownloadScreen(Screen):
         color = "#bbbbbb" if processing else (
             "#e50000" if state.is_failed else "#6fe28f"
         )
+        logger.debug(f"Processing state: Processing=%s, Failed: %s, Text: %s, Color: %s", processing, state.is_failed, text, color)
         try:
             self._status_value.configure(text=text, fg=color)
         except Exception:
-            pass
+            logger.exception("Failed to update processing state")
         self._set_buttons_enabled(not processing and not state.is_failed)
 
     def _poll_processing(self) -> None:
-        try:
-            self._apply_processing_state()
-        except Exception:
-            logger.exception("Failed to apply processing state in poll")
-        # Keep polling while processing
-        if bool(getattr(state, "is_processing", False)):
+        while True:
             try:
-                self.after(300, self._poll_processing)
+                self._apply_processing_state()
             except Exception:
-                logger.exception("Failed to reschedule processing poll")
+                logger.exception("Failed to apply processing state in poll")
+
+            if not state.is_processing:
+                self._apply_processing_state()
+                break
+            time.sleep(1.0)
             
     def _back_home(self):
         state.sku = ""

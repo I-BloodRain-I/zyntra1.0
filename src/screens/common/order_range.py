@@ -13,7 +13,7 @@ from copy import deepcopy
 from pprint import pformat
 import tkinter as tk
 import tkinter.font as tkfont
-from tkinter import ttk, messagebox
+from tkinter import TclError, ttk, messagebox
 from typing import Any, Dict, List, Literal
 from PIL import ImageDraw, ImageChops, ImageFilter, ImageOps
 from PIL import Image as _PILImage
@@ -187,13 +187,18 @@ class OrderRangeScreen(Screen):
             )
         )
         self.start_btn.place(relx=0.995, rely=0.99, anchor="se")
+        # Remember original cursor to restore after processing
+        try:
+            self._start_btn_default_cursor = self.start_btn.cget("cursor")
+        except Exception:
+            self._start_btn_default_cursor = ""
 
         # Bottom-left Go Back button (styled like font_info)
         back_btn = create_button(
             ButtonInfo(
                 parent=self,
                 text_info=TextInfo(
-                    text="Go Back",
+                    text="Cancel",
                     color=COLOR_TEXT,
                     font_size=22,
                 ),
@@ -202,14 +207,19 @@ class OrderRangeScreen(Screen):
                 active_color=COLOR_BG_DARK,
                 padding_x=20,
                 padding_y=12,
-                command=self.app.go_back,
+                command=self._on_cancel,
             )
         )
         back_btn.place(relx=0.005, rely=0.99, anchor="sw")
 
         # Hotkeys: Enter → Start, Escape → Back (accept optional event)
         self.app.bind("<Return>", lambda _e=None: self._start())
-        self.app.bind("<Escape>", lambda _e=None: self.app.go_back())
+        self.app.bind("<Escape>", lambda _e=None: self._on_cancel())
+
+        # Processing state flag to prevent multiple concurrent starts
+        self._is_processing = False
+        # Cancellation flag
+        self._cancel_requested = False
 
     # ------------------------------ Logging ------------------------------
 
@@ -241,9 +251,13 @@ class OrderRangeScreen(Screen):
             else:
                 with open(LOGS_PATH / (current_day + ".log"), "a", encoding="utf-8") as f:
                     f.write(f"[{current_time}] {message}\n")
-
+        except TclError:
+            pass
         finally:
-            self.log_text.configure(state="disabled")
+            try:
+                self.log_text.configure(state="disabled")
+            except Exception:
+                pass
 
     # ------------------------------- Start --------------------------------
     def _get_image_customization_objs(self, root_obj: Union[Dict[str, Any], List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
@@ -328,6 +342,8 @@ class OrderRangeScreen(Screen):
         retries = 3
         image_name = image_url.split("/")[-1]
         while retries > 0:
+            if getattr(self, "_cancel_requested", False):
+                return {"status": "error", "message": "Cancelled"}
             try:
                 self.log(f"Downloading image {image_name} from Amazon")
                 response = requests.get(image_url)
@@ -464,9 +480,7 @@ class OrderRangeScreen(Screen):
         self, 
         im: Image.Image, 
         template_path: Path, 
-        mask_path: Path,
-        alpha_threshold: int = 10,
-        fit_mode: Literal["cover", "contain", "fill"] = "fill"
+        mask_path: Path
     ) -> Dict[str, Any]:
 
         def largest_component_bool(bool_mask):
@@ -632,6 +646,8 @@ class OrderRangeScreen(Screen):
         loaded_image_count = 0
         for side in customization_info:
             for object in customization_info[side]:
+                if getattr(self, "_cancel_requested", False):
+                    return {"status": "error", "message": "Cancelled"}
                 
                 if object["type"] == "image":
                     image_info = self._load_image(object["image_path"])
@@ -732,7 +748,6 @@ class OrderRangeScreen(Screen):
                         result = self._apply_mask(order_object["loaded_image"], template_path, mask_path)
                         if result["status"] == "error":
                             return {"status": "error", "message": f"Failed to apply mask for order: {result['message']}"}
-                        result["image"].show()
                         object["loaded_image"] = result["image"]
                     else:
                         object["loaded_image"] = order_object["loaded_image"]
@@ -773,64 +788,156 @@ class OrderRangeScreen(Screen):
         return {"status": "success", "front": selected_slot_front, "back": selected_slot_back}
 
     def _process_orders(self):
-        
-        def _is_pattern_filled(pattern_info: Dict[str, Any]) -> bool:
-            for side in ["Frontside", "Backside"]:
-                for major in pattern_info[side]:
-                    for slot in major["slots"]:
-                        if slot["objects"]:
-                            return False
-            return True
-
-        self.log(f"Trying to open the {state.saved_product} pattern file...")
         try:
-            with open(PRODUCTS_PATH / f"{state.saved_product}.json", "r", encoding="utf-8") as f:
-                pattern_info = json.load(f)
-        except Exception as e:
-            self.log(f"Failed to open the {state.saved_product} pattern file: {e}", ERROR_COLOR)
-            self.start_btn.configure(state="normal")
-            self.progress["value"] = 100
-            return
-        self.log(f"{state.saved_product} pattern file opened successfully", SUCCESS_COLOR)
+            def _is_pattern_filled(pattern_info: Dict[str, Any]) -> bool:
+                for side in ["Frontside", "Backside"]:
+                    for major in pattern_info[side]:
+                        for slot in major["slots"]:
+                            if slot["objects"]:
+                                return False
+                return True
 
-        self.log(f"Starting processing for range [{state.order_from}..{state.order_to}]")
-        # order_paths = [f"data/15-09-2025 LIGHTER BULK/JSON/161804_Image1.json" for _ in range(6)]
-        order_paths = [f"data/15-09-2025 LIGHTER BULK/JSON/161823_Image1.json" for _ in range(1)]
-        total_orders = len(order_paths)
-        progress_step = 100 / len(order_paths)
+            if getattr(self, "_cancel_requested", False):
+                self.log("Processing cancelled by user.", WARNING_COLOR)
+                return
 
-        failed_orders = []
-        pattern_data = deepcopy(pattern_info)
-        pdf_data: List[Tuple[Dict[str, Any], Dict[str, Any]]] = []
-        pdf_start_oder_i = 1
-        for i, order_path in enumerate(order_paths):
-            self.log(f"Processing of Order {i+1}/{total_orders} has been initiated")
-            order_result = self._process_order(order_path, pattern_data, i, total_orders)
-            if order_result["status"] == "error":
-                failed_orders.append(order_path)
-                self.log(f"[{i+1}/{total_orders}] Order processing failed: " + order_result["message"], ERROR_COLOR)
-            else:
-                self.log(f"[{i+1}/{total_orders}] Order processed successfully", SUCCESS_COLOR)
-                pdf_data.append((order_result["front"], order_result["back"]))
+            self.log(f"Trying to open the {state.saved_product} pattern file...")
+            try:
+                with open(PRODUCTS_PATH / f"{state.saved_product}.json", "r", encoding="utf-8") as f:
+                    pattern_info = json.load(f)
+            except Exception as e:
+                self.log(f"Failed to open the {state.saved_product} pattern file: {e}", ERROR_COLOR)
+                self.start_btn.configure(state="normal")
+                self.progress["value"] = 100
+                return
+            self.log(f"{state.saved_product} pattern file opened successfully", SUCCESS_COLOR)
 
-            if _is_pattern_filled(pattern_data) or (i == total_orders - 1 and pdf_data):
-                self.log(f"[{pdf_start_oder_i}-{i+1}] The pdf data is filled, making pdf...")
-                pattern_data = deepcopy(pattern_info)
-                jig_info = pattern_info["Scene"]["jig"]
-                result = self._make_pdf(pdf_data, (jig_info["width_mm"], jig_info["height_mm"]), pdf_start_oder_i, i+1)
-                if result["status"] == "error":
-                    self.log(f"[{pdf_start_oder_i}-{i+1}] Failed to make pdf: " + result["message"], ERROR_COLOR)
-                    failed_orders.extend(order_paths[pdf_start_oder_i-1:i+1])
+            self.log(f"Starting processing for range [{state.order_from}..{state.order_to}]")
+            # order_paths = [f"data/15-09-2025 LIGHTER BULK/JSON/161804_Image1.json" for _ in range(6)]
+            order_paths = [f"data/15-09-2025 LIGHTER BULK/JSON/161823_Image1.json" for _ in range(5)]
+            total_orders = len(order_paths)
+            progress_step = 100 / len(order_paths)
+
+            failed_orders = []
+            pattern_data = deepcopy(pattern_info)
+            pdf_data: List[Tuple[Dict[str, Any], Dict[str, Any]]] = []
+            pdf_start_oder_i = 1
+            for i, order_path in enumerate(order_paths):
+                if getattr(self, "_cancel_requested", False):
+                    self.log("Processing cancelled by user.", WARNING_COLOR)
+                    logger.debug("Processing cancelled by user.")
+                    break
+                self.log(f"Processing of Order {i+1}/{total_orders} has been initiated")
+                logger.debug(f"Processing of Order {i+1}/{total_orders} has been initiated")
+                order_result = self._process_order(order_path, pattern_data, i, total_orders)
+                if order_result["status"] == "error":
+                    if order_result.get("message") == "Cancelled":
+                        self.log("Processing cancelled by user.", WARNING_COLOR)
+                        break
+                    failed_orders.append(order_path)
+                    self.log(f"[{i+1}/{total_orders}] Order processing failed: " + order_result["message"], ERROR_COLOR)
                 else:
-                    self.log(f"[{pdf_start_oder_i}-{i+1}] PDFs made successfully", SUCCESS_COLOR)
-                pdf_data.clear()
-                pdf_start_oder_i = i + 2
+                    self.log(f"[{i+1}/{total_orders}] Order processed successfully", SUCCESS_COLOR)
+                    pdf_data.append((order_result["front"], order_result["back"]))
 
-            self.progress["value"] += progress_step
+                if getattr(self, "_cancel_requested", False):
+                    self.log("Processing cancelled by user.", WARNING_COLOR)
+                    break
 
-        # make pdf
+                if _is_pattern_filled(pattern_data) or (i == total_orders - 1 and pdf_data):
+                    self.log(f"[{pdf_start_oder_i}-{i+1}] The pdf data is filled, making pdf...")
+                    pattern_data = deepcopy(pattern_info)
+                    jig_info = pattern_info["Scene"]["jig"]
+                    result = self._make_pdf(pdf_data, (jig_info["width_mm"], jig_info["height_mm"]), pdf_start_oder_i, i+1)
+                    if result["status"] == "error":
+                        self.log(f"[{pdf_start_oder_i}-{i+1}] Failed to make pdf: " + result["message"], ERROR_COLOR)
+                        failed_orders.extend(order_paths[pdf_start_oder_i-1:i+1])
+                    else:
+                        self.log(f"[{pdf_start_oder_i}-{i+1}] PDFs made successfully", SUCCESS_COLOR)
+                    pdf_data.clear()
+                    pdf_start_oder_i = i + 2
+
+                self.progress["value"] += progress_step
+
+            # make pdf
+        finally:
+            # Re-enable Start button and reset processing flag when done
+            try:
+                self.start_btn.configure(state="normal")
+                self.progress["value"] = 100
+                # Restore visuals and interactions
+                self._clear_start_button_color_override()
+                self._restore_start_button_interactions()
+                # Restore original cursor exactly as before processing
+                self.start_btn.configure(cursor=getattr(self, "_start_btn_default_cursor", ""))
+            except Exception:
+                pass
+            self._is_processing = False
+            self._cancel_requested = False
+
+    # ------------------------- Helpers: Button UI -------------------------
+    def _set_start_button_color(self, color: str) -> None:
+        try:
+            c = self.start_btn
+            c.update_idletasks()
+            w = int(c.winfo_width())
+            h = int(c.winfo_height())
+            # Remove previous override if any
+            try:
+                c.delete("btn_disabled_overlay")
+            except Exception:
+                pass
+            c.create_rectangle(0, 0, w, h, fill=color, outline="", tags=("btn_disabled_overlay",))
+            # Keep text above
+            try:
+                c.tag_raise("btntxt")
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _clear_start_button_color_override(self) -> None:
+        try:
+            self.start_btn.delete("btn_disabled_overlay")
+            self.start_btn.update_idletasks()
+        except Exception:
+            pass
+
+    def _disable_start_button_interactions(self) -> None:
+        """Intercept common hover/press events to suppress animations during processing."""
+        try:
+            self._start_btn_blocked_events = (
+                "<Enter>", "<Leave>", "<ButtonPress-1>", "<ButtonRelease-1>", "<Motion>"
+            )
+            # Save previous bindings to restore later
+            self._start_btn_saved_bindings = {}
+            for seq in self._start_btn_blocked_events:
+                prev_script = self.start_btn.bind(seq)
+                self._start_btn_saved_bindings[seq] = prev_script
+                # Returning "break" prevents further processing of the event
+                self.start_btn.bind(seq, lambda _e=None: "break")
+        except Exception:
+            pass
+
+    def _restore_start_button_interactions(self) -> None:
+        try:
+            for seq in getattr(self, "_start_btn_blocked_events", ()):  # type: ignore[attr-defined]
+                prev = getattr(self, "_start_btn_saved_bindings", {}).get(seq)
+                if prev:
+                    self.start_btn.bind(seq, prev)
+                else:
+                    self.start_btn.unbind(seq)
+            # Clear saved bindings
+            self._start_btn_saved_bindings = {}
+        except Exception:
+            pass
 
     def _start(self):
+        # Prevent multiple concurrent starts via button or hotkey
+        if getattr(self, "_is_processing", False):
+            return
+        # Clear any previous cancellation
+        self._cancel_requested = False
         from_s = self.from_var.get().strip()
         to_s = self.to_var.get().strip()
 
@@ -855,14 +962,29 @@ class OrderRangeScreen(Screen):
         state.order_from = from_s
         state.order_to = to_s
 
-        # Подготовка прогресса и запуск анимации
         self.progress["value"] = 0
+        # Visually disable start button and block hover/press animations
+        try:
+            self._set_start_button_color("#555555")
+            self._disable_start_button_interactions()
+            self.start_btn.configure(cursor="arrow")
+        except Exception:
+            pass
         self.start_btn.configure(state="disabled")
+        self._is_processing = True
 
         threading.Thread(target=self._process_orders).start()
-        # result = self._process_order("data/15-09-2025 LIGHTER BULK/JSON/161804_Image1.json")
-        # if result["status"] == "error":
-        #     self.log(result["message"], ERROR_COLOR)
-        # else:
-        #     self.log("Order processed successfully", SUCCESS_COLOR)
-
+    def _on_cancel(self):
+        """If processing, request cancellation; otherwise go back."""
+        if getattr(self, "_is_processing", False):
+            if not getattr(self, "_cancel_requested", False):
+                self._cancel_requested = True
+                try:
+                    self.log("Cancellation requested...", WARNING_COLOR)
+                except Exception:
+                    pass
+        # Not processing: behave as a normal back button
+        try:
+            self.app.go_back()
+        except Exception:
+            pass

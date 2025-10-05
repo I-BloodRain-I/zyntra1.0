@@ -1662,13 +1662,12 @@ class NStickerCanvasScreen(Screen):
 
                 template: list[tuple[int, CanvasObject]] = []  # (cid, meta)
                 for cid, meta in self._items.items():
+                    # Consider only real placeable objects
                     if meta.get("type") not in ("rect", "image", "text"):
                         continue
-                    try:
-                        if active_major and str(meta.get("owner_major", "")) != active_major:
-                            continue
-                    except Exception:
-                        continue
+                    # Duplicate any object whose center lies inside slot 1,
+                    # regardless of its current owner_major (some items might
+                    # have missing or mismatched ownership).
                     if _inside_slot_center_mm(meta):
                         template.append((cid, meta))
 
@@ -1676,10 +1675,21 @@ class NStickerCanvasScreen(Screen):
                     # Duplicate each template object into all other slots of this major
                     jx0, jy0, jx1, jy1 = self._jig_inner_rect_px()
                     oxp = self._item_outline_half_px(); oyp = self._item_outline_half_px()
-                    z_base = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
-                    z_next = int(z_base + 1)
+                    # Preserve relative z-index differences from the template
+                    try:
+                        template_min_z = min(int(m.get("z", 0)) for _cid, m in template)
+                    except Exception:
+                        template_min_z = 0
+                    try:
+                        template_max_z = max(int(m.get("z", 0)) for _cid, m in template)
+                    except Exception:
+                        template_max_z = template_min_z
+                    # Track the current global maximum z to avoid collisions across groups
+                    global_max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
                     for _dx, _dy, dest_sid, dest_meta in slot_entries:
                         if dest_sid != slot1_id:
+                            # Base z for this destination group; clones will keep their relative diffs
+                            base_z = int(global_max_z + 1)
                             dx = float(dest_meta.get("x_mm", 0.0))
                             dy = float(dest_meta.get("y_mm", 0.0))
                             # Clear existing non-slot objects inside this destination slot before cloning
@@ -1695,11 +1705,8 @@ class NStickerCanvasScreen(Screen):
                                 to_delete_ids: list[int] = []
                                 for del_cid, del_meta in list(self._items.items()):
                                     t = del_meta.get("type")
-                                    # Only consider objects, not slots or majors
+                                    # Only consider objects, not slots or majors. Clear regardless of owner.
                                     consider = (t == "rect") or (t == "image") or (t == "text")
-                                    if consider:
-                                        if active_major and str(del_meta.get("owner_major", "")) != active_major:
-                                            consider = False
                                     if consider:
                                         try:
                                             if t == "text":
@@ -1762,6 +1769,11 @@ class NStickerCanvasScreen(Screen):
                                 raise
                             for _cid, om in template:
                                 try:
+                                    try:
+                                        orig_z = int(om.get("z", 0))
+                                    except Exception:
+                                        orig_z = 0
+                                    assigned_z = int(base_z + (orig_z - template_min_z))
                                     rel_x = float(om.get("x_mm", 0.0)) - s1_x
                                     rel_y = float(om.get("y_mm", 0.0)) - s1_y
                                     nx_mm = dx + rel_x
@@ -1816,7 +1828,7 @@ class NStickerCanvasScreen(Screen):
                                         place_top = top + (h_px - bh) / 2.0
                                         img_id = self.canvas.create_image(place_left, place_top, image=photo, anchor="nw")
                                         new_meta.canvas_id = img_id
-                                        new_meta["z"] = z_next; z_next += 1
+                                        new_meta["z"] = assigned_z
                                         self._items[img_id] = new_meta
                                         did_duplicate = True
                                     elif om.get("type") == "text":
@@ -1860,8 +1872,8 @@ class NStickerCanvasScreen(Screen):
                                             except Exception as e:
                                                 logger.exception("Failed to apply text font on clone")
                                                 raise
-                                            # z-order
-                                            self._items[tid]["z"] = z_next; z_next += 1
+                                            # z-order: preserve relative offset
+                                            self._items[tid]["z"] = assigned_z
                                             did_duplicate = True
                                     else:
                                         # Rectangle/text block clone
@@ -1884,7 +1896,7 @@ class NStickerCanvasScreen(Screen):
                                             angle=ang,
                                         )
                                         if rid in self._items:
-                                            self._items[rid]["z"] = z_next; z_next += 1
+                                            self._items[rid]["z"] = assigned_z
                                             self._items[rid]["amazon_label"] = str(om.get("amazon_label", "") or "")
                                             try:
                                                 self._items[rid]["is_options"] = bool(om.get("is_options", False))
@@ -1916,6 +1928,11 @@ class NStickerCanvasScreen(Screen):
                                 except Exception:
                                     logger.exception("Failed while duplicating an object into a slot")
                                     raise
+                            # Update global_max_z after finishing this group, to avoid z collisions for the next group
+                            try:
+                                global_max_z = max(global_max_z, int(base_z + (template_max_z - template_min_z)))
+                            except Exception:
+                                global_max_z = max(global_max_z, base_z)
             except Exception:
                 did_duplicate = False
 
@@ -2601,7 +2618,7 @@ class NStickerCanvasScreen(Screen):
                     except Exception:
                         return p
 
-            def _compose_side(items_for_side: list[dict]) -> dict:
+            def _compose_side(items_for_side: list[dict], sku_name: str, prev_sku_name: str) -> dict:
                 slot_descs: list[dict] = []
                 for it in items_for_side:
                     if str(it.get("type", "")) == "slot":
@@ -2640,9 +2657,11 @@ class NStickerCanvasScreen(Screen):
                     if str(it.get("type", "")) != "image":
                         continue
                     try:
+                        path_parts = [part_ if part_ != prev_sku_name else sku_name for part_ in Path(str(it.get("path", ""))).parts]
+                        mask_path_parts = [part_ if part_ != prev_sku_name else sku_name for part_ in Path(str(it.get("mask_path", ""))).parts]
                         obj = {
                             "type": "image",
-                            "path": _to_rel(str(it.get("path", ""))),
+                            "path": _to_rel(str(Path(*path_parts))),
                             "x_mm": float(it.get("x_mm", 0.0)),
                             "y_mm": float(it.get("y_mm", 0.0)),
                             "w_mm": float(it.get("w_mm", 0.0)),
@@ -2654,7 +2673,7 @@ class NStickerCanvasScreen(Screen):
                             "is_options": bool(it.get("is_options", False)),
                             "is_static": bool(it.get("is_static", False)),
                             # Optional mask path for image
-                            "mask_path": _to_rel(str(it.get("mask_path", ""))),
+                            "mask_path": _to_rel(str(Path(*mask_path_parts))),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process image for slot: {e}")
@@ -2888,8 +2907,8 @@ class NStickerCanvasScreen(Screen):
                         ordered_labels.append(lbl)
                 return [groups_map[lbl] for lbl in ordered_labels]
 
-            front_grouped = _group_side_by_major(_compose_side(front_items))
-            back_grouped = _group_side_by_major(_compose_side(back_items))
+            front_grouped = _group_side_by_major(_compose_side(front_items, state.sku_name, state.prev_sku_name))
+            back_grouped = _group_side_by_major(_compose_side(back_items, state.sku_name, state.prev_sku_name))
 
             combined = {
                 "Sku": state.sku or "",
@@ -2975,7 +2994,7 @@ class NStickerCanvasScreen(Screen):
                         break
                 else:
                     ALL_PRODUCTS.append(state.sku_name)
-
+                    ALL_PRODUCTS.pop(ALL_PRODUCTS.index(state.prev_sku_name))
 
                 if state.prev_sku_name and state.prev_sku_name != state.sku_name:
                     logger.debug(f"Removing previous product: %s", state.prev_sku_name)
