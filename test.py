@@ -1,202 +1,199 @@
-import tkinter as tk
-import tkinter.font as tkfont
-from typing import Tuple
-from src.utils import *
+from __future__ import annotations
+from typing import List, Tuple, Optional
+from io import BytesIO
+import os
+import functools
+import urllib.request
+from PIL import Image, ImageDraw, ImageFont
+import emoji
 
 
-# import tkinter as tk
-# import tkinter.font as tkfont
-# from typing import Tuple
+TWEMOJI_PNG_DIR: Optional[str] = None
+TWEMOJI_CDN = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72"
 
-def create_pill_with_embedded_entry(
-    parent: tk.Widget,
-    *,
-    label: tk.Canvas,
-    text: str = "Variation 1 Designs total:",
-    value: str = "4",
-    font_size: int = 20,
-    # внешняя пилюля
-    pill_bg: str = "#b3b3b3",   # фон внешней пилюли
-    r: int = 22,
-    pad_x: int = 20,
-    pad_y: int = 12,
-    gap: int = 12,
-    shadow: bool = False,
-    shadow_offset: int = 2,
-    shadow_color: str = "#cfcfcf",
-    text_color: str = "black",
-    # правая капсула/entry (используем вашу create_entry)
-    capsule_width: int = 56,
-    capsule_height: int | None = None,  # если None — подгон по высоте пилюли
-    capsule_r: int = 12,
-    capsule_bg: str = "#e5e5e5",        # цвет заполнения капсулы
-    entry_fg: str = "black",
-    entry_justify: str = "center",
-    entry_padding: int = 6,             # прокинем как padding в create_entry
-    pack_: bool = True,
-) -> Tuple[tk.Canvas, tk.Entry]:
-    """
-    Слева — текст, справа — ваша же капсула с Entry, встроенная внутрь пилюли.
-    Требует доступной функции _rounded_rect и ваших create_pill_label/create_entry.
-    """
 
-    # font_obj = tkfont.Font(size=font_size)
-    # text_w = int(font_obj.measure(text))
-    # line_h = int(font_obj.metrics("linespace"))
-    # h = int(line_h + pad_y*2)
-    # w = int(pad_x + text_w + gap + capsule_width + pad_x)
+def _split_text_emoji(s: str) -> List[Tuple[str, str]]:
+    """Split text into ('text', chunk) / ('emoji', chunk) pairs using emoji>=2.0 API."""
+    result, last = [], 0
+    for e in emoji.emoji_list(s):
+        st, en = e["match_start"], e["match_end"]
+        if st > last:
+            result.append(("text", s[last:st]))
+        result.append(("emoji", s[st:en]))
+        last = en
+    if last < len(s):
+        result.append(("text", s[last:]))
+    return result
 
-    # # внешний canvas и пилюля
-    # canvas = tk.Canvas(parent, width=w, height=h, highlightthickness=0, bd=0)
-    # if pack_:
-    #     canvas.pack()
 
-    # if shadow and shadow_offset > 0:
-    #     _rounded_rect(canvas, 0, shadow_offset, w, h, r, fill=shadow_color, outline="")
+def _codepoints(s: str) -> str:
+    """Return lower-hex Unicode codepoints joined by dashes (Twemoji format)."""
+    return "-".join(f"{ord(ch):x}" for ch in s)
 
-    # _rounded_rect(canvas, 0, 0, w, h, r, fill=pill_bg, outline="")
 
-    # # текст слева
-    # canvas.create_text(pad_x, h//2, text=text, fill=text_color, font=font_obj, anchor="w")
-    canvas = label
-    # print(canvas.winfo_width(), canvas.winfo_height())
-    # h = 40
-    # w = 120
-    h = canvas.winfo_height()
-    w = canvas.winfo_width()
-    
-    # размеры правой капсулы (чуть ниже полной высоты — визуально мягче)
-    cap_h = h if capsule_height is None else capsule_height
-    if capsule_height is None:
-        cap_h = h - max(2, pad_y // 2)
-
-    # создаём КАПСУЛУ через вашу create_entry (она вернёт entry и ЕЁ canvas)
-    # ВАЖНО: bg внутреннего canvas == цвет внешней пилюли (pill_bg), чтобы углы
-    # вокруг капсулы «растворялись» в пилюле и не было второго прямоугольника.
-    text_info = TextInfo(text=value, color=entry_fg, font_size=font_size, justify=entry_justify)
-    info = EntryInfo(
-        parent=canvas,
-        radius=capsule_r,
-        width=capsule_width,
-        height=cap_h,
-        text_info=text_info,
-        padding_x=entry_padding,
-        padding_y=entry_padding,
-        border=0,
-        border_color="#C0C0C0",
-        fill=capsule_bg,
-        background_color=pill_bg,
-        foreground_color=entry_fg,
-    )
-    entry, entry_canvas = create_entry(info=info)
-    #     parent=canvas,             # родитель временно не важен — встроим create_window
-    #     r=capsule_r,
-    #     width=capsule_width,
-    #     height=cap_h,
-    #     font_size=font_size,
-    #     text=value,
-    #     bg=pill_bg,                # фон canvas под капсулой = фон pilly
-    #     entry_bg=capsule_bg,       # фон самого поля = фон капсулы
-    #     fg=entry_fg,
-    #     justify=entry_justify,
-    #     border=0,
-    #     border_color="#C0C0C0",
-    #     padding=entry_padding
-    # )
-
-    # не даём ему самовольно pack'нуться (если в вашей версии pack стоит внутри —
-    # добавьте в create_entry флаг, либо сразу после вызова сделайте:)
+def _estimate_x_height(font: ImageFont.FreeTypeFont) -> int:
+    """Estimate x-height of the given font."""
     try:
-        entry_canvas.pack_forget()
+        l, t, r, b = font.getbbox("x")
+        return max(1, b - t)
     except Exception:
-        pass
-
-    # позиционируем правую капсулу в большой пилюле
-    cx1 = w - pad_x
-    cx0 = cx1 - capsule_width
-    cy0 = (h - cap_h) // 2
-    cy1 = cy0 + cap_h
-
-    canvas.create_window((cx0 + cx1)//2, (cy0 + cy1)//2,
-                         window=entry_canvas, width=capsule_width, height=cap_h)
-
-    return canvas, entry
+        return max(1, int(font.size * 0.5))
 
 
-from src.utils import create_pill_label
+def compute_emoji_y_shift(font: ImageFont.FreeTypeFont, scale: float) -> int:
+    """Estimate vertical offset to visually align emoji center with text body."""
+    ascent, _ = font.getmetrics()
+    xh = _estimate_x_height(font)
+    em = int(round(font.size * scale))
+    baseline_y = ascent
+    target_center_y = baseline_y - xh * 0.55
+    emoji_top_y = target_center_y - em / 2.0
+    default_top_y = baseline_y - em
+    return int(round(emoji_top_y - default_top_y))
+
+
+@functools.lru_cache(maxsize=4096)
+def _load_twemoji_png(codepoint: str) -> Image.Image:
+    """Return RGBA Twemoji PNG for the given codepoint, local or CDN-based."""
+    filename = f"{codepoint}.png"
+    if TWEMOJI_PNG_DIR:
+        local_path = os.path.join(TWEMOJI_PNG_DIR, filename)
+        if os.path.isfile(local_path):
+            im = Image.open(local_path)
+            return im.convert("RGBA") if im.mode != "RGBA" else im
+    url = f"{TWEMOJI_CDN}/{filename}"
+    with urllib.request.urlopen(url, timeout=10) as resp:
+        data = resp.read()
+    im = Image.open(BytesIO(data))
+    return im.convert("RGBA") if im.mode != "RGBA" else im
+
+
+def draw_text_with_emojis(
+    img: Image.Image,
+    xy: Tuple[int, int],
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    *,
+    fill=(0, 0, 0, 255),
+    emoji_scale: float = 1.0,
+    emoji_shift_px: Optional[int] = None,
+) -> None:
+    """Draw single-line text with emojis aligned to text baseline."""
+    x, y = xy
+    draw = ImageDraw.Draw(img, "RGBA")
+    if emoji_shift_px is None:
+        emoji_shift_px = compute_emoji_y_shift(font, emoji_scale)
+    for kind, chunk in _split_text_emoji(text):
+        if kind == "text" and chunk:
+            draw.text((x, y), chunk, font=font, fill=fill)
+            x += draw.textlength(chunk, font=font)
+        elif kind == "emoji":
+            cp = _codepoints(chunk)
+            try:
+                im = _load_twemoji_png(cp)
+            except Exception:
+                em = max(1, int(round(font.size * emoji_scale)))
+                im = Image.new("RGBA", (em, em), (0, 0, 0, 0))
+                g = ImageDraw.Draw(im)
+                g.rectangle([0, 0, em - 1, em - 1], outline=(0, 0, 0, 255))
+                g.line([0, 0, em - 1, em - 1], fill=(0, 0, 0, 255))
+                g.line([0, em - 1, em - 1, 0], fill=(0, 0, 0, 255))
+            target = max(1, int(round(font.size * emoji_scale)))
+            if im.height != target:
+                im = im.resize((target, target), Image.LANCZOS)
+            ascent, _ = font.getmetrics()
+            top = y + ascent - target + (emoji_shift_px or 0)
+            img.alpha_composite(im, (int(x), int(top)))
+            x += target
+
+
+def measure_text_with_emojis(
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    *,
+    emoji_scale: float = 1.0,
+    emoji_shift_px: Optional[int] = None,
+    padding: int = 4,
+) -> Tuple[int, int]:
+    """Measure width and height of rendered text with emojis."""
+    if emoji_shift_px is None:
+        emoji_shift_px = compute_emoji_y_shift(font, emoji_scale)
+    rough_w = 2 * padding
+    for kind, chunk in _split_text_emoji(text):
+        if kind == "text" and chunk:
+            rough_w += int(ImageDraw.Draw(Image.new("L", (1, 1))).textlength(chunk, font=font))
+        else:
+            rough_w += int(round(font.size * emoji_scale))
+    ascent, descent = font.getmetrics()
+    rough_h = ascent + descent + 2 * padding
+    tmp = Image.new("RGBA", (max(1, rough_w), max(1, rough_h)), (0, 0, 0, 0))
+    draw_text_with_emojis(tmp, (padding, padding), text, font,
+                          fill=(0, 0, 0, 255),
+                          emoji_scale=emoji_scale,
+                          emoji_shift_px=emoji_shift_px)
+    bbox = tmp.getbbox()
+    if not bbox:
+        return (1, 1)
+    l, t, r, b = bbox
+    return (max(1, r - l), max(1, b - t))
+
+
+def measure_rotated_text_with_emojis(
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    angle_deg: float,
+    *,
+    emoji_scale: float = 1.0,
+    emoji_shift_px: Optional[int] = None,
+    padding: int = 4,
+) -> Tuple[int, int]:
+    """Measure rotated text with emojis by rendering, rotating, and cropping."""
+    if emoji_shift_px is None:
+        emoji_shift_px = compute_emoji_y_shift(font, emoji_scale)
+    w, h = measure_text_with_emojis(text, font,
+                                    emoji_scale=emoji_scale,
+                                    emoji_shift_px=emoji_shift_px,
+                                    padding=padding)
+    tmp = Image.new("RGBA", (w + 2 * padding, h + 2 * padding), (0, 0, 0, 0))
+    draw_text_with_emojis(tmp, (padding, padding), text, font,
+                          emoji_scale=emoji_scale,
+                          emoji_shift_px=emoji_shift_px)
+    try:
+        tmp = tmp.rotate(float(angle_deg), expand=True,
+                         resample=Image.BICUBIC, fillcolor=(0, 0, 0, 0))
+    except Exception:
+        tmp = tmp.rotate(float(angle_deg), expand=True)
+    bbox = tmp.getbbox()
+    if not bbox:
+        return (1, 1)
+    l, t, r, b = bbox
+    return (max(1, r - l), max(1, b - t))
+
+
 if __name__ == "__main__":
-    root = tk.Tk()
-    # label = create_pill_label(root, text="Variation 1 Designs total:")
-    # entry, canvas = create_entry(label)
-    # canvas.pack_forget()
+    font = ImageFont.truetype("C:/Users/vboxuser/Desktop/zyntra/zyntra1.0/_internal/fonts/MyriadPro-Regular.ttf", 48)
+    text = "Allosty🤍 Hello 😄😎  🇺🇦🇯🇵  test"
 
-    # cx1 = canvas.winfo_width() - 20
-    # cx0 = cx1 - 56
-    # cy0 = (canvas.winfo_height() - 34) // 2
-    # cy1 = cy0 + 34
+    mw, mh = measure_text_with_emojis(text, font, emoji_scale=1.0)
+    print("measure:", mw, mh)
 
-    # canvas.create_window((cx0 + cx1)//2, (cy0 + cy1)//2,
-    #                      window=canvas, width=56, height=34)
+    canvas = Image.new("RGBA", (mw + 40, mh + 40), (255, 255, 255, 0))
+    draw_text_with_emojis(canvas, (20, 20), text, font, fill=(0, 0, 0, 255), emoji_scale=1.0)
+    canvas.save("out.png")
 
-    # Basic layer
-    text_info = TextInfo(text="Variation 1 Designs total:", color="black", font_size=36)
-    pill_info = PillLabelInfo(
-        width=900,
-        parent=root, 
-        text_info=text_info, 
-        fill="#e5e5e5", 
-        radius=22,
-        padding_x=24,
-        padding_y=12
-    )
-    entry_info = EntryInfo(
-        parent=root,
-        radius=12,
-        width=56,
-        height=60,
-        text_info=TextInfo(text="4", color="black", font_size=12),
-        padding_x=6,
-        padding_y=12,
-        fill="#008000",
-    )
-    button_info = PillLabelInfo(
-        parent=root,
-        radius=12,
-        width=56,
-        height=60,
-        padding_x=6,
-        padding_y=12,
-        fill="#008000",
-    )
-    canvas, entry_canvas, entry = append_object_to_pill_label(
-        pill_info, 
-        entry_info,
-        object_padding_x=-80
-    )
-    canvas, button_canvas, _ = append_object_to_pill_label(
-        pill_info,
-        button_info,
-        pill_canvas=canvas,
-        object_padding_x=-150
-    )
-    root.mainloop()
-    
+    rw, rh = measure_rotated_text_with_emojis(text, font, 20.0, emoji_scale=1.0)
+    print("rotated measure:", rw, rh)
 
-# if __name__ == "__main__":
-#     root = tk.Tk()
-#     text_info = TextInfo(text="4", color="black", font_size=12)
-#     pill_label_widget = EntryInfo(
-#         width=400,
-#         parent=root,
-#         text_info=text_info, 
-#         padding_x=24, 
-#         padding_y=16, 
-#         radius=20, 
-#         tag="label",
-#         fill="#e5e5e5",
-#         border=0,
-#         border_color="#C0C0C0",
-#     )
-#     label = create_entry(info=pill_label_widget)
-#     # entry, canvas = create_entry(root, text="4")
-#     root.mainloop()
+    tmp = Image.new("RGBA", (mw + 20, mh + 20), (0, 0, 0, 0))
+    draw_text_with_emojis(tmp, (10, 10), text, font, fill=(0, 0, 0, 255), emoji_scale=1.0)
+    try:
+        tmp = tmp.rotate(20.0, expand=True, resample=Image.BICUBIC, fillcolor=(0, 0, 0, 0))
+    except Exception:
+        tmp = tmp.rotate(20.0, expand=True)
+    bbox = tmp.getbbox()
+    if bbox:
+        tmp = tmp.crop(bbox)
+
+    canvas2 = Image.new("RGBA", (rw + 40, rh + 40), (255, 255, 255, 0))
+    canvas2.alpha_composite(tmp, dest=(20, 20))
+    canvas2.show()

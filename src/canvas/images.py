@@ -68,11 +68,11 @@ class ImageManager:
                     pil = pil.convert("RGBA")
                 except Exception as e:
                     logger.exception(f"Failed to convert SVG image to RGBA: {e}")
-                # Apply mask using window-based composition (order_range._apply_mask logic)
+                # Apply mask using clip (cut) logic: keep pixels only where mask alpha > 0
                 try:
                     mpath = str(meta.get("mask_path", "") or "")
                     if mpath and os.path.exists(mpath):
-                        pil = self._apply_mask_window_compose(pil, mpath, int(w_px), int(h_px))
+                        pil = self._apply_mask_clip(pil, mpath, int(w_px), int(h_px))
                 except Exception:
                     logger.exception("Failed to apply window-based mask to SVG rasterization")
                 try:
@@ -99,11 +99,11 @@ class ImageManager:
                 except Exception as e:
                     logger.exception(f"Failed to convert raster image to RGBA: {e}")
                 resized = pil.resize((int(w_px), int(h_px)), Image.LANCZOS)
-                # Apply mask using window-based composition (order_range._apply_mask logic)
+                # Apply mask using clip (cut) logic: keep pixels only where mask alpha > 0
                 try:
                     mpath = str(meta.get("mask_path", "") or "")
                     if mpath and os.path.exists(mpath):
-                        resized = self._apply_mask_window_compose(resized, mpath, int(w_px), int(h_px))
+                        resized = self._apply_mask_clip(resized, mpath, int(w_px), int(h_px))
                 except Exception as e:
                     logger.exception(f"Failed to apply window-based mask: {e}")
                 # Apply rotation if any (clockwise degrees)
@@ -346,5 +346,84 @@ class ImageManager:
             out.paste(fitted, (left, top), Image.fromarray(matte, mode="L"))
         except Exception:
             out.paste(fitted, (left, top))
+        return out
+
+    def _apply_mask_clip(self, content_rgba, mask_path: str, target_w: int, target_h: int):
+        """Clip content to the mask's opaque area without resizing to fit.
+
+        - Resizes the mask to target size if needed
+        - Multiplies the content alpha by mask alpha (keeps pixels where mask alpha > 0)
+        - Returns RGBA image same size as target with content cut by the mask
+        """
+        try:
+            from PIL import Image
+        except Exception:
+            return content_rgba
+
+        try:
+            mask_raw = Image.open(mask_path)
+        except Exception:
+            return content_rgba
+
+        # Derive a binary mask (L mode) from either transparency windows or luminance
+        try:
+            if mask_raw.mode != "RGBA":
+                mask_rgba = mask_raw.convert("RGBA")
+            else:
+                mask_rgba = mask_raw
+            alpha_band = mask_rgba.split()[-1]
+            # Detect if the mask uses transparency windows (significant transparent area)
+            try:
+                # Count fraction of pixels with alpha < 128
+                hist = alpha_band.histogram()
+                total = max(1, sum(hist))
+                transparent_count = sum(hist[:128])
+                transparent_frac = float(transparent_count) / float(total)
+            except Exception:
+                transparent_frac = 0.0
+            if transparent_frac > 0.05:
+                # Use inverted alpha so transparent regions become selection (keep content there)
+                from PIL import ImageChops as _ImageChops  # type: ignore
+                mask_l = _ImageChops.invert(alpha_band)
+            else:
+                # Use luminance; keep bright (white) regions
+                mask_l = mask_rgba.convert("L")
+            # Threshold to binary to avoid halos from antialiasing
+            mask_l = mask_l.point(lambda p: 255 if int(p) >= 128 else 0)
+        except Exception:
+            # Fallback: grayscale luminance
+            try:
+                mask_l = mask_raw.convert("L")
+                mask_l = mask_l.point(lambda p: 255 if int(p) >= 128 else 0)
+            except Exception:
+                return content_rgba
+
+        # Ensure content is RGBA and of target size
+        try:
+            content_rgba = content_rgba.convert("RGBA")
+        except Exception:
+            pass
+        if content_rgba.size != (int(target_w), int(target_h)):
+            try:
+                content_rgba = content_rgba.resize((int(target_w), int(target_h)), Image.LANCZOS)
+            except Exception:
+                content_rgba = content_rgba.resize((int(target_w), int(target_h)))
+
+        # Resize mask to target using nearest to preserve hard edges
+        if mask_l.size != (int(target_w), int(target_h)):
+            try:
+                mask_l = mask_l.resize((int(target_w), int(target_h)), Image.NEAREST)
+            except Exception:
+                mask_l = mask_l.resize((int(target_w), int(target_h)))
+
+        # Multiply content alpha by mask alpha
+        r, g, b, a = content_rgba.split()
+        try:
+            from PIL import ImageChops  # type: ignore
+            a_masked = ImageChops.multiply(a, mask_l)
+        except Exception:
+            # Fallback: overwrite alpha with mask
+            a_masked = mask_l
+        out = Image.merge("RGBA", (r, g, b, a_masked))
         return out
 

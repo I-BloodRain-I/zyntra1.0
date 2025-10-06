@@ -160,6 +160,70 @@ class CanvasSelection:
             max_mm_y = (jy1 - oy - bh - (jy0 + oy)) / (MM_TO_PX * max(self.s._zoom, 1e-6))
             sx_mm = float(max(min_mm_x, min(sx_mm, max_mm_x)))
             sy_mm = float(max(min_mm_y, min(sy_mm, max_mm_y)))
+            # Prevent major/major overlap by nudging away from neighbors
+            if str(meta.get("type", "")) == "major":
+                try:
+                    w_mm = float(meta.get("w_mm", 0.0) or 0.0)
+                    h_mm = float(meta.get("h_mm", 0.0) or 0.0)
+                except Exception:
+                    w_mm, h_mm = 0.0, 0.0
+                pad_mm = 2.0
+                # Bounds in mm for clamping after adjustment
+                min_x_mm_allowed = min_mm_x
+                max_x_mm_allowed = max_mm_x
+                min_y_mm_allowed = min_mm_y
+                max_y_mm_allowed = max_mm_y
+                # Previous position in mm (for movement direction)
+                prev_mm_x = float(meta.get("x_mm", 0.0) or 0.0)
+                prev_mm_y = float(meta.get("y_mm", 0.0) or 0.0)
+                # Build list of other majors
+                others = []
+                for rid, m in self.s._items.items():
+                    if rid == self._selected:
+                        continue
+                    if str(m.get("type", "")) != "major":
+                        continue
+                    try:
+                        ox_mm = float(m.get("x_mm", 0.0) or 0.0)
+                        oy_mm = float(m.get("y_mm", 0.0) or 0.0)
+                        ow_mm = float(m.get("w_mm", 0.0) or 0.0)
+                        oh_mm = float(m.get("h_mm", 0.0) or 0.0)
+                    except Exception:
+                        ox_mm, oy_mm, ow_mm, oh_mm = 0.0, 0.0, 0.0, 0.0
+                    others.append((ox_mm, oy_mm, ow_mm, oh_mm))
+
+                def _overlaps(ax, ay, aw, ah, bx, by, bw, bh, pad=0.0) -> bool:
+                    return not ((ax + aw + pad) <= bx or (bx + bw) <= (ax - pad) or (ay + ah + pad) <= by or (by + bh) <= (ay - pad))
+
+                # Iteratively resolve collisions with a single-step push along move axis
+                max_iter = 16
+                it = 0
+                while it < max_iter:
+                    collided = False
+                    for (ox, oy, ow, oh) in others:
+                        if _overlaps(sx_mm, sy_mm, w_mm, h_mm, ox, oy, ow, oh, pad=pad_mm):
+                            collided = True
+                            dx = sx_mm - prev_mm_x
+                            dy = sy_mm - prev_mm_y
+                            if abs(dx) >= abs(dy):
+                                # Resolve along X
+                                if dx >= 0:
+                                    sx_mm = min(max_x_mm_allowed, ox - pad_mm - w_mm)
+                                else:
+                                    sx_mm = max(min_x_mm_allowed, ox + ow + pad_mm)
+                            else:
+                                # Resolve along Y
+                                if dy >= 0:
+                                    sy_mm = min(max_y_mm_allowed, oy - pad_mm - h_mm)
+                                else:
+                                    sy_mm = max(min_y_mm_allowed, oy + oh + pad_mm)
+                            # Re-clamp to bounds
+                            sx_mm = float(max(min_x_mm_allowed, min(sx_mm, max_x_mm_allowed)))
+                            sy_mm = float(max(min_y_mm_allowed, min(sy_mm, max_y_mm_allowed)))
+                            break
+                    if not collided:
+                        break
+                    it += 1
             # if mm didn't change materially, skip redundant updates for smoother feel
             prev_mm_x = float(meta.get("x_mm", 0.0) or 0.0)
             prev_mm_y = float(meta.get("y_mm", 0.0) or 0.0)
@@ -326,8 +390,6 @@ class CanvasSelection:
         meta = self.s._items.get(target, {})
         if str(meta.get("type", "")) == "image":
             buttons.append(("Set mask", self._on_set_mask))
-        # Image-specific actions
-        if str(meta.get("type", "")) == "image":
             buttons.append(("Remove mask", self._on_remove_mask))
         buttons.append(("Delete", self.on_delete))
         self._ctx_popup_obj = CanvasContextPopup(self.s, buttons=buttons)

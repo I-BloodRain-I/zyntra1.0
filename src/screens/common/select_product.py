@@ -1,14 +1,20 @@
+from collections import defaultdict
 import json
+
+
+import re
+import threading
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import messagebox
 from tkinter import ttk
+from bs4 import BeautifulSoup
 
-from src.core.state import PRODUCTS_PATH, FONTS_PATH, state, ALL_PRODUCTS, APP_TITLE, IMAGES_PATH
+from src.core.state import INPUT_PATH, PRODUCTS_PATH, FONTS_PATH, state, ALL_PRODUCTS, APP_TITLE, IMAGES_PATH
 from src.core import Screen, COLOR_BG_DARK, COLOR_BG_SCREEN, COLOR_PILL, COLOR_TEXT, scale_px, font_from_pt, UI_SCALE
+from src.screens.nonsticker import NStickerCanvasScreen
 from src.utils import *
 from .order_range import OrderRangeScreen
-from src.screens.nonsticker import NStickerCanvasScreen
 
 
 class SelectProductScreen(Screen):
@@ -16,6 +22,8 @@ class SelectProductScreen(Screen):
         super().__init__(master, app)
         self._popup_just_opened = False
         self._suppress_auto_open = False
+
+        threading.Thread(target=self._detect_inputs_orders).start()
 
         title = tk.Frame(self, bg=COLOR_BG_DARK, height="31p"); title.pack(fill="x")
         title.pack_propagate(False)
@@ -711,7 +719,14 @@ class SelectProductScreen(Screen):
         if product not in ALL_PRODUCTS:
             messagebox.showerror("Error", "Invalid product")
             return
+            
+        with open(PRODUCTS_PATH / f"{product}.json", "r", encoding="utf-8") as f:
+            product_info = json.load(f)
+            state.sku = product_info["Sku"]
+            state.sku_name = product_info["SkuName"]
+            state.prev_sku_name = product_info["SkuName"]
         state.saved_product = product
+        
         self.app.show_screen(OrderRangeScreen)
 
     def _add_new(self):
@@ -837,3 +852,20 @@ class SelectProductScreen(Screen):
 
         tk.Button(btns, text="Remove", command=_do_remove).pack(side="left", padx=8)
         tk.Button(btns, text="Cancel", command=_cancel).pack(side="left", padx=8)
+
+    def _detect_inputs_orders(self):
+        # from PyPDF2 import PdfReader
+        
+        json_files = INPUT_PATH.glob("*.json")
+        orders = [int(f.stem.split("_")[0]) for f in json_files]
+        state.order_from = str(min(orders))
+        state.order_to = str(max(orders))
+        
+            # reader = PdfReader(pdf_path)
+            # text = ""
+            # for page in reader.pages:
+            #     text += page.extract_text() or ""
+
+            # for line in text.split("\n"):
+            #     if line.find("Reference") != -1 and line.find("Delivery note no.") != -1:
+            #         reference = line.split("Reference ")[1].split("Delivery note no.")[0].strip()

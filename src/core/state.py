@@ -3,11 +3,7 @@ from pathlib import Path
 from typing import List, Tuple, Optional
 from dataclasses import dataclass, field, asdict
 
-# ALL_PRODUCTS = [
-#     "Lighteruv1", "Lighteruv2", "LighterMax", "LighterMini",
-#     "TorchMini", "TorchPro", "CandlePro", "MatchStick",
-#     "SparkLite", "Product2", "Product3"
-# ]
+
 MM_TO_PX = 1  # simple scale mm→px for drawing
 APP_TITLE = "Zyntra 1.0"
 
@@ -20,7 +16,9 @@ PRODUCTS_PATH = INTERNAL_PATH / "products"
 PRODUCTS_PATH.mkdir(exist_ok=True)
 LOGS_PATH     = INTERNAL_PATH / "logs"
 LOGS_PATH.mkdir(exist_ok=True)
-OUTPUT_PATH   = Path.cwd() / "output"
+INPUT_PATH    = Path.cwd() / "inputs"
+INPUT_PATH.mkdir(exist_ok=True)
+OUTPUT_PATH   = Path.cwd() / "outputs"
 OUTPUT_PATH.mkdir(exist_ok=True)
 
 ALL_PRODUCTS = [f.stem for f in INTERNAL_PATH.glob("products/*.json") if f.is_file()]
@@ -31,8 +29,8 @@ class AppState:
     saved_search: str = "Lighteruv1"
     is_sticker: Optional[bool] = None
     saved_product: str = ""
-    order_from: str = "13111"
-    order_to: str = "13112"
+    order_from: str = "0"
+    order_to: str = "0"
 
     # Screen 1
     sku: str = ""

@@ -1,17 +1,27 @@
 from __future__ import annotations
 
+import io
 import os
 import logging
-from typing import List
+from typing import List, Tuple, Optional
+from io import BytesIO
+import functools
+import urllib.request
 
 import math
 import arabic_reshaper
 from bidi.algorithm import get_display
+import cairo
+import emoji
+from PIL import Image, ImageDraw, ImageFont
+from pilmoji import Pilmoji
 
 from src.core import MM_TO_PX
 from src.core.state import FONTS_PATH, PRODUCTS_PATH
 from src.utils import svg_to_png
 
+TWEMOJI_PNG_DIR: Optional[str] = None
+TWEMOJI_CDN = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72"
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +48,14 @@ class PdfExporter:
         except Exception as e:
             raise RuntimeError("Pillow (PIL) is required to export PDF.") from e
 
-        import os
+        if not hasattr(_PIL_Font.FreeTypeFont, "getsize"):
+            def _getsize(self, text, *args, **kwargs):
+                # getbbox возвращает (left, top, right, bottom)
+                bbox = self.getbbox(text, *args, **kwargs)
+                w = bbox[2] - bbox[0]
+                h = bbox[3] - bbox[1]
+                return (w, h)
+            _PIL_Font.FreeTypeFont.getsize = _getsize
 
         # базовые единицы
         px_per_mm = float(dpi) / 25.4
@@ -123,47 +140,236 @@ class PdfExporter:
             fill: tuple[int, int, int, int],
             angle_deg: float,
         ) -> None:
+            # bidi/arabic shaping — как и было
             reshaped_text = arabic_reshaper.reshape(text)
             text = get_display(reshaped_text)
-            # Measure text bbox to create tight canvas
+
+            # Базовый bbox только для оценки масштаба
             bb = draw.textbbox((0, 0), text, font=font)
             tw = max(1, bb[2] - bb[0])
             th = max(1, bb[3] - bb[1])
-            temp_img = _PIL_Image.new("RGBA", (int(tw), int(th)), (0, 0, 0, 0))
-            temp_draw = _PIL_Draw.Draw(temp_img, "RGBA")
-            # Shift by -bb[0], -bb[1] to neutralize baseline offsets
-            temp_draw.text((-bb[0], -bb[1]), text, font=font, fill=fill)
+
+            pad = max(8, int(getattr(font, "size", 16)) * 2)
+
+            temp_img = _PIL_Image.new("RGBA", (tw + pad * 2, th + pad * 2), (0, 0, 0, 0))
+            draw_text_with_emojis(temp_img, (pad - bb[0], pad - bb[1]), text, font, fill=fill, emoji_scale=1.0)
+
+            # Поворот
             if abs(float(angle_deg)) > 1e-6:
                 try:
                     temp_img = temp_img.rotate(float(angle_deg), expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0, 0, 0, 0))
                 except Exception:
                     temp_img = temp_img.rotate(float(angle_deg), expand=True)
+
+            a = temp_img.split()[-1]
+            bbox = a.getbbox()
+            if bbox:
+                temp_img = temp_img.crop(bbox)
+
             left = int(round(center_x - temp_img.width / 2.0))
-            top = int(round(center_y - temp_img.height / 2.0))
+            top  = int(round(center_y - temp_img.height / 2.0))
+
             try:
                 img.alpha_composite(temp_img, (left, top))
             except Exception:
                 img.paste(temp_img, (left, top), temp_img.split()[-1])
 
-        def _measure_rotated_text_size_px(text: str, font, angle_deg: float) -> tuple[int, int]:
-            """Measure rendered (rotated) text raster size in pixels.
 
-            Uses same shaping and drawing logic as _draw_rotated_text_center.
-            """
+        def _split_text_emoji(s: str) -> List[Tuple[str, str]]:
+            """Split text into ('text', chunk) / ('emoji', chunk) pairs using emoji>=2.0 API."""
+            result, last = [], 0
+            for e in emoji.emoji_list(s):
+                st, en = e["match_start"], e["match_end"]
+                if st > last:
+                    result.append(("text", s[last:st]))
+                result.append(("emoji", s[st:en]))
+                last = en
+            if last < len(s):
+                result.append(("text", s[last:]))
+            return result
+
+
+        def _codepoints(s: str) -> str:
+            """Return lower-hex Unicode codepoints joined by dashes (Twemoji format)."""
+            return "-".join(f"{ord(ch):x}" for ch in s)
+
+
+        def _estimate_x_height(font: ImageFont.FreeTypeFont) -> int:
+            """Estimate x-height of the given font."""
+            try:
+                l, t, r, b = font.getbbox("x")
+                return max(1, b - t)
+            except Exception:
+                return max(1, int(font.size * 0.5))
+
+
+        def compute_emoji_y_shift(font: ImageFont.FreeTypeFont, scale: float) -> int:
+            """Estimate vertical offset to visually align emoji center with text body."""
+            ascent, _ = font.getmetrics()
+            xh = _estimate_x_height(font)
+            em = int(round(font.size * scale))
+            baseline_y = ascent
+            target_center_y = baseline_y - xh * 0.55
+            emoji_top_y = target_center_y - em / 2.0
+            default_top_y = baseline_y - em
+            return int(round(emoji_top_y - default_top_y))
+
+
+        @functools.lru_cache(maxsize=4096)
+        def _load_twemoji_png(codepoint: str) -> Image.Image:
+            """Return RGBA Twemoji PNG for the given codepoint, local or CDN-based."""
+            filename = f"{codepoint}.png"
+            if TWEMOJI_PNG_DIR:
+                local_path = os.path.join(TWEMOJI_PNG_DIR, filename)
+                if os.path.isfile(local_path):
+                    im = Image.open(local_path)
+                    return im.convert("RGBA") if im.mode != "RGBA" else im
+            url = f"{TWEMOJI_CDN}/{filename}"
+            with urllib.request.urlopen(url, timeout=10) as resp:
+                data = resp.read()
+            im = Image.open(BytesIO(data))
+            return im.convert("RGBA") if im.mode != "RGBA" else im
+
+
+        def draw_text_with_emojis(
+            img: Image.Image,
+            xy: Tuple[int, int],
+            text: str,
+            font: ImageFont.FreeTypeFont,
+            *,
+            fill=(0, 0, 0, 255),
+            emoji_scale: float = 1.0,
+            emoji_shift_px: Optional[int] = None,
+        ) -> None:
+            """Draw single-line text with emojis aligned to text baseline."""
+            x, y = xy
+            draw = ImageDraw.Draw(img, "RGBA")
+            if emoji_shift_px is None:
+                emoji_shift_px = compute_emoji_y_shift(font, emoji_scale)
+            for kind, chunk in _split_text_emoji(text):
+                if kind == "text" and chunk:
+                    draw.text((x, y), chunk, font=font, fill=fill)
+                    x += draw.textlength(chunk, font=font)
+                elif kind == "emoji":
+                    cp = _codepoints(chunk)
+                    try:
+                        im = _load_twemoji_png(cp)
+                    except Exception:
+                        em = max(1, int(round(font.size * emoji_scale)))
+                        im = Image.new("RGBA", (em, em), (0, 0, 0, 0))
+                        g = ImageDraw.Draw(im)
+                        g.rectangle([0, 0, em - 1, em - 1], outline=(0, 0, 0, 255))
+                        g.line([0, 0, em - 1, em - 1], fill=(0, 0, 0, 255))
+                        g.line([0, em - 1, em - 1, 0], fill=(0, 0, 0, 255))
+                    target = max(1, int(round(font.size * emoji_scale)))
+                    if im.height != target:
+                        im = im.resize((target, target), Image.LANCZOS)
+                    ascent, _ = font.getmetrics()
+                    top = y + ascent - target + (emoji_shift_px or 0)
+                    img.alpha_composite(im, (int(x), int(top)))
+                    x += target
+
+
+        def measure_text_with_emojis(
+            text: str,
+            font: ImageFont.FreeTypeFont,
+            *,
+            emoji_scale: float = 1.0,
+            emoji_shift_px: Optional[int] = None,
+            padding: int = 4,
+        ) -> Tuple[int, int]:
+            """Measure width and height of rendered text with emojis."""
+            if emoji_shift_px is None:
+                emoji_shift_px = compute_emoji_y_shift(font, emoji_scale)
+            rough_w = 2 * padding
+            for kind, chunk in _split_text_emoji(text):
+                if kind == "text" and chunk:
+                    rough_w += int(ImageDraw.Draw(Image.new("L", (1, 1))).textlength(chunk, font=font))
+                else:
+                    rough_w += int(round(font.size * emoji_scale))
+            ascent, descent = font.getmetrics()
+            rough_h = ascent + descent + 2 * padding
+            tmp = Image.new("RGBA", (max(1, rough_w), max(1, rough_h)), (0, 0, 0, 0))
+            draw_text_with_emojis(tmp, (padding, padding), text, font,
+                                fill=(0, 0, 0, 255),
+                                emoji_scale=emoji_scale,
+                                emoji_shift_px=emoji_shift_px)
+            bbox = tmp.getbbox()
+            if not bbox:
+                return (1, 1)
+            l, t, r, b = bbox
+            return (max(1, r - l), max(1, b - t))
+
+
+        def measure_rotated_text_with_emojis(
+            text: str,
+            font: ImageFont.FreeTypeFont,
+            angle_deg: float,
+            *,
+            emoji_scale: float = 1.0,
+            emoji_shift_px: Optional[int] = None,
+            padding: int = 4,
+        ) -> Tuple[int, int]:
+            """Measure rotated text with emojis by rendering, rotating, and cropping."""
+            if emoji_shift_px is None:
+                emoji_shift_px = compute_emoji_y_shift(font, emoji_scale)
+            w, h = measure_text_with_emojis(text, font,
+                                            emoji_scale=emoji_scale,
+                                            emoji_shift_px=emoji_shift_px,
+                                            padding=padding)
+            tmp = Image.new("RGBA", (w + 2 * padding, h + 2 * padding), (0, 0, 0, 0))
+            draw_text_with_emojis(tmp, (padding, padding), text, font,
+                                emoji_scale=emoji_scale,
+                                emoji_shift_px=emoji_shift_px)
+            try:
+                tmp = tmp.rotate(float(angle_deg), expand=True,
+                                resample=Image.BICUBIC, fillcolor=(0, 0, 0, 0))
+            except Exception:
+                tmp = tmp.rotate(float(angle_deg), expand=True)
+            bbox = tmp.getbbox()
+            if not bbox:
+                return (1, 1)
+            l, t, r, b = bbox
+            return (max(1, r - l), max(1, b - t))
+
+        def _measure_rotated_text_size_px(text: str, font, angle_deg: float) -> tuple[int, int]:
+            """Измеряет реальный размер (после Pilmoji-рендера и поворота)."""
+            # bidi/arabic shaping
             reshaped_text = arabic_reshaper.reshape(text)
             text_disp = get_display(reshaped_text)
-            bb = draw.textbbox((0, 0), text_disp, font=font)
-            tw = max(1, bb[2] - bb[0])
-            th = max(1, bb[3] - bb[1])
-            tmp = _PIL_Image.new("RGBA", (int(tw), int(th)), (0, 0, 0, 0))
-            td = _PIL_Draw.Draw(tmp, "RGBA")
-            td.text((-bb[0], -bb[1]), text_disp, font=font, fill=(0, 0, 0, 255))
+
+            # Оценочный bbox
+            bb0 = draw.textbbox((0, 0), text_disp, font=font)
+            tw0 = max(1, bb0[2] - bb0[0])
+            th0 = max(1, bb0[3] - bb0[1])
+
+            pad = max(8, int(getattr(font, "size", 16)) * 2)
+
+            tmp = _PIL_Image.new("RGBA", (tw0 + pad * 2, th0 + pad * 2), (0, 0, 0, 0))
+            try:
+                with Pilmoji(tmp) as p:
+                    p.text((pad - bb0[0], pad - bb0[1]), text_disp, font=font, fill=(0, 0, 0, 255))
+            except Exception:
+                # На всякий случай fallback (хотя Pilmoji установлен)
+                td = _PIL_Draw.Draw(tmp, "RGBA")
+                td.text((pad - bb0[0], pad - bb0[1]), text_disp, font=font, fill=(0, 0, 0, 255))
+
             if abs(float(angle_deg)) > 1e-6:
                 try:
                     tmp = tmp.rotate(float(angle_deg), expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0, 0, 0, 0))
                 except Exception:
                     tmp = tmp.rotate(float(angle_deg), expand=True)
-            return int(tmp.width), int(tmp.height)
+
+            a = tmp.split()[-1]
+            bbox = a.getbbox()
+            if bbox:
+                rw = bbox[2] - bbox[0]
+                rh = bbox[3] - bbox[1]
+            else:
+                rw, rh = tmp.width, tmp.height
+
+            return int(rw), int(rh)
+
 
         def _fit_font_to_block(text: str, family: str, initial_size_px: int, max_w_px: int, max_h_px: int, angle_deg: float):
             """Return a truetype font scaled down so rotated text fits within max_w_px x max_h_px."""
@@ -345,7 +551,7 @@ class PdfExporter:
                                     raise
 
                         im_resized = im.resize((int(w_px), int(h_px)), _PIL_Image.LANCZOS)
-                        # Apply window-based mask composition (same as canvas & orders)
+                        # Apply clip-based mask (same cut behavior as canvas)
                         try:
                             mpath = str(it.get("mask_path", "") or "")
                             if mpath:
@@ -359,9 +565,9 @@ class PdfExporter:
                                     pass
                                 if os.path.exists(mabs) and hasattr(self.s, "images"):
                                     try:
-                                        im_resized = self.s.images._apply_mask_window_compose(im_resized, mabs, int(w_px), int(h_px))
+                                        im_resized = self.s.images._apply_mask_clip(im_resized, mabs, int(w_px), int(h_px))
                                     except Exception:
-                                        logger.exception("Failed applying window-based mask for PDF render")
+                                        logger.exception("Failed applying clip-based mask for PDF render")
                         except Exception:
                             logger.exception("Failed to handle mask for PDF render")
                         if abs(ang) > 1e-6:
@@ -440,13 +646,40 @@ class PdfExporter:
                         cy = jy0 + mm_to_px(it.get("y_mm", 0.0))
                         _draw_rotated_text_center(txt, int(cx), int(cy), fnt, col, ang)
 
-        # «Сплющивание» на белый фон и сохранение в PDF
-        out_rgb = _PIL_Image.new("RGB", (page_w_px, page_h_px), "white")
-        # используем альфа-канал итогового холста как маску
+        # out_rgb = _PIL_Image.new("RGB", (page_w_px, page_h_px), "white")
+        out_rgb = _PIL_Image.new("RGBA", (page_w_px, page_h_px), (255, 255, 255, 0))
         alpha = img.split()[-1]
         out_rgb.paste(img.convert("RGB"), mask=alpha)
-        # out_rgb.save(f"output_{path.split('\\')[-1].split('.')[0]}.png", "png")
-        out_rgb.save(path, "PDF", resolution=dpi)
+
+        width_px, height_px = out_rgb.size
+
+        # Переводим пиксели в пункты (1 дюйм = 72 точки)
+        width_pt = width_px * 72 / dpi
+        height_pt = height_px * 72 / dpi
+
+        # Создаём PDFSurface
+        surface = cairo.PDFSurface(path, width_pt, height_pt)
+        context = cairo.Context(surface)
+
+        # Загружаем PNG в Cairo
+        with io.BytesIO() as buffer:
+            out_rgb.save(buffer, format="PNG")
+            buffer.seek(0)
+            image_surface = cairo.ImageSurface.create_from_png(buffer)
+
+        # Масштабируем, чтобы учесть DPI
+        scale = 72.0 / dpi
+        context.scale(scale, scale)
+
+        # Рисуем изображение
+        context.set_source_surface(image_surface, 0, 0)
+        context.paint()
+
+        # Завершаем PDF
+        surface.finish()
+        
+        # out_rgb.save(path, "PDF", resolution=dpi)
+        
         
     def render_jig_to_svg(
         self,

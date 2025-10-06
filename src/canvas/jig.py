@@ -325,7 +325,7 @@ class JigController:
         # direction: +1 zoom in, -1 zoom out
         old_zoom = self.s._zoom
         if direction > 0:
-            self.s._zoom = min(5.0, self.s._zoom * 1.1)
+            self.s._zoom = min(20.0, self.s._zoom * 1.1)
         else:
             self.s._zoom = max(0.2, self.s._zoom / 1.1)
         if abs(self.s._zoom - old_zoom) < 1e-6:

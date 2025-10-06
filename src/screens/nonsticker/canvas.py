@@ -84,7 +84,7 @@ class NStickerCanvasScreen(Screen):
         # Top row: Write SKU (primary SKU field)
         header_row_top = ttk.Frame(self, style="Screen.TFrame")
         header_row_top.pack(padx=0, pady=(35, 8))
-        tk.Label(header_row_top, text=" Write SKU ", bg="#737373", fg=COLOR_TEXT,
+        tk.Label(header_row_top, text=" Write ASIN ", bg="#737373", fg=COLOR_TEXT,
                  font=("Myriad Pro", 22), width=20).pack(side="left", padx=(8, 0))
         self.sku_var = tk.StringVar(value=state.sku or "")
         input_wrap_top = tk.Frame(header_row_top, bg="#000000")
@@ -99,7 +99,7 @@ class NStickerCanvasScreen(Screen):
         # Second row: Write name for SKU (independent, labels aligned by fixed width)
         header_row_bottom = ttk.Frame(self, style="Screen.TFrame")
         header_row_bottom.pack(padx=0, pady=(0, 25))
-        tk.Label(header_row_bottom, text=" Write name for SKU ", bg="#737373", fg=COLOR_TEXT,
+        tk.Label(header_row_bottom, text=" Write name for ASIN ", bg="#737373", fg=COLOR_TEXT,
                  font=("Myriad Pro", 22), width=20).pack(side="left", padx=(8, 0))
         self.sku_name_var = tk.StringVar(value=state.sku_name or "")
         input_wrap_bottom = tk.Frame(header_row_bottom, bg="#000000")
@@ -860,8 +860,8 @@ class NStickerCanvasScreen(Screen):
         self._suppress_flag_traces = False
         self.sel_is_options = tk.BooleanVar(value=False)
         self.sel_is_static = tk.BooleanVar(value=False)
-        ttk.Checkbutton(_flags, variable=self.sel_is_options, text="Is Options").pack(side="left", pady=6, padx=(0,6))
-        ttk.Checkbutton(_flags, variable=self.sel_is_static, text="Is Static").pack(side="left", pady=6)
+        # ttk.Checkbutton(_flags, variable=self.sel_is_options, text="Is Options").pack(side="left", pady=6, padx=(0,6))
+        # ttk.Checkbutton(_flags, variable=self.sel_is_static, text="Is Static").pack(side="left", pady=6)
         # Persist flags into selected object
         def _on_flags_change(*_):
             # Ignore programmatic updates
@@ -2095,11 +2095,10 @@ class NStickerCanvasScreen(Screen):
             logger.exception("Failed to hide text menu after AI arrange")
 
     def _arrange_majors(self):
-        """Pack major rectangles within the jig area to avoid overlaps and refresh per-major slots.
+        """Pack major rectangles within the jig area to minimize wasted space and refresh per-major slots.
 
-        Layout strategy: best-fit placement (largest first) into free space with 5mm jig margin
-        and 2mm inter-major padding. Each major can move; we compute a non-overlapping placement
-        per current sizes. Keeps each major's width/height, only updates x/y.
+        Strategy: skyline bottom-left packing with 5mm jig margin and 2mm inter-major padding.
+        Keeps each major's width/height, only updates x/y.
         """
         # Deselect and hide text controls for clarity
         try:
@@ -2119,9 +2118,21 @@ class NStickerCanvasScreen(Screen):
             jx, jy = 296.0, 394.5831
         if jx <= 0.0 or jy <= 0.0:
             return
-        # Jig boundary padding in mm
+        # Jig boundary margin and inter-major padding (mm)
         margin = 5.0
-        # Collect majors in natural order
+        pad = 2.0
+
+        # Effective container for packing (inner jig minus margins). To allow majors to be flush
+        # to the inner boundary without extra padding, extend container by `pad` because we inflate
+        # each major by `pad` while packing.
+        inner_w = max(0.0, jx - 2.0 * margin)
+        inner_h = max(0.0, jy - 2.0 * margin)
+        if inner_w <= 0.0 or inner_h <= 0.0:
+            return
+        W = inner_w + pad
+        H = inner_h + pad
+
+        # Gather majors (skip invalid sizes)
         try:
             def _order_key(k: str) -> tuple:
                 import re as __re
@@ -2133,85 +2144,179 @@ class NStickerCanvasScreen(Screen):
             ordered = list(self._major_sizes.keys())
         if not ordered:
             return
-        # Inter-major padding
-        pad = 2.0
 
-        # Rect overlap check in mm
-        def _overlaps(ax, ay, aw, ah, bx, by, bw, bh) -> bool:
-            return not (ax + aw <= bx or bx + bw <= ax or ay + ah <= by or by + bh <= ay)
-
-        # Build discrete candidate positions based on already placed majors' edges
-        def _edge_candidates(mw: float, mh: float, placed_rects: list[tuple[str, float, float, float, float]]):
-            # existing position first (None)
-            yield None
-            x_cands = [margin]
-            y_cands = [margin]
-            for _nm, ox, oy, ow, oh in placed_rects:
-                x_cands.append(ox + ow + pad)
-                y_cands.append(oy + oh + pad)
-            # Deduplicate and sort
-            x_cands = sorted(set(round(v, 6) for v in x_cands))
-            y_cands = sorted(set(round(v, 6) for v in y_cands))
-            for y in y_cands:
-                for x in x_cands:
-                    yield (float(x), float(y))
-
-        # Build current rectangles from presets and sort by area (largest first)
-        all_rects: dict[str, tuple[float, float, float, float]] = {}
-        order_by_area: list[tuple[float, str]] = []
+        rects: list[tuple[str, float, float]] = []
         for nm in ordered:
             vals = self._major_sizes.get(nm) or {}
             try:
                 mw = float(vals.get("w", 0.0) or 0.0)
                 mh = float(vals.get("h", 0.0) or 0.0)
-                cx = float(vals.get("x", margin))
-                cy = float(vals.get("y", margin))
             except Exception:
-                mw, mh, cx, cy = 0.0, 0.0, margin, margin
-            if mw <= 0.0 or mh <= 0.0:
-                continue
-            cx = max(margin, min(cx, max(margin, jx - margin - mw)))
-            cy = max(margin, min(cy, max(margin, jy - margin - mh)))
-            all_rects[nm] = (cx, cy, mw, mh)
-            order_by_area.append((-(mw * mh), nm))
-        order_by_area.sort()
+                mw, mh = 0.0, 0.0
+            if mw > 0.0 and mh > 0.0 and mw <= inner_w and mh <= inner_h:
+                rects.append((nm, mw, mh))
 
-        # Occupied set starts with all current rectangles; we move one at a time without overlapping others
-        occupied: list[tuple[str, float, float, float, float]] = [(n, *all_rects[n]) for _area, n in order_by_area]
+        if not rects:
+            return
 
-        for _neg_area, nm in order_by_area:
-            cx, cy, mw, mh = all_rects[nm]
-            # Remove self from occupied before testing candidates
-            occupied = [(nn, x, y, w, h) for (nn, x, y, w, h) in occupied if nn != nm]
-            best = None
-            for cand in _edge_candidates(mw, mh, occupied):
-                if cand is None:
-                    px, py = cx, cy
-                else:
-                    px, py = cand
-                # Bounds check
-                if px < margin or py < margin or (px + mw) > (jx - margin + 1e-6) or (py + mh) > (jy - margin + 1e-6):
+        # Sort by height desc, then width desc for better shelf utilization with skyline
+        rects.sort(key=lambda it: (-it[2], -it[1]))
+
+        # Skyline nodes: list of (x, y); initially floor line
+        skyline: list[tuple[float, float]] = [(0.0, 0.0), (W, 0.0)]
+
+        def _find_position(w_in: float, h_in: float) -> Optional[tuple[float, float, int, float]]:
+            """Find bottom-left position for rectangle of size (w_in, h_in).
+            Returns (x, y, start_index, right_height) or None if not fit.
+            Uses inflated sizes (w_in, h_in) which already include `pad`.
+            """
+            best_y = float("inf"); best_x = 0.0
+            best_idx = -1; best_right_h = 0.0
+            # Scan each skyline node as potential start
+            for i in range(len(skyline) - 1):
+                x0, y0 = skyline[i]
+                # Early prune if x0 beyond packing width
+                if x0 + w_in > W + 1e-9:
                     continue
-                # Overlap check vs all others (with padding margin around candidate)
-                ok = True
-                for _onm, ox, oy, ow, oh in occupied:
-                    if _overlaps(px - pad, py - pad, mw + 2 * pad, mh + 2 * pad, ox, oy, ow, oh):
-                        ok = False
+                j = i
+                width_left = w_in
+                y_pos = y0
+                # Walk segments until we cover needed width
+                while width_left > 0.0:
+                    if j >= len(skyline) - 1:
+                        y_pos = float("inf"); break
+                    seg_w = skyline[j + 1][0] - skyline[j][0]
+                    y_pos = max(y_pos, skyline[j][1])
+                    if y_pos + h_in > H + 1e-9:
+                        y_pos = float("inf"); break
+                    if seg_w >= width_left:
+                        # Fits within current and following segments
+                        right_h = skyline[j][1]
                         break
-                if not ok:
+                    width_left -= seg_w
+                    j += 1
+                if y_pos == float("inf"):
                     continue
-                best = (px, py)
-                break
-            # If nothing fits, keep original location; do not overlap because original was in occupied set
-            if best is None:
-                best = (cx, cy)
-            px, py = best
-            all_rects[nm] = (px, py, mw, mh)
-            occupied.append((nm, px, py, mw, mh))
+                # Bottom-left rule: choose the lowest y, then leftmost x
+                if y_pos < best_y - 1e-9 or (abs(y_pos - best_y) <= 1e-9 and x0 < best_x - 1e-9):
+                    best_y = y_pos; best_x = x0; best_idx = i; best_right_h = skyline[j][1]
+            if best_idx < 0:
+                return None
+            return (best_x, best_y, best_idx, best_right_h)
+
+        def _merge_skyline() -> None:
+            # Remove consecutive nodes with the same height
+            k = 0
+            while k < len(skyline) - 1:
+                if abs(skyline[k][1] - skyline[k + 1][1]) <= 1e-9:
+                    skyline.pop(k + 1)
+                else:
+                    k += 1
+
+        # Overlap check in inner coords (mm), padding applies to the moving rect only
+        def _overlaps(ax: float, ay: float, aw: float, ah: float,
+                      bx: float, by: float, bw: float, bh: float,
+                      pad_mm: float = 0.0) -> bool:
+            ax0, ay0, ax1, ay1 = ax - pad_mm, ay - pad_mm, ax + aw + pad_mm, ay + ah + pad_mm
+            bx0, by0, bx1, by1 = bx, by, bx + bw, by + bh
+            return not (ax1 <= bx0 or bx1 <= ax0 or ay1 <= by0 or by1 <= ay0)
+
+        # Discrete candidate search using edges of placed rects (bottom-left order)
+        def _edge_search(mw: float, mh: float, placed: list[tuple[float, float, float, float]]) -> tuple[float, float] | None:
+            xs = {0.0}
+            ys = {0.0}
+            for px, py, pw, ph in placed:
+                xs.add(px)
+                xs.add(px + pw + pad)
+                ys.add(py)
+                ys.add(py + ph + pad)
+            for y in sorted(ys):
+                for x in sorted(xs):
+                    if x + mw + pad > W + 1e-9 or y + mh + pad > H + 1e-9:
+                        continue
+                    ok = True
+                    for ox, oy, ow, oh in placed:
+                        if _overlaps(x, y, mw, mh, ox, oy, ow, oh, pad_mm=pad):
+                            ok = False
+                            break
+                    if ok:
+                        return (x, y)
+            return None
+
+        placements: dict[str, tuple[float, float, float, float]] = {}
+        placed_list: list[tuple[float, float, float, float]] = []  # inner coords mm
+        for nm, mw, mh in rects:
+            w_in = mw + pad
+            h_in = mh + pad
+            pos = _find_position(w_in, h_in)
+            if pos is None:
+                # Try discrete edge-based search before giving up
+                found = _edge_search(mw, mh, placed_list)
+                if found is None:
+                    # As a last resort, keep old position only if it does not collide with already placed
+                    vals = self._major_sizes.get(nm) or {}
+                    try:
+                        ox = float(vals.get("x", margin) or margin)
+                        oy = float(vals.get("y", margin) or margin)
+                    except Exception:
+                        ox, oy = margin, margin
+                    # Convert to inner coords
+                    oxi = max(0.0, min(ox - margin, inner_w - mw))
+                    oyi = max(0.0, min(oy - margin, inner_h - mh))
+                    collided = any(_overlaps(oxi, oyi, mw, mh, px, py, pw, ph, pad_mm=pad) for (px, py, pw, ph) in placed_list)
+                    if collided:
+                        # Cannot place safely; preserve old position but include it in occupancy
+                        ax = margin + oxi
+                        ay = margin + oyi
+                        placements[nm] = (ax, ay, mw, mh)
+                        placed_list.append((oxi, oyi, mw, mh))
+                        continue
+                    x0, y0 = oxi, oyi
+                    # No skyline update when using fallback; just record placement
+                    ax = margin + x0
+                    ay = margin + y0
+                    placements[nm] = (ax, ay, mw, mh)
+                    placed_list.append((x0, y0, mw, mh))
+                    continue
+                else:
+                    x0, y0 = found
+                    # No precomputed skyline indices for edge search; we won't modify skyline but record placement
+                    ax = margin + x0
+                    ay = margin + y0
+                    placements[nm] = (ax, ay, mw, mh)
+                    placed_list.append((x0, y0, mw, mh))
+                    continue
+            else:
+                x0, y0, idx, right_h = pos
+                # Update skyline: insert node at x0 with height y0 + h_in, remove covered, then add node at x1
+                new_h = y0 + h_in
+                x1 = x0 + w_in
+                # Insert/replace at position idx
+                if abs(skyline[idx][0] - x0) <= 1e-9:
+                    skyline[idx] = (x0, new_h)
+                else:
+                    skyline.insert(idx + 1, (x0, new_h))
+                    idx += 1
+                # Remove nodes fully covered by [x0, x1)
+                k = idx + 1
+                while k < len(skyline) and skyline[k][0] <= x1 + 1e-9:
+                    k += 1
+                skyline[idx + 1:k] = []
+                # Ensure a node at x1 with the previous right-side height
+                if idx + 1 < len(skyline) and abs(skyline[idx + 1][0] - x1) <= 1e-9:
+                    skyline[idx + 1] = (x1, right_h)
+                else:
+                    skyline.insert(idx + 1, (x1, right_h))
+                _merge_skyline()
+                # Record actual mm placement (remove padding, add jig margin)
+                ax = margin + x0
+                ay = margin + y0
+                placements[nm] = (ax, ay, mw, mh)
+                placed_list.append((x0, y0, mw, mh))
 
         # Capture old positions in mm BEFORE persisting new ones
         old_mm: dict[str, tuple[float, float]] = {}
-        for nm in all_rects.keys():
+        for nm in [nm for (nm, _w, _h) in rects]:
             try:
                 v0 = self._major_sizes.get(nm) or {}
                 ox = float(v0.get("x", 0.0) or 0.0)
@@ -2219,11 +2324,16 @@ class NStickerCanvasScreen(Screen):
             except Exception:
                 ox, oy = 0.0, 0.0
             old_mm[nm] = (ox, oy)
+
         # Persist updated positions back to presets
-        for nm, (px, py, mw, mh) in all_rects.items():
+        for nm, (px, py, mw, mh) in placements.items():
             vals = self._major_sizes.get(nm) or {}
+            # Clamp within jig bounds just in case
+            px = max(margin, min(px, jx - margin - mw))
+            py = max(margin, min(py, jy - margin - mh))
             vals["x"], vals["y"] = str(float(px)), str(float(py))
             self._major_sizes[nm] = vals
+
         # Apply updates to canvas and refresh slots per major
         try:
             # Temporarily suppress child shifts while we reposition majors in bulk
@@ -2235,11 +2345,11 @@ class NStickerCanvasScreen(Screen):
             except Exception:
                 pass
 
-        # Shift children of each major by the exact delta we applied to the major
+        # Shift children of each major by the delta we applied to the major
         try:
             if hasattr(self, "selection") and hasattr(self.selection, "_shift_children_for_major"):
                 from src.core import MM_TO_PX as __MM_TO_PX
-                for nm, (nx, ny, mw, mh) in all_rects.items():
+                for nm, (nx, ny, _mw, _mh) in placements.items():
                     ox, oy = old_mm.get(nm, (nx, ny))
                     dx_mm = float(nx) - float(ox)
                     dy_mm = float(ny) - float(oy)
@@ -2250,6 +2360,7 @@ class NStickerCanvasScreen(Screen):
                     self.selection._shift_children_for_major(str(nm), dx_px, dy_px, dx_mm, dy_mm)
         except Exception:
             pass
+
         # Update entries for currently selected major to reflect new x/y
         try:
             active_major = str(self.major_name.get() or "").strip()
@@ -2452,7 +2563,7 @@ class NStickerCanvasScreen(Screen):
                             _it["path"] = str(dst_path)
                         # Optional mask copy if present and valid
                         try:
-                            mask_path_str = str(_it.get("mask_path", "") or "").strip()
+                            mask_path_str = str(_it.get("mask_path", "") if _it.get("mask_path", "") is not None else "").strip()
                         except Exception:
                             mask_path_str = ""
                         if mask_path_str and mask_path_str.lower() != "none":
@@ -2476,12 +2587,12 @@ class NStickerCanvasScreen(Screen):
                                             except Exception:
                                                 logger.exception(f"Failed to copy mask to product folder: {msrc}")
                                             else:
-                                                _it["mask_path"] = str(mdst)
+                                                _it["mask_path"] = str(mdst) if str(mdst) is not None else ""
                                         else:
-                                            _it["mask_path"] = str(mdst)
+                                            _it["mask_path"] = str(mdst) if str(mdst) is not None else ""
                                     else:
                                         # Already in current product folder
-                                        _it["mask_path"] = str(msrc)
+                                        _it["mask_path"] = str(msrc) if str(msrc) is not None else ""
                                 except Exception:
                                     logger.exception("Failed processing mask for internalization")
                     except Exception as e:
@@ -2658,7 +2769,7 @@ class NStickerCanvasScreen(Screen):
                         continue
                     try:
                         path_parts = [part_ if part_ != prev_sku_name else sku_name for part_ in Path(str(it.get("path", ""))).parts]
-                        mask_path_parts = [part_ if part_ != prev_sku_name else sku_name for part_ in Path(str(it.get("mask_path", ""))).parts]
+                        mask_path_parts = [part_ if part_ != prev_sku_name else sku_name for part_ in Path(str(it.get("mask_path", "") if it.get("mask_path", "") is not None else "")).parts]
                         obj = {
                             "type": "image",
                             "path": _to_rel(str(Path(*path_parts))),
@@ -2673,7 +2784,7 @@ class NStickerCanvasScreen(Screen):
                             "is_options": bool(it.get("is_options", False)),
                             "is_static": bool(it.get("is_static", False)),
                             # Optional mask path for image
-                            "mask_path": _to_rel(str(Path(*mask_path_parts))),
+                            "mask_path": _to_rel(str(Path(*mask_path_parts))) if mask_path_parts else "",
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process image for slot: {e}")
@@ -2961,13 +3072,16 @@ class NStickerCanvasScreen(Screen):
                 if state.is_cancelled:
                     logger.debug(f"Processing cancelled")
                     return
-                self._render_scene_to_pdf(p_front, front_items, jx, jy, dpi=1200)
+
+                front_items_without_slots = [item for item in front_items if item.get("type") != "slot"]
+                self._render_scene_to_pdf(p_front, front_items_without_slots, jx, jy, dpi=1200)
                 logger.debug(f"Rendering back PDF...")
                 state.processing_message = "Rendering back PDF..."
                 if state.is_cancelled:
                     logger.debug(f"Processing cancelled")
                     return
-                self._render_scene_to_pdf(p_back, back_items, jx, jy, dpi=1200)
+                back_items_without_slots = [item for item in back_items if item.get("type") != "slot"]
+                self._render_scene_to_pdf(p_back, back_items_without_slots, jx, jy, dpi=1200)
                 # Write JSON
                 try:
                     logger.debug(f"Writing JSON file...")
@@ -2994,7 +3108,8 @@ class NStickerCanvasScreen(Screen):
                         break
                 else:
                     ALL_PRODUCTS.append(state.sku_name)
-                    ALL_PRODUCTS.pop(ALL_PRODUCTS.index(state.prev_sku_name))
+                    if state.sku_name != state.prev_sku_name and state.prev_sku_name:
+                        ALL_PRODUCTS.pop(ALL_PRODUCTS.index(state.prev_sku_name))
 
                 if state.prev_sku_name and state.prev_sku_name != state.sku_name:
                     logger.debug(f"Removing previous product: %s", state.prev_sku_name)
@@ -3193,7 +3308,7 @@ class NStickerCanvasScreen(Screen):
                         "is_options": bool(meta.get("is_options", False)),
                         "is_static": bool(meta.get("is_static", False)),
                         "path": str(meta.get("path", "")),
-                        "mask_path": str(meta.get("mask_path", "")),
+                        "mask_path": str(meta.get("mask_path", "") if meta.get("mask_path", "") is not None else ""),
                         "w_mm": float(meta.get("w_mm", 0.0)),
                         "h_mm": float(meta.get("h_mm", 0.0)),
                         "x_mm": float(meta.get("x_mm", 0.0)),

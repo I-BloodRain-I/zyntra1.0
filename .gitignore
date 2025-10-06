@@ -3,5 +3,8 @@ data/
 __pycache__/
 dist/
 build/
+logs/
+outputs/
+inputs/
 readme.md
 *.spec

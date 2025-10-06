@@ -299,7 +299,7 @@ class FontsManager:
             raw_sz = (self.s.text_size.get() or "").strip()
             if raw_sz != "":
                 sz = int(float(raw_sz))
-                sz = max(6, sz)
+                sz = max(2, sz)
                 if t == "rect":
                     meta["label_font_size"] = int(sz)
                     try:

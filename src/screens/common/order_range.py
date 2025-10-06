@@ -1,6 +1,5 @@
+import functools
 import logging
-import os
-from tempfile import gettempdir
 import threading
 import time
 import requests
@@ -10,17 +9,15 @@ from datetime import datetime
 import json
 from copy import deepcopy
 
-from pprint import pformat
 import tkinter as tk
-import tkinter.font as tkfont
 from tkinter import TclError, ttk, messagebox
-from typing import Any, Dict, List, Literal
-from PIL import ImageDraw, ImageChops, ImageFilter, ImageOps
+from typing import Any, Dict, List
+from PIL import ImageDraw, ImageChops, ImageFilter
 from PIL import Image as _PILImage
 import numpy as np
 import math
 
-from src.core.state import state
+from src.core.state import FONTS_PATH, INPUT_PATH, state
 from src.core import (
     Screen,
     COLOR_BG_DARK,
@@ -306,6 +303,13 @@ class OrderRangeScreen(Screen):
                 elif area["customizationType"] == "TextPrinting":
                     if not area['text']:
                         continue
+
+                    font_family = area["fontFamily"]
+                    with open(FONTS_PATH / "fonts.json", "r", encoding="utf-8") as f:
+                        all_fonts = json.load(f)
+                    if font_family not in all_fonts:
+                        return {"status": "error", "message": f"Font family {font_family} not found"}
+
                     objects[side].append({
                         "type": "text",
                         "color": area["fill"],
@@ -336,8 +340,9 @@ class OrderRangeScreen(Screen):
                 else:
                     raise RuntimeError(f"Unexpected type: {area["customizationType"]}")
 
-        return objects
+        return {"status": "success", "data": objects}
 
+    @functools.lru_cache(maxsize=4096)
     def _download_image(self, image_url: str) -> Dict[str, Union[str, Image.Image]]:
         retries = 3
         image_name = image_url.split("/")[-1]
@@ -359,6 +364,9 @@ class OrderRangeScreen(Screen):
                 time.sleep(5)
                 continue
         return {"status": "error", "message": f"Failed to download image {image_name} from Amazon"}
+
+    def _crop_image(self, image: Image.Image) -> Image.Image:
+        return image.crop(image.getbbox())
 
     def _load_image(self, image_path: str) -> Dict[str, Union[str, Image.Image]]:
         path = Path(image_path)
@@ -398,18 +406,12 @@ class OrderRangeScreen(Screen):
         W, H = im.size
         new_w = max(1, int(round(W * scale)))
         new_h = max(1, int(round(H * scale)))
-        try:
-            lanczos = _PILImage.Resampling.LANCZOS
-            bicubic = _PILImage.Resampling.BICUBIC
-            bilinear = _PILImage.Resampling.BILINEAR
-            nearest = _PILImage.Resampling.NEAREST
-            affine_method = _PILImage.Transform.AFFINE
-        except AttributeError:
-            lanczos = _PILImage.LANCZOS
-            bicubic = _PILImage.BICUBIC
-            bilinear = _PILImage.BILINEAR
-            nearest = _PILImage.NEAREST
-            affine_method = _PILImage.AFFINE
+
+        lanczos = _PILImage.Resampling.LANCZOS
+        bicubic = _PILImage.Resampling.BICUBIC
+        bilinear = _PILImage.Resampling.BILINEAR
+        nearest = _PILImage.Resampling.NEAREST
+        affine_method = _PILImage.Transform.AFFINE
 
         im_scaled = im.resize((new_w, new_h), lanczos) if (new_w != W or new_h != H) else im
 
@@ -631,7 +633,14 @@ class OrderRangeScreen(Screen):
         with open(path, "r", encoding="utf-8") as f:
             order_info = json.load(f)
         
-        customization_info = self._collect_customization_info(order_info)
+        if "quantity" not in order_info:
+            return {"status": "error", "message": "Quantity not found"}
+
+        result = self._collect_customization_info(order_info)
+        if result["status"] == "error":
+            return {"status": "error", "message": result["message"]}
+        customization_info = result["data"]
+
         total_download_image_count = 0
         total_loaded_image_count = 0
         for side in customization_info:
@@ -640,7 +649,7 @@ class OrderRangeScreen(Screen):
                     total_download_image_count += 1
                 if object["type"] == "image":
                     total_loaded_image_count += 1
-        self.log(f"[{order_i+1}/{total_orders}] Total images to download from Amazon: {total_download_image_count}; from Dropbox: {total_loaded_image_count}")
+        self.log(f"[{order_i}/{total_orders}] Total images to download from Amazon: {total_download_image_count}; from disk: {total_loaded_image_count}")
 
         downloaded_image_count = 0
         loaded_image_count = 0
@@ -650,13 +659,12 @@ class OrderRangeScreen(Screen):
                     return {"status": "error", "message": "Cancelled"}
                 
                 if object["type"] == "image":
-                    image_info = self._load_image(object["image_path"])
+                    image_info = self._load_image(INPUT_PATH / object["image_path"])
                     if image_info["status"] == "error":
                         return {"status": "error", "message": image_info["message"]}
                     else:
                         loaded_image_count += 1
-                        self.log(f"[{order_i+1}/{total_orders}] Image {loaded_image_count}/{total_loaded_image_count} downloaded from Dropbox")
-                        image_info["image"].save("order_object_loaded_image_before.png")
+                        self.log(f"[{order_i}/{total_orders}] Image {loaded_image_count}/{total_loaded_image_count} loaded from disk")
                         image = self._transform_amazon_image(
                             im=image_info["image"], 
                             scale=object["scale"]["scaleX"], 
@@ -672,9 +680,10 @@ class OrderRangeScreen(Screen):
                         return {"status": "error", "message": image_info["message"]}
                     else:
                         downloaded_image_count += 1
-                        self.log(f"[{order_i+1}/{total_orders}] Image {downloaded_image_count}/{total_download_image_count} downloaded from Amazon")
+                        self.log(f"[{order_i}/{total_orders}] Image {downloaded_image_count}/{total_download_image_count} downloaded from Amazon")
+                        image = self._crop_image(image_info["image"])
                         image = self._transform_amazon_image(
-                            im=image_info["image"], 
+                            im=image, 
                             scale=object["scale"]["scaleX"], 
                             angle_deg=object["rotation"], 
                             place_xy=[object["position"]["x"], object["position"]["y"]], 
@@ -682,7 +691,7 @@ class OrderRangeScreen(Screen):
                         )
                         object["loaded_image"] = image
 
-        return {"status": "success", "data": customization_info}
+        return {"status": "success", "data": customization_info, "quantity": order_info["quantity"]}
 
     def _make_pdf(
         self, 
@@ -692,6 +701,16 @@ class OrderRangeScreen(Screen):
         pdf_end_oder_i: int
     ) -> Dict[str, str]:
         try:       
+            def _remove_empty_text_rect(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+                new_items = []
+                for item in items:
+                    if item["type"] in ["text", "rect"]:
+                        if item["label"]:
+                            new_items.append(item)
+                    else:
+                        new_items.append(item)
+                return new_items
+
             exporter = PdfExporter(self)
             p_front = str((OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_front.pdf").resolve())
             p_back  = str((OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_back.pdf").resolve())
@@ -704,10 +723,10 @@ class OrderRangeScreen(Screen):
                     back_items.extend(back["objects"])
 
             logger.debug("Rendering front PDF...")
-            exporter.render_scene_to_pdf(p_front, front_items, jig_size[0], jig_size[1], dpi=1200)
+            exporter.render_scene_to_pdf(p_front, _remove_empty_text_rect(front_items), jig_size[0], jig_size[1], dpi=1200)
             if back_items and any(item is not None for item in back_items):
                 logger.debug("Rendering back PDF...")
-                exporter.render_scene_to_pdf(p_back, back_items, jig_size[0], jig_size[1], dpi=1200)
+                exporter.render_scene_to_pdf(p_back, _remove_empty_text_rect(back_items), jig_size[0], jig_size[1], dpi=1200)
 
             return {"status": "success"}
 
@@ -718,7 +737,7 @@ class OrderRangeScreen(Screen):
             logger.exception(e)
             return {"status": "error", "message": str(e)}
 
-    def _process_order(self, path_to_json: str, pattern_info: Dict[str, Any], order_i: int, total_orders: int) -> Tuple[Dict[str, str], bool]:
+    def _process_order(self, path_to_json: str, pattern_info: Dict[str, Any], order_i: int, total_orders: int) -> Dict[str, Any]:
 
         def _select_slot(order_side_data: Dict[str, Any], pattern_info: Dict[str, Any], side: str) -> Dict[str, Any]:
             for major_index, major in enumerate(pattern_info[side]):
@@ -744,7 +763,6 @@ class OrderRangeScreen(Screen):
                     if object["mask_path"] and object["mask_path"] != "None":
                         mask_path = PRODUCTS_PATH / object["mask_path"]
                         template_path = PRODUCTS_PATH / object["path"]
-                        order_object["loaded_image"].save("order_object_loaded_image.png")
                         result = self._apply_mask(order_object["loaded_image"], template_path, mask_path)
                         if result["status"] == "error":
                             return {"status": "error", "message": f"Failed to apply mask for order: {result['message']}"}
@@ -752,7 +770,6 @@ class OrderRangeScreen(Screen):
                     else:
                         object["loaded_image"] = order_object["loaded_image"]
 
-                    # order_object["loaded_image"].save(path)
                     filename = order_object["image_path"].split(".")[0] + ".png" if "image_path" in order_object else order_object["image_url"].split("/")[-1].split(".")[0] + ".png"
                     object["path"] = str(filename)
                     object["processed"] = True
@@ -769,23 +786,26 @@ class OrderRangeScreen(Screen):
             return {"status": "error", "message": result["message"]}
         order_data = result["data"]
 
-        selected_slot_front = None
-        selected_slot_back = None
-        if order_data.get("front", {}):
-            selected_slot_front = _select_slot(order_data["front"], pattern_info, "Frontside")
-            if not selected_slot_front:
-                return {"status": "error", "message": f"Not found front pattern slot for order {path_to_json}"}
-        if order_data.get("back", {}):
-            selected_slot_back = _select_slot(order_data["back"], pattern_info, "Backside")
-            if not selected_slot_back:
-                return {"status": "error", "message": f"Not found back pattern slot for order {path_to_json}"}
-        
-        if selected_slot_front:
-            _process_object(order_data["front"], selected_slot_front)
-        if selected_slot_back:
-            _process_object(order_data["back"], selected_slot_back)
+        selected_slots = []
+        for _ in range(result["quantity"]):
+            selected_slot_front = None
+            selected_slot_back = None
+            if order_data.get("front", {}):
+                selected_slot_front = _select_slot(order_data["front"], pattern_info, "Frontside")
+                if not selected_slot_front:
+                    return {"status": "error", "message": f"Not found front pattern slot for order {path_to_json}"}
+            if order_data.get("back", {}):
+                selected_slot_back = _select_slot(order_data["back"], pattern_info, "Backside")
+                if not selected_slot_back:
+                    return {"status": "error", "message": f"Not found back pattern slot for order {path_to_json}"}
             
-        return {"status": "success", "front": selected_slot_front, "back": selected_slot_back}
+            if selected_slot_front:
+                _process_object(order_data["front"], selected_slot_front)
+            if selected_slot_back:
+                _process_object(order_data["back"], selected_slot_back)
+            selected_slots.append((selected_slot_front, selected_slot_back))
+            
+        return {"status": "success", "selected_slots": selected_slots}
 
     def _process_orders(self):
         try:
@@ -805,6 +825,22 @@ class OrderRangeScreen(Screen):
             try:
                 with open(PRODUCTS_PATH / f"{state.saved_product}.json", "r", encoding="utf-8") as f:
                     pattern_info = json.load(f)
+                    for side in ["Frontside", "Backside"]:
+                        for major in pattern_info[side]:
+                            for slot in major["slots"]:
+                                for obj_ in slot["objects"]:
+                                    if obj_["type"] == "image":
+                                        if obj_["mask_path"] in [None, ".", "None", "none"]:
+                                            obj_["mask_path"] = ""
+                                        else:
+                                            try:
+                                                Path(obj_["mask_path"])
+                                            except Exception: 
+                                                obj_["mask_path"] = ""
+
+                                    elif obj_["type"] == "text":
+                                        obj_["label"] = ""
+
             except Exception as e:
                 self.log(f"Failed to open the {state.saved_product} pattern file: {e}", ERROR_COLOR)
                 self.start_btn.configure(state="normal")
@@ -814,52 +850,90 @@ class OrderRangeScreen(Screen):
 
             self.log(f"Starting processing for range [{state.order_from}..{state.order_to}]")
             # order_paths = [f"data/15-09-2025 LIGHTER BULK/JSON/161804_Image1.json" for _ in range(6)]
-            order_paths = [f"data/15-09-2025 LIGHTER BULK/JSON/161823_Image1.json" for _ in range(5)]
-            total_orders = len(order_paths)
+
+            json_paths = list(INPUT_PATH.glob("*.json"))
+            total_order_paths = []
+            for order_id in range(int(state.order_from), int(state.order_to) + 1):
+                total_order_paths.extend([order_path_ for order_path_ in json_paths if order_path_.stem.split("_")[0] == str(order_id)])
+            
+            if not total_order_paths:
+                self.log(f"No orders found for range [{state.order_from}..{state.order_to}]", ERROR_COLOR)
+                return
+            else:
+                self.log(f"Total orders in folder: {len(total_order_paths)}")
+            
+            order_paths = []
+            for order_path in total_order_paths:
+                with open(order_path, "r", encoding="utf-8") as f:
+                    order_info = json.load(f)
+                if "asin" not in order_info:
+                    self.log(f"Order {order_path} has no asin", ERROR_COLOR)
+                    order_paths.remove(order_path)
+                    continue
+                
+                if order_info["asin"] == state.sku:
+                    order_paths.append(order_path)
+
+            if not order_paths:
+                self.log(f"No orders found for ASIN {state.sku}", ERROR_COLOR)
+                return
+            else:
+                self.log(f"Found {len(order_paths)} orders for ASIN {state.sku}", SUCCESS_COLOR)
+
+            total_orders = len(order_paths) 
             progress_step = 100 / len(order_paths)
+            last_order_i = max(int(order_path.stem.split("_")[0]) for order_path in order_paths)
 
             failed_orders = []
+            current_processing_orders = []
             pattern_data = deepcopy(pattern_info)
             pdf_data: List[Tuple[Dict[str, Any], Dict[str, Any]]] = []
-            pdf_start_oder_i = 1
+            pdf_start_oder_i = None
             for i, order_path in enumerate(order_paths):
+                i += int(order_path.stem.split("_")[0])
+                if pdf_start_oder_i is None:
+                    pdf_start_oder_i = i
+
                 if getattr(self, "_cancel_requested", False):
                     self.log("Processing cancelled by user.", WARNING_COLOR)
                     logger.debug("Processing cancelled by user.")
                     break
-                self.log(f"Processing of Order {i+1}/{total_orders} has been initiated")
-                logger.debug(f"Processing of Order {i+1}/{total_orders} has been initiated")
-                order_result = self._process_order(order_path, pattern_data, i, total_orders)
+
+                self.log(f"Processing of Order {i}/{last_order_i} has been initiated")
+                logger.debug(f"Processing of Order {i}/{last_order_i} has been initiated")
+                order_result = self._process_order(order_path, pattern_data, i, last_order_i)
                 if order_result["status"] == "error":
                     if order_result.get("message") == "Cancelled":
                         self.log("Processing cancelled by user.", WARNING_COLOR)
                         break
                     failed_orders.append(order_path)
-                    self.log(f"[{i+1}/{total_orders}] Order processing failed: " + order_result["message"], ERROR_COLOR)
+                    self.log(f"[{i}/{last_order_i}] Order processing failed: " + order_result["message"], ERROR_COLOR)
                 else:
-                    self.log(f"[{i+1}/{total_orders}] Order processed successfully", SUCCESS_COLOR)
-                    pdf_data.append((order_result["front"], order_result["back"]))
+                    self.log(f"[{i}/{last_order_i}] Order processed successfully", SUCCESS_COLOR)
+                    pdf_data.extend(order_result["selected_slots"])
+                    current_processing_orders.append(order_path)
 
                 if getattr(self, "_cancel_requested", False):
                     self.log("Processing cancelled by user.", WARNING_COLOR)
                     break
 
-                if _is_pattern_filled(pattern_data) or (i == total_orders - 1 and pdf_data):
-                    self.log(f"[{pdf_start_oder_i}-{i+1}] The pdf data is filled, making pdf...")
+                if _is_pattern_filled(pattern_data) or (i - int(order_path.stem.split("_")[0]) == total_orders - 1 and pdf_data):
+                    self.log(f"[{pdf_start_oder_i}-{i}] The pdf data is filled, making pdf...")
                     pattern_data = deepcopy(pattern_info)
                     jig_info = pattern_info["Scene"]["jig"]
-                    result = self._make_pdf(pdf_data, (jig_info["width_mm"], jig_info["height_mm"]), pdf_start_oder_i, i+1)
+                    result = self._make_pdf(pdf_data, (jig_info["width_mm"], jig_info["height_mm"]), pdf_start_oder_i, i)
                     if result["status"] == "error":
-                        self.log(f"[{pdf_start_oder_i}-{i+1}] Failed to make pdf: " + result["message"], ERROR_COLOR)
-                        failed_orders.extend(order_paths[pdf_start_oder_i-1:i+1])
+                        self.log(f"[{pdf_start_oder_i}-{i}] Failed to make pdf: " + result["message"], ERROR_COLOR)
+                        failed_orders.extend(current_processing_orders)
                     else:
-                        self.log(f"[{pdf_start_oder_i}-{i+1}] PDFs made successfully", SUCCESS_COLOR)
+                        self.log(f"[{pdf_start_oder_i}-{i}] PDFs made successfully", SUCCESS_COLOR)
                     pdf_data.clear()
-                    pdf_start_oder_i = i + 2
+                    pdf_start_oder_i = None
 
                 self.progress["value"] += progress_step
 
-            # make pdf
+            self.log(f"Processing for range [{state.order_from}..{state.order_to}] completed", SUCCESS_COLOR)
+
         finally:
             # Re-enable Start button and reset processing flag when done
             try:
