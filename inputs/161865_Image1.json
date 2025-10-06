@@ -1,0 +1,596 @@
+{
+  "orderId" : "305-5700227-0659516",
+  "orderItemId" : "54033907422402",
+  "merchantId" : "A3HKD4EJOSUJJW",
+  "marketplaceId" : "A1PA6795UKMFR9",
+  "asin" : "B0F1NZ5JDM",
+  "title" : "Meinearmbänder Personalisiertes Feuerzeug mit Initialen - Hochwertiger UV-Druck auf sturmfestem Feuerzeug - Langlebig, nachfüllbar & Winddicht - Ideale Geschenkidee für Männer zum Vatertag",
+  "quantity" : 1,
+  "vendorCode" : {
+    "empty" : true,
+    "present" : false
+  },
+  "customizationData" : {
+    "type" : "PageContainerCustomization",
+    "children" : [ {
+      "type" : "PreviewContainerCustomization",
+      "name" : "VORDERSEITE",
+      "label" : "GESTALTE DIE VORDERSEITE DEINES FEUERZEUGS",
+      "children" : [ {
+        "type" : "FlatContainerCustomization",
+        "children" : [ {
+          "type" : "OptionCustomization",
+          "name" : "VORDERSEITE",
+          "label" : "FEUERZEUG PERSONALISIERT",
+          "optionSelection" : {
+            "name" : "FEUERZEUG PERSONALISIERT",
+            "label" : "FEUERZEUG PERSONALISIERT",
+            "additionalCost" : {
+              "amount" : 4.9
+            }
+          },
+          "displayValue" : "FEUERZEUG PERSONALISIERT"
+        }, {
+          "type" : "OptionCustomization",
+          "name" : "MONOGRAM",
+          "label" : "WÄHLE DEIN MONOGRAM !",
+          "optionSelection" : {
+            "name" : "P",
+            "label" : "P",
+            "additionalCost" : {
+              "amount" : 0
+            },
+            "thumbnailImage" : {
+              "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/0a60716141dc02ede687a3cea0eddcf0.png",
+              "dimension" : {
+                "width" : 2000,
+                "height" : 2000
+              }
+            },
+            "overlayImage" : {
+              "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/0a60716141dc02ede687a3cea0eddcf0.png",
+              "dimension" : {
+                "width" : 2000,
+                "height" : 2000
+              }
+            }
+          },
+          "displayValue" : "P"
+        }, {
+          "type" : "ContainerCustomization",
+          "name" : "WUNSCHTEXT",
+          "label" : "Text 1",
+          "children" : [ {
+            "type" : "FontCustomization",
+            "name" : "",
+            "label" : "Handschrift",
+            "fontSelection" : {
+              "family" : "dearheart"
+            }
+          }, {
+            "type" : "ColorCustomization",
+            "name" : "",
+            "label" : "Weiß",
+            "colorSelection" : {
+              "name" : "Weiß",
+              "value" : "#ffffff",
+              "colorModel" : "rgb"
+            }
+          }, {
+            "type" : "ContainerCustomization",
+            "children" : [ {
+              "type" : "PlacementContainerCustomization",
+              "name" : "Wunschtext",
+              "label" : "Texteingabe 1",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "WUNSCHNAME",
+                  "inputValue" : "Peggy"
+                } ],
+                "priceDelta" : {
+                  "amount" : 0
+                }
+              } ],
+              "dimension" : {
+                "width" : 170,
+                "height" : 65
+              },
+              "position" : {
+                "x" : 119,
+                "y" : 190
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "TEXT 2",
+              "label" : "Texteingabe 2",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "WUNSCHTEXT OBEN",
+                  "inputValue" : ""
+                } ]
+              } ],
+              "dimension" : {
+                "width" : 144,
+                "height" : 55
+              },
+              "position" : {
+                "x" : 127,
+                "y" : 42
+              }
+            } ]
+          } ]
+        }, {
+          "type" : "OptionCustomization",
+          "name" : "GESCHENKBOX",
+          "label" : "GESCHENKBOX",
+          "optionSelection" : {
+            "name" : "JA | 1 STÜCK SCHMUCKSCHACHTEL",
+            "label" : "JA | 1 STÜCK SCHMUCKSCHACHTEL",
+            "additionalCost" : {
+              "amount" : 4.9
+            },
+            "thumbnailImage" : {
+              "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/463d1cd20ec3edaaf726d44b8e9b39fe.jpg",
+              "dimension" : {
+                "width" : 2000,
+                "height" : 2000
+              }
+            }
+          },
+          "displayValue" : "JA | 1 STÜCK SCHMUCKSCHACHTEL"
+        } ]
+      } ],
+      "baseImage" : {
+        "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/45f498d31039930b31ecd3a006ae1ef0.jpg",
+        "dimension" : {
+          "width" : 2000,
+          "height" : 2000
+        }
+      },
+      "snapshot" : {
+        "imageName" : "4a4df977-0e6f-3648-8717-734f3002fd28.jpg",
+        "dimension" : {
+          "width" : 400,
+          "height" : 400
+        }
+      },
+      "svg" : "e3ed3970-f71c-fc64-583c-6e1bc3c7584f.svg"
+    }, {
+      "type" : "PreviewContainerCustomization",
+      "name" : "RÜCKSEITE",
+      "label" : "GESTALTE DIE RÜCKSEITE DEINES FEUERZEUGS",
+      "children" : [ {
+        "type" : "FlatContainerCustomization",
+        "children" : [ {
+          "type" : "OptionCustomization",
+          "name" : "RÜCKSEITE",
+          "label" : "MIT TEXT AUF DER RÜCKSEITE ?",
+          "optionSelection" : {
+            "name" : "JA - MIT TEXT",
+            "label" : "JA - MIT TEXT",
+            "additionalCost" : {
+              "amount" : 4.9
+            }
+          },
+          "displayValue" : "JA - MIT TEXT"
+        }, {
+          "type" : "ContainerCustomization",
+          "name" : "Text 1",
+          "label" : "Text 1",
+          "children" : [ {
+            "type" : "FontCustomization",
+            "name" : "",
+            "label" : "HANDSCHRIFT",
+            "fontSelection" : {
+              "family" : "dearheart"
+            }
+          }, {
+            "type" : "ColorCustomization",
+            "name" : "",
+            "label" : "WEIß",
+            "colorSelection" : {
+              "name" : "Weiß",
+              "value" : "#ffffff",
+              "colorModel" : "rgb"
+            }
+          }, {
+            "type" : "ContainerCustomization",
+            "children" : [ {
+              "type" : "PlacementContainerCustomization",
+              "name" : "1.ZEILE",
+              "label" : "Texteingabe 1",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "1.ZEILE",
+                  "inputValue" : "Julia Laura Nina "
+                } ],
+                "priceDelta" : {
+                  "amount" : 0
+                }
+              } ],
+              "dimension" : {
+                "width" : 150,
+                "height" : 30
+              },
+              "position" : {
+                "x" : 127,
+                "y" : 32
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "2.ZEILE",
+              "label" : "Texteingabe 2",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "2.ZEILE",
+                  "inputValue" : ""
+                } ]
+              } ],
+              "dimension" : {
+                "width" : 150,
+                "height" : 31
+              },
+              "position" : {
+                "x" : 127,
+                "y" : 71
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "3.ZEILE",
+              "label" : "Texteingabe 3",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "3.ZEILE",
+                  "inputValue" : "Vater werden "
+                } ],
+                "priceDelta" : {
+                  "amount" : 0
+                }
+              } ],
+              "dimension" : {
+                "width" : 150,
+                "height" : 30
+              },
+              "position" : {
+                "x" : 127,
+                "y" : 130
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "4.ZEILE",
+              "label" : "Texteingabe 4",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "4.ZEILE",
+                  "inputValue" : " ist nicht schwer, "
+                } ],
+                "priceDelta" : {
+                  "amount" : 0
+                }
+              } ],
+              "dimension" : {
+                "width" : 150,
+                "height" : 30
+              },
+              "position" : {
+                "x" : 127,
+                "y" : 170
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "5.ZEILE",
+              "label" : "Texteingabe 5",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "5.ZEILE",
+                  "inputValue" : " Vater sein"
+                } ],
+                "priceDelta" : {
+                  "amount" : 0
+                }
+              } ],
+              "dimension" : {
+                "width" : 150,
+                "height" : 30
+              },
+              "position" : {
+                "x" : 127,
+                "y" : 210
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "6.ZEILE",
+              "label" : "Texteingabe 6",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "6.ZEILE",
+                  "inputValue" : "dagegen sehr."
+                } ],
+                "priceDelta" : {
+                  "amount" : 0
+                }
+              } ],
+              "dimension" : {
+                "width" : 150,
+                "height" : 30
+              },
+              "position" : {
+                "x" : 127,
+                "y" : 249
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "7.ZEILE",
+              "label" : "Texteingabe 7",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "7.ZEILE",
+                  "inputValue" : ""
+                } ]
+              } ],
+              "dimension" : {
+                "width" : 150,
+                "height" : 30
+              },
+              "position" : {
+                "x" : 127,
+                "y" : 290
+              }
+            } ]
+          } ]
+        } ]
+      } ],
+      "baseImage" : {
+        "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/3dcd7b2a96fd16d909f7e1bb1ea691c5.jpg",
+        "dimension" : {
+          "width" : 2000,
+          "height" : 2000
+        }
+      },
+      "snapshot" : {
+        "imageName" : "1eed37af-96a5-9fef-f737-e5622fb20cdf.jpg",
+        "dimension" : {
+          "width" : 400,
+          "height" : 400
+        }
+      },
+      "svg" : "4e8fab24-d26e-bfdd-a791-64f4de146fd3.svg"
+    } ]
+  },
+  "customizationInfo" : {
+    "version3.0" : {
+      "surfaces" : [ {
+        "name" : "GESTALTE DIE VORDERSEITE DEINES FEUERZEUGS",
+        "areas" : [ {
+          "customizationType" : "Options",
+          "name" : "VORDERSEITE",
+          "label" : "FEUERZEUG PERSONALISIERT",
+          "optionValue" : "FEUERZEUG PERSONALISIERT",
+          "priceDelta" : {
+            "value" : 4.9
+          },
+          "optionImage" : ""
+        }, {
+          "customizationType" : "Options",
+          "name" : "MONOGRAM",
+          "label" : "WÄHLE DEIN MONOGRAM !",
+          "optionValue" : "P",
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "optionImage" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/0a60716141dc02ede687a3cea0eddcf0.png"
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "dearheart",
+          "Dimensions" : {
+            "width" : 170,
+            "height" : 65
+          },
+          "Position" : {
+            "x" : 119,
+            "y" : 190
+          },
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "name" : "Wunschtext",
+          "label" : "WUNSCHNAME",
+          "text" : "Peggy"
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "dearheart",
+          "Dimensions" : {
+            "width" : 144,
+            "height" : 55
+          },
+          "Position" : {
+            "x" : 127,
+            "y" : 42
+          },
+          "name" : "TEXT 2",
+          "label" : "WUNSCHTEXT OBEN",
+          "text" : ""
+        }, {
+          "customizationType" : "Options",
+          "name" : "GESCHENKBOX",
+          "label" : "GESCHENKBOX",
+          "optionValue" : "JA | 1 STÜCK SCHMUCKSCHACHTEL",
+          "priceDelta" : {
+            "value" : 4.9
+          },
+          "optionImage" : ""
+        } ]
+      }, {
+        "name" : "GESTALTE DIE RÜCKSEITE DEINES FEUERZEUGS",
+        "areas" : [ {
+          "customizationType" : "Options",
+          "name" : "RÜCKSEITE",
+          "label" : "MIT TEXT AUF DER RÜCKSEITE ?",
+          "optionValue" : "JA - MIT TEXT",
+          "priceDelta" : {
+            "value" : 4.9
+          },
+          "optionImage" : ""
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "dearheart",
+          "Dimensions" : {
+            "width" : 150,
+            "height" : 30
+          },
+          "Position" : {
+            "x" : 127,
+            "y" : 32
+          },
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "name" : "1.ZEILE",
+          "label" : "1.ZEILE",
+          "text" : "Julia Laura Nina "
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "dearheart",
+          "Dimensions" : {
+            "width" : 150,
+            "height" : 31
+          },
+          "Position" : {
+            "x" : 127,
+            "y" : 71
+          },
+          "name" : "2.ZEILE",
+          "label" : "2.ZEILE",
+          "text" : ""
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "dearheart",
+          "Dimensions" : {
+            "width" : 150,
+            "height" : 30
+          },
+          "Position" : {
+            "x" : 127,
+            "y" : 130
+          },
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "name" : "3.ZEILE",
+          "label" : "3.ZEILE",
+          "text" : "Vater werden "
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "dearheart",
+          "Dimensions" : {
+            "width" : 150,
+            "height" : 30
+          },
+          "Position" : {
+            "x" : 127,
+            "y" : 170
+          },
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "name" : "4.ZEILE",
+          "label" : "4.ZEILE",
+          "text" : " ist nicht schwer, "
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "dearheart",
+          "Dimensions" : {
+            "width" : 150,
+            "height" : 30
+          },
+          "Position" : {
+            "x" : 127,
+            "y" : 210
+          },
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "name" : "5.ZEILE",
+          "label" : "5.ZEILE",
+          "text" : " Vater sein"
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "dearheart",
+          "Dimensions" : {
+            "width" : 150,
+            "height" : 30
+          },
+          "Position" : {
+            "x" : 127,
+            "y" : 249
+          },
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "name" : "6.ZEILE",
+          "label" : "6.ZEILE",
+          "text" : "dagegen sehr."
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "dearheart",
+          "Dimensions" : {
+            "width" : 150,
+            "height" : 30
+          },
+          "Position" : {
+            "x" : 127,
+            "y" : 290
+          },
+          "name" : "7.ZEILE",
+          "label" : "7.ZEILE",
+          "text" : ""
+        } ]
+      } ]
+    }
+  }
+}

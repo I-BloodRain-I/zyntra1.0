@@ -856,10 +856,11 @@ class SelectProductScreen(Screen):
     def _detect_inputs_orders(self):
         # from PyPDF2 import PdfReader
         
-        json_files = INPUT_PATH.glob("*.json")
-        orders = [int(f.stem.split("_")[0]) for f in json_files]
-        state.order_from = str(min(orders))
-        state.order_to = str(max(orders))
+        json_files = list(INPUT_PATH.glob("*.json"))
+        if len(json_files) > 0:
+            orders = [int(f.stem.split("_")[0]) for f in json_files]
+            state.order_from = str(min(orders))
+            state.order_to = str(max(orders))
         
             # reader = PdfReader(pdf_path)
             # text = ""

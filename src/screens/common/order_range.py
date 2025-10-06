@@ -292,7 +292,7 @@ class OrderRangeScreen(Screen):
                 if area["customizationType"] == "Options":
                     if not area["optionImage"] or area["optionValue"].startswith("NEIN"):
                         continue
-                    if str(order_info).count(area["optionValue"]) > 3:
+                    if str(order_info).count(area["optionImage"]) > 3:
                         continue
                     objects[side].append({
                         "type": "options",
@@ -682,13 +682,6 @@ class OrderRangeScreen(Screen):
                         downloaded_image_count += 1
                         self.log(f"[{order_i}/{total_orders}] Image {downloaded_image_count}/{total_download_image_count} downloaded from Amazon")
                         image = self._crop_image(image_info["image"])
-                        image = self._transform_amazon_image(
-                            im=image, 
-                            scale=object["scale"]["scaleX"], 
-                            angle_deg=object["rotation"], 
-                            place_xy=[object["position"]["x"], object["position"]["y"]], 
-                            mask_rect=[object["mask_position"]["x"], object["mask_position"]["y"], object["mask_size"]["width"], object["mask_size"]["height"]]
-                        )
                         object["loaded_image"] = image
 
         return {"status": "success", "data": customization_info, "quantity": order_info["quantity"]}
@@ -701,15 +694,8 @@ class OrderRangeScreen(Screen):
         pdf_end_oder_i: int
     ) -> Dict[str, str]:
         try:       
-            def _remove_empty_text_rect(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-                new_items = []
-                for item in items:
-                    if item["type"] in ["text", "rect"]:
-                        if item["label"]:
-                            new_items.append(item)
-                    else:
-                        new_items.append(item)
-                return new_items
+            def _remove_unprocessed_objs(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+                return [item for item in items if item.get("processed", False)]
 
             exporter = PdfExporter(self)
             p_front = str((OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_front.pdf").resolve())
@@ -718,15 +704,15 @@ class OrderRangeScreen(Screen):
             front_items = []
             back_items = []
             for front, back in data:
-                front_items.extend(front["objects"])
+                front_items.extend(front["objects"] if front else [])
                 if back:
-                    back_items.extend(back["objects"])
+                    back_items.extend(back["objects"] if back else [])
 
             logger.debug("Rendering front PDF...")
-            exporter.render_scene_to_pdf(p_front, _remove_empty_text_rect(front_items), jig_size[0], jig_size[1], dpi=1200)
+            exporter.render_scene_to_pdf(p_front, _remove_unprocessed_objs(front_items), jig_size[0], jig_size[1], dpi=1200)
             if back_items and any(item is not None for item in back_items):
                 logger.debug("Rendering back PDF...")
-                exporter.render_scene_to_pdf(p_back, _remove_empty_text_rect(back_items), jig_size[0], jig_size[1], dpi=1200)
+                exporter.render_scene_to_pdf(p_back, _remove_unprocessed_objs(back_items), jig_size[0], jig_size[1], dpi=1200)
 
             return {"status": "success"}
 
@@ -810,12 +796,19 @@ class OrderRangeScreen(Screen):
     def _process_orders(self):
         try:
             def _is_pattern_filled(pattern_info: Dict[str, Any]) -> bool:
-                for side in ["Frontside", "Backside"]:
-                    for major in pattern_info[side]:
-                        for slot in major["slots"]:
-                            if slot["objects"]:
-                                return False
-                return True
+                is_filled_front = True
+                is_filled_back = True
+                for major in pattern_info["Frontside"]:
+                    for slot in major["slots"]:
+                        if slot["objects"]:
+                            is_filled_front = False
+
+                for major in pattern_info["Backside"]:
+                    for slot in major["slots"]:
+                        if slot["objects"]:
+                            is_filled_back = False
+
+                return is_filled_front or is_filled_back
 
             if getattr(self, "_cancel_requested", False):
                 self.log("Processing cancelled by user.", WARNING_COLOR)
@@ -882,6 +875,7 @@ class OrderRangeScreen(Screen):
 
             total_orders = len(order_paths) 
             progress_step = 100 / len(order_paths)
+            order_paths = sorted(order_paths, key=lambda x: int(x.stem.split("_")[0]))
             last_order_i = max(int(order_path.stem.split("_")[0]) for order_path in order_paths)
 
             failed_orders = []
@@ -890,49 +884,54 @@ class OrderRangeScreen(Screen):
             pdf_data: List[Tuple[Dict[str, Any], Dict[str, Any]]] = []
             pdf_start_oder_i = None
             for i, order_path in enumerate(order_paths):
-                i += int(order_path.stem.split("_")[0])
+                order_id = int(order_path.stem.split("_")[0])
                 if pdf_start_oder_i is None:
-                    pdf_start_oder_i = i
+                    pdf_start_oder_i = order_id
 
                 if getattr(self, "_cancel_requested", False):
                     self.log("Processing cancelled by user.", WARNING_COLOR)
                     logger.debug("Processing cancelled by user.")
                     break
 
-                self.log(f"Processing of Order {i}/{last_order_i} has been initiated")
-                logger.debug(f"Processing of Order {i}/{last_order_i} has been initiated")
-                order_result = self._process_order(order_path, pattern_data, i, last_order_i)
+                self.log(f"Processing of Order {order_id}/{last_order_i} has been initiated")
+                logger.debug(f"Processing of Order {order_id}/{last_order_i} has been initiated")
+                order_result = self._process_order(order_path, pattern_data, order_id, last_order_i)
                 if order_result["status"] == "error":
                     if order_result.get("message") == "Cancelled":
                         self.log("Processing cancelled by user.", WARNING_COLOR)
                         break
-                    failed_orders.append(order_path)
-                    self.log(f"[{i}/{last_order_i}] Order processing failed: " + order_result["message"], ERROR_COLOR)
+                    failed_orders.append(order_path.stem)
+                    self.log(f"[{order_id}/{last_order_i}] Order processing failed: " + order_result["message"], ERROR_COLOR)
                 else:
-                    self.log(f"[{i}/{last_order_i}] Order processed successfully", SUCCESS_COLOR)
-                    pdf_data.extend(order_result["selected_slots"])
-                    current_processing_orders.append(order_path)
+                    self.log(f"[{order_id}/{last_order_i}] Order processed successfully", SUCCESS_COLOR)
+                    if order_result["selected_slots"] == (None, None):
+                        self.log(f"[{order_id}/{last_order_i}] Order doesn't require customization", WARNING_COLOR)
+                    else:
+                        pdf_data.extend(order_result["selected_slots"])
+                        current_processing_orders.append(order_path)
 
                 if getattr(self, "_cancel_requested", False):
                     self.log("Processing cancelled by user.", WARNING_COLOR)
                     break
 
-                if _is_pattern_filled(pattern_data) or (i - int(order_path.stem.split("_")[0]) == total_orders - 1 and pdf_data):
-                    self.log(f"[{pdf_start_oder_i}-{i}] The pdf data is filled, making pdf...")
+                if _is_pattern_filled(pattern_data) or (i == total_orders - 1 and pdf_data):
+                    self.log(f"[{pdf_start_oder_i}-{order_id}] The pdf data is filled, making pdf...")
                     pattern_data = deepcopy(pattern_info)
                     jig_info = pattern_info["Scene"]["jig"]
-                    result = self._make_pdf(pdf_data, (jig_info["width_mm"], jig_info["height_mm"]), pdf_start_oder_i, i)
+                    result = self._make_pdf(pdf_data, (jig_info["width_mm"], jig_info["height_mm"]), pdf_start_oder_i, order_id)
                     if result["status"] == "error":
-                        self.log(f"[{pdf_start_oder_i}-{i}] Failed to make pdf: " + result["message"], ERROR_COLOR)
-                        failed_orders.extend(current_processing_orders)
+                        self.log(f"[{pdf_start_oder_i}-{order_id}] Failed to make pdf: " + result["message"], ERROR_COLOR)
+                        failed_orders.extend([order_path.stem for order_path in current_processing_orders])
                     else:
-                        self.log(f"[{pdf_start_oder_i}-{i}] PDFs made successfully", SUCCESS_COLOR)
+                        self.log(f"[{pdf_start_oder_i}-{order_id}] PDFs made successfully", SUCCESS_COLOR)
                     pdf_data.clear()
                     pdf_start_oder_i = None
 
                 self.progress["value"] += progress_step
 
             self.log(f"Processing for range [{state.order_from}..{state.order_to}] completed", SUCCESS_COLOR)
+            if failed_orders:
+                self.log(f"Failed orders: {failed_orders}", ERROR_COLOR)
 
         finally:
             # Re-enable Start button and reset processing flag when done

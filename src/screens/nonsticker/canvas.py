@@ -1648,15 +1648,26 @@ class NStickerCanvasScreen(Screen):
                 s1_w = float(slot1_meta.get("w_mm", 0.0))
                 s1_h = float(slot1_meta.get("h_mm", 0.0))
 
-                def _inside_slot_center_mm(obj_meta: CanvasObject) -> bool:
+                # Prefer pixel-space bbox to respect rotation and actual rendered bounds
+                try:
+                    slot1_bbox_px = self.canvas.bbox(slot1_id)
+                except Exception:
+                    slot1_bbox_px = None
+
+                def _inside_slot_by_bbox_px(obj_cid: int) -> bool:
                     try:
-                        ox = float(obj_meta.get("x_mm", 0.0))
-                        oy = float(obj_meta.get("y_mm", 0.0))
-                        ow = float(obj_meta.get("w_mm", 0.0))
-                        oh = float(obj_meta.get("h_mm", 0.0))
-                        cx = ox + ow / 2.0
-                        cy = oy + oh / 2.0
-                        return (s1_x <= cx <= s1_x + s1_w) and (s1_y <= cy <= s1_y + s1_h)
+                        if not slot1_bbox_px:
+                            return False
+                        bx = self.canvas.bbox(obj_cid)
+                        if not bx:
+                            return False
+                        ox0, oy0, ox1, oy1 = float(bx[0]), float(bx[1]), float(bx[2]), float(bx[3])
+                        sx0, sy0, sx1, sy1 = float(slot1_bbox_px[0]), float(slot1_bbox_px[1]), float(slot1_bbox_px[2]), float(slot1_bbox_px[3])
+                        cx = (ox0 + ox1) / 2.0
+                        cy = (oy0 + oy1) / 2.0
+                        # Pixel epsilon
+                        eps_px = 1.0
+                        return (cx >= sx0 - eps_px) and (cx <= sx1 + eps_px) and (cy >= sy0 - eps_px) and (cy <= sy1 + eps_px)
                     except Exception:
                         return False
 
@@ -1668,7 +1679,7 @@ class NStickerCanvasScreen(Screen):
                     # Duplicate any object whose center lies inside slot 1,
                     # regardless of its current owner_major (some items might
                     # have missing or mismatched ownership).
-                    if _inside_slot_center_mm(meta):
+                    if _inside_slot_by_bbox_px(cid):
                         template.append((cid, meta))
 
                 if template:
@@ -1693,13 +1704,18 @@ class NStickerCanvasScreen(Screen):
                             dx = float(dest_meta.get("x_mm", 0.0))
                             dy = float(dest_meta.get("y_mm", 0.0))
                             # Clear existing non-slot objects inside this destination slot before cloning
+                            # Use destination slot's canvas bounding box in pixels for accurate containment
                             try:
-                                dsx = float(dest_meta.get("x_mm", 0.0))
-                                dsy = float(dest_meta.get("y_mm", 0.0))
-                                dsw = float(dest_meta.get("w_mm", 0.0))
-                                dsh = float(dest_meta.get("h_mm", 0.0))
-                            except Exception as e:
-                                logger.exception("Failed to read destination slot bounds before clearing")
+                                dest_bbox_px = self.canvas.bbox(dest_sid)
+                            except Exception:
+                                dest_bbox_px = None
+                            if not dest_bbox_px:
+                                logger.exception("Destination slot bbox not available before clearing")
+                                raise RuntimeError("Destination slot bbox not available")
+                            try:
+                                dsx0, dsy0, dsx1, dsy1 = float(dest_bbox_px[0]), float(dest_bbox_px[1]), float(dest_bbox_px[2]), float(dest_bbox_px[3])
+                            except Exception:
+                                logger.exception("Failed to parse destination slot bbox before clearing")
                                 raise
                             try:
                                 to_delete_ids: list[int] = []
@@ -1709,17 +1725,15 @@ class NStickerCanvasScreen(Screen):
                                     consider = (t == "rect") or (t == "image") or (t == "text")
                                     if consider:
                                         try:
-                                            if t == "text":
-                                                cx = float(del_meta.get("x_mm", 0.0))
-                                                cy = float(del_meta.get("y_mm", 0.0))
-                                            else:
-                                                oxm = float(del_meta.get("x_mm", 0.0))
-                                                oym = float(del_meta.get("y_mm", 0.0))
-                                                wmm = float(del_meta.get("w_mm", 0.0))
-                                                hmm = float(del_meta.get("h_mm", 0.0))
-                                                cx = oxm + wmm / 2.0
-                                                cy = oym + hmm / 2.0
-                                            inside = (dsx <= cx <= dsx + dsw) and (dsy <= cy <= dsy + dsh)
+                                            bx = self.canvas.bbox(del_cid)
+                                            if not bx:
+                                                continue
+                                            ox0, oy0, ox1, oy1 = float(bx[0]), float(bx[1]), float(bx[2]), float(bx[3])
+                                            cx = (ox0 + ox1) / 2.0
+                                            cy = (oy0 + oy1) / 2.0
+                                            # Pixel tolerance
+                                            eps_px = 1.0
+                                            inside = (cx >= dsx0 - eps_px) and (cx <= dsx1 + eps_px) and (cy >= dsy0 - eps_px) and (cy <= dsy1 + eps_px)
                                         except Exception as e:
                                             logger.exception("Failed to check object position against destination slot")
                                             raise
@@ -2759,7 +2773,9 @@ class NStickerCanvasScreen(Screen):
                         sy = float(sl.get("y_mm", 0.0))
                         sw = float(sl.get("w_mm", 0.0))
                         sh = float(sl.get("h_mm", 0.0))
-                        return (sx <= cx <= sx + sw) and (sy <= cy <= sy + sh)
+                        # Use small tolerance for boundary to avoid missing near-edge items
+                        eps = 1e-3
+                        return (cx >= sx - eps) and (cx <= sx + sw + eps) and (cy >= sy - eps) and (cy <= sy + sh + eps)
                     except Exception as e:
                         logger.exception(f"Failed to check if image is centered in slot: {e}")
                         return False
@@ -2826,7 +2842,8 @@ class NStickerCanvasScreen(Screen):
                             sh = float(sl.get("h_mm", 0.0))
                             cx = float(obj.get("x_mm", 0.0))
                             cy = float(obj.get("y_mm", 0.0))
-                            inside = (sx <= cx <= sx + sw) and (sy <= cy <= sy + sh)
+                            eps = 1e-3
+                            inside = (cx >= sx - eps) and (cx <= sx + sw + eps) and (cy >= sy - eps) and (cy <= sy + sh + eps)
                         except Exception as e:
                             logger.exception(f"Failed to check if text is inside slot: {e}")
                             inside = False
@@ -2869,7 +2886,8 @@ class NStickerCanvasScreen(Screen):
                             sy = float(sl.get("y_mm", 0.0))
                             sw = float(sl.get("w_mm", 0.0))
                             sh = float(sl.get("h_mm", 0.0))
-                            inside = (sx <= obj["x_mm"] <= sx + sw) and (sy <= obj["y_mm"] <= sy + sh)
+                            eps = 1e-3
+                            inside = (obj["x_mm"] >= sx - eps) and (obj["x_mm"] <= sx + sw + eps) and (obj["y_mm"] >= sy - eps) and (obj["y_mm"] <= sy + sh + eps)
                         except Exception as e:
                             logger.exception(f"Failed to check if sized text is inside slot: {e}")
                             inside = False
@@ -2910,7 +2928,8 @@ class NStickerCanvasScreen(Screen):
                             sy = float(sl.get("y_mm", 0.0))
                             sw = float(sl.get("w_mm", 0.0))
                             sh = float(sl.get("h_mm", 0.0))
-                            inside = (sx <= obj["x_mm"] <= sx + sw) and (sy <= obj["y_mm"] <= sy + sh)
+                            eps = 1e-3
+                            inside = (obj["x_mm"] >= sx - eps) and (obj["x_mm"] <= sx + sw + eps) and (obj["y_mm"] >= sy - eps) and (obj["y_mm"] <= sy + sh + eps)
                         except Exception as e:
                             logger.exception(f"Failed to check if rect is inside slot: {e}")
                             inside = False

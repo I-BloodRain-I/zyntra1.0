@@ -1,0 +1,276 @@
+{
+  "orderId" : "028-5611820-9288356",
+  "orderItemId" : "54014663360722",
+  "merchantId" : "A3HKD4EJOSUJJW",
+  "marketplaceId" : "A1PA6795UKMFR9",
+  "asin" : "B0F1NZ5JDM",
+  "title" : "Meinearmbänder Personalisiertes Feuerzeug mit Initialen - Hochwertiger UV-Druck auf sturmfestem Feuerzeug - Langlebig, nachfüllbar & Winddicht - Ideale Geschenkidee für Männer zum Vatertag",
+  "quantity" : 1,
+  "vendorCode" : {
+    "empty" : true,
+    "present" : false
+  },
+  "customizationData" : {
+    "type" : "PageContainerCustomization",
+    "children" : [ {
+      "type" : "PreviewContainerCustomization",
+      "name" : "VORDERSEITE",
+      "label" : "GESTALTE DIE VORDERSEITE DEINES FEUERZEUGS",
+      "children" : [ {
+        "type" : "FlatContainerCustomization",
+        "children" : [ {
+          "type" : "OptionCustomization",
+          "name" : "VORDERSEITE",
+          "label" : "FEUERZEUG PERSONALISIERT",
+          "optionSelection" : {
+            "name" : "FEUERZEUG PERSONALISIERT",
+            "label" : "FEUERZEUG PERSONALISIERT",
+            "additionalCost" : {
+              "amount" : 4.9
+            }
+          },
+          "displayValue" : "FEUERZEUG PERSONALISIERT"
+        }, {
+          "type" : "OptionCustomization",
+          "name" : "MONOGRAM",
+          "label" : "WÄHLE DEIN MONOGRAM !",
+          "optionSelection" : {
+            "name" : "V",
+            "label" : "V",
+            "additionalCost" : {
+              "amount" : 0
+            },
+            "thumbnailImage" : {
+              "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/8a5f928e4a2f35f5aab3a3f8344565e0.png",
+              "dimension" : {
+                "width" : 2000,
+                "height" : 2000
+              }
+            },
+            "overlayImage" : {
+              "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/8a5f928e4a2f35f5aab3a3f8344565e0.png",
+              "dimension" : {
+                "width" : 2000,
+                "height" : 2000
+              }
+            }
+          },
+          "displayValue" : "V"
+        }, {
+          "type" : "ContainerCustomization",
+          "name" : "WUNSCHTEXT",
+          "label" : "Text 1",
+          "children" : [ {
+            "type" : "FontCustomization",
+            "name" : "",
+            "label" : "Handschrift",
+            "fontSelection" : {
+              "family" : "dearheart"
+            }
+          }, {
+            "type" : "ColorCustomization",
+            "name" : "",
+            "label" : "Weiß",
+            "colorSelection" : {
+              "name" : "Weiß",
+              "value" : "#ffffff",
+              "colorModel" : "rgb"
+            }
+          }, {
+            "type" : "ContainerCustomization",
+            "children" : [ {
+              "type" : "PlacementContainerCustomization",
+              "name" : "Wunschtext",
+              "label" : "Texteingabe 1",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "WUNSCHNAME",
+                  "inputValue" : "Vinti"
+                } ],
+                "priceDelta" : {
+                  "amount" : 0
+                }
+              } ],
+              "dimension" : {
+                "width" : 170,
+                "height" : 65
+              },
+              "position" : {
+                "x" : 119,
+                "y" : 190
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "TEXT 2",
+              "label" : "Texteingabe 2",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "WUNSCHTEXT OBEN",
+                  "inputValue" : ""
+                } ]
+              } ],
+              "dimension" : {
+                "width" : 144,
+                "height" : 55
+              },
+              "position" : {
+                "x" : 127,
+                "y" : 42
+              }
+            } ]
+          } ]
+        }, {
+          "type" : "OptionCustomization",
+          "name" : "GESCHENKBOX",
+          "label" : "GESCHENKBOX",
+          "optionSelection" : {
+            "name" : "NEIN",
+            "label" : "NEIN",
+            "additionalCost" : {
+              "amount" : 0
+            }
+          },
+          "displayValue" : "NEIN"
+        } ]
+      } ],
+      "baseImage" : {
+        "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/45f498d31039930b31ecd3a006ae1ef0.jpg",
+        "dimension" : {
+          "width" : 2000,
+          "height" : 2000
+        }
+      },
+      "snapshot" : {
+        "imageName" : "f0d4cb5e-b54b-132a-a0d4-21602623c33a.jpg",
+        "dimension" : {
+          "width" : 400,
+          "height" : 400
+        }
+      },
+      "svg" : "87776ea6-c55f-98f9-1efd-c4db1692a80a.svg"
+    }, {
+      "type" : "PreviewContainerCustomization",
+      "name" : "RÜCKSEITE",
+      "label" : "GESTALTE DIE RÜCKSEITE DEINES FEUERZEUGS",
+      "children" : [ {
+        "type" : "FlatContainerCustomization",
+        "children" : [ {
+          "type" : "OptionCustomization",
+          "name" : "RÜCKSEITE",
+          "label" : "MIT TEXT AUF DER RÜCKSEITE ?",
+          "optionSelection" : {
+            "name" : "NEIN - BLANKO",
+            "label" : "NEIN - BLANKO",
+            "additionalCost" : {
+              "amount" : 0
+            }
+          },
+          "displayValue" : "NEIN - BLANKO"
+        } ]
+      } ],
+      "baseImage" : {
+        "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/3dcd7b2a96fd16d909f7e1bb1ea691c5.jpg",
+        "dimension" : {
+          "width" : 2000,
+          "height" : 2000
+        }
+      },
+      "snapshot" : {
+        "imageName" : "4dee0b61-6071-ff69-c45b-8c47a0850711.jpg",
+        "dimension" : {
+          "width" : 400,
+          "height" : 400
+        }
+      },
+      "svg" : "d6333117-9bdc-4a2e-3961-a57612ae42c2.svg"
+    } ]
+  },
+  "customizationInfo" : {
+    "version3.0" : {
+      "surfaces" : [ {
+        "name" : "GESTALTE DIE VORDERSEITE DEINES FEUERZEUGS",
+        "areas" : [ {
+          "customizationType" : "Options",
+          "name" : "VORDERSEITE",
+          "label" : "FEUERZEUG PERSONALISIERT",
+          "optionValue" : "FEUERZEUG PERSONALISIERT",
+          "priceDelta" : {
+            "value" : 4.9
+          },
+          "optionImage" : ""
+        }, {
+          "customizationType" : "Options",
+          "name" : "MONOGRAM",
+          "label" : "WÄHLE DEIN MONOGRAM !",
+          "optionValue" : "V",
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "optionImage" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/8a5f928e4a2f35f5aab3a3f8344565e0.png"
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "dearheart",
+          "Dimensions" : {
+            "width" : 170,
+            "height" : 65
+          },
+          "Position" : {
+            "x" : 119,
+            "y" : 190
+          },
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "name" : "Wunschtext",
+          "label" : "WUNSCHNAME",
+          "text" : "Vinti"
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "dearheart",
+          "Dimensions" : {
+            "width" : 144,
+            "height" : 55
+          },
+          "Position" : {
+            "x" : 127,
+            "y" : 42
+          },
+          "name" : "TEXT 2",
+          "label" : "WUNSCHTEXT OBEN",
+          "text" : ""
+        }, {
+          "customizationType" : "Options",
+          "name" : "GESCHENKBOX",
+          "label" : "GESCHENKBOX",
+          "optionValue" : "NEIN",
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "optionImage" : ""
+        } ]
+      }, {
+        "name" : "GESTALTE DIE RÜCKSEITE DEINES FEUERZEUGS",
+        "areas" : [ {
+          "customizationType" : "Options",
+          "name" : "RÜCKSEITE",
+          "label" : "MIT TEXT AUF DER RÜCKSEITE ?",
+          "optionValue" : "NEIN - BLANKO",
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "optionImage" : ""
+        } ]
+      } ]
+    }
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "orderId" : "305-8731372-5944309",
+  "orderItemId" : "54046854149642",
+  "merchantId" : "A3HKD4EJOSUJJW",
+  "marketplaceId" : "A1PA6795UKMFR9",
+  "asin" : "B0F1NZ5JDM",
+  "title" : "Meinearmbänder Personalisiertes Feuerzeug mit Initialen - Hochwertiger UV-Druck auf sturmfestem Feuerzeug - Langlebig, nachfüllbar & Winddicht - Ideale Geschenkidee für Männer zum Vatertag",
+  "quantity" : 1,
+  "vendorCode" : {
+    "empty" : true,
+    "present" : false
+  },
+  "customizationData" : {
+    "type" : "PageContainerCustomization",
+    "children" : [ {
+      "type" : "PreviewContainerCustomization",
+      "name" : "VORDERSEITE",
+      "label" : "GESTALTE DIE VORDERSEITE DEINES FEUERZEUGS",
+      "children" : [ {
+        "type" : "FlatContainerCustomization",
+        "children" : [ {
+          "type" : "OptionCustomization",
+          "name" : "VORDERSEITE",
+          "label" : "FEUERZEUG PERSONALISIERT",
+          "optionSelection" : {
+            "name" : "NEIN - BLANKO",
+            "label" : "NEIN - BLANKO",
+            "additionalCost" : {
+              "amount" : 0
+            }
+          },
+          "displayValue" : "NEIN - BLANKO"
+        }, {
+          "type" : "OptionCustomization",
+          "name" : "GESCHENKBOX",
+          "label" : "GESCHENKBOX",
+          "optionSelection" : {
+            "name" : "NEIN",
+            "label" : "NEIN",
+            "additionalCost" : {
+              "amount" : 0
+            }
+          },
+          "displayValue" : "NEIN"
+        } ]
+      } ],
+      "baseImage" : {
+        "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/45f498d31039930b31ecd3a006ae1ef0.jpg",
+        "dimension" : {
+          "width" : 2000,
+          "height" : 2000
+        }
+      },
+      "snapshot" : {
+        "imageName" : "ce82f819-0112-67d9-2af6-c52fd31000c4.jpg",
+        "dimension" : {
+          "width" : 400,
+          "height" : 400
+        }
+      },
+      "svg" : "4886dbd2-4fa6-facb-78a4-c7f48e8b379b.svg"
+    }, {
+      "type" : "PreviewContainerCustomization",
+      "name" : "RÜCKSEITE",
+      "label" : "GESTALTE DIE RÜCKSEITE DEINES FEUERZEUGS",
+      "children" : [ {
+        "type" : "FlatContainerCustomization",
+        "children" : [ {
+          "type" : "OptionCustomization",
+          "name" : "RÜCKSEITE",
+          "label" : "MIT TEXT AUF DER RÜCKSEITE ?",
+          "optionSelection" : {
+            "name" : "NEIN - BLANKO",
+            "label" : "NEIN - BLANKO",
+            "additionalCost" : {
+              "amount" : 0
+            }
+          },
+          "displayValue" : "NEIN - BLANKO"
+        } ]
+      } ],
+      "baseImage" : {
+        "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/3dcd7b2a96fd16d909f7e1bb1ea691c5.jpg",
+        "dimension" : {
+          "width" : 2000,
+          "height" : 2000
+        }
+      },
+      "snapshot" : {
+        "imageName" : "6cfbe506-e879-effc-65b6-c446be9c1803.jpg",
+        "dimension" : {
+          "width" : 400,
+          "height" : 400
+        }
+      },
+      "svg" : "6624c1b2-296e-551b-ef30-df98a8cb66b1.svg"
+    } ]
+  },
+  "customizationInfo" : {
+    "version3.0" : {
+      "surfaces" : [ {
+        "name" : "GESTALTE DIE VORDERSEITE DEINES FEUERZEUGS",
+        "areas" : [ {
+          "customizationType" : "Options",
+          "name" : "VORDERSEITE",
+          "label" : "FEUERZEUG PERSONALISIERT",
+          "optionValue" : "NEIN - BLANKO",
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "optionImage" : ""
+        }, {
+          "customizationType" : "Options",
+          "name" : "GESCHENKBOX",
+          "label" : "GESCHENKBOX",
+          "optionValue" : "NEIN",
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "optionImage" : ""
+        } ]
+      }, {
+        "name" : "GESTALTE DIE RÜCKSEITE DEINES FEUERZEUGS",
+        "areas" : [ {
+          "customizationType" : "Options",
+          "name" : "RÜCKSEITE",
+          "label" : "MIT TEXT AUF DER RÜCKSEITE ?",
+          "optionValue" : "NEIN - BLANKO",
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "optionImage" : ""
+        } ]
+      } ]
+    }
+  }
+}
