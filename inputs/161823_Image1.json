@@ -1,0 +1,514 @@
+{
+  "orderId" : "302-2119004-2822764",
+  "orderItemId" : "54004655017042",
+  "merchantId" : "A3HKD4EJOSUJJW",
+  "marketplaceId" : "A1PA6795UKMFR9",
+  "asin" : "B0F4DQR21L",
+  "title" : "Personalisiertes Graviertes Feuerzeug mit Wunschtext - Einzigartiges Geschenk für Ihn - Individuelles Andenken für Besondere Anlässe",
+  "quantity" : 1,
+  "vendorCode" : {
+    "empty" : true,
+    "present" : false
+  },
+  "customizationData" : {
+    "type" : "PageContainerCustomization",
+    "children" : [ {
+      "type" : "PreviewContainerCustomization",
+      "name" : "LADE EIN BILD HOCH",
+      "label" : "LADE EIN BILD HOCH !",
+      "children" : [ {
+        "type" : "FlatContainerCustomization",
+        "children" : [ {
+          "type" : "OptionCustomization",
+          "name" : "Bild gewünscht",
+          "label" : "BILD GEWÜNSCHT ?",
+          "optionSelection" : {
+            "name" : "JA",
+            "label" : "JA",
+            "additionalCost" : {
+              "amount" : 4.9
+            }
+          },
+          "displayValue" : "JA"
+        }, {
+          "type" : "PlacementContainerCustomization",
+          "name" : "BILD HOCHLADEN",
+          "label" : "Image 1",
+          "children" : [ {
+            "type" : "ImageCustomization",
+            "name" : "",
+            "label" : "BITTE BILD HOCHLADEN !",
+            "image" : {
+              "imageName" : "2789e1e5-af87-459c-9f96-0e98c063e9c6.jpg",
+              "buyerFilename" : "IMG_3291.jpeg"
+            }
+          } ],
+          "dimension" : {
+            "width" : 188,
+            "height" : 250
+          },
+          "position" : {
+            "x" : 112,
+            "y" : 118
+          },
+          "buyerPlacement" : {
+            "position" : {
+              "x" : 111.99999999999994,
+              "y" : 114.00578034682076
+            },
+            "dimension" : {
+              "width" : 1595,
+              "height" : 2211
+            },
+            "scale" : {
+              "scaleX" : 0.11411020711399424,
+              "scaleY" : 0.11411020711399424
+            },
+            "angleOfRotation" : 0
+          }
+        }, {
+          "type" : "OptionCustomization",
+          "name" : "Geschenkbox",
+          "label" : "GESCHENKBOX",
+          "optionSelection" : {
+            "name" : "JA | MIT GESCHENKBOX",
+            "label" : "JA | MIT GESCHENKBOX",
+            "additionalCost" : {
+              "amount" : 4.9
+            },
+            "thumbnailImage" : {
+              "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/ad9a5a16e361c8f285c3189ed6857168.jpg",
+              "dimension" : {
+                "width" : 2000,
+                "height" : 2000
+              }
+            }
+          },
+          "displayValue" : "JA | MIT GESCHENKBOX"
+        } ]
+      } ],
+      "baseImage" : {
+        "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/c96ee45742839ea503282b9f4e29c7da.jpg",
+        "dimension" : {
+          "width" : 2000,
+          "height" : 2000
+        }
+      },
+      "snapshot" : {
+        "imageName" : "ddb8fc24-0e3b-5acd-5b72-63e76072f5af.jpg",
+        "dimension" : {
+          "width" : 400,
+          "height" : 400
+        }
+      },
+      "svg" : "a7c20054-8b85-0bf9-be89-51988ff6ac2a.svg"
+    }, {
+      "type" : "PreviewContainerCustomization",
+      "name" : "RÜCKSEITE",
+      "label" : "GRAVUR RÜCKSEITE",
+      "children" : [ {
+        "type" : "FlatContainerCustomization",
+        "children" : [ {
+          "type" : "OptionCustomization",
+          "name" : "GRAVUR RÜCKSEITE",
+          "label" : "GRAVUR RÜCKSEITE",
+          "optionSelection" : {
+            "name" : "JA",
+            "label" : "JA",
+            "additionalCost" : {
+              "amount" : 0
+            },
+            "thumbnailImage" : {
+              "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/c96ee45742839ea503282b9f4e29c7da.jpg",
+              "dimension" : {
+                "width" : 2000,
+                "height" : 2000
+              }
+            },
+            "overlayImage" : {
+              "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/c96ee45742839ea503282b9f4e29c7da.jpg",
+              "dimension" : {
+                "width" : 2000,
+                "height" : 2000
+              }
+            }
+          },
+          "displayValue" : "JA"
+        }, {
+          "type" : "ContainerCustomization",
+          "name" : "TEXT RÜCKSEITE",
+          "label" : "Text 1",
+          "children" : [ {
+            "type" : "FontCustomization",
+            "name" : "",
+            "label" : "SCHRIFTART",
+            "fontSelection" : {
+              "family" : "Summer Rose"
+            }
+          }, {
+            "type" : "ColorCustomization",
+            "name" : "",
+            "label" : "Weiß",
+            "colorSelection" : {
+              "name" : "Weiß",
+              "value" : "#ffffff",
+              "colorModel" : "rgb"
+            }
+          }, {
+            "type" : "ContainerCustomization",
+            "children" : [ {
+              "type" : "PlacementContainerCustomization",
+              "name" : "Texteingabe 1",
+              "label" : "Text input 1",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "Gib deinen gewünschten Text ein",
+                  "inputValue" : "الروْح"
+                } ],
+                "priceDelta" : {
+                  "amount" : 0
+                }
+              } ],
+              "dimension" : {
+                "width" : 184,
+                "height" : 41
+              },
+              "position" : {
+                "x" : 111,
+                "y" : 17
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "Text input 2",
+              "label" : "Text input 2",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "Gib deinen gewünschten Text ein",
+                  "inputValue" : "بحبك"
+                } ],
+                "priceDelta" : {
+                  "amount" : 0
+                }
+              } ],
+              "dimension" : {
+                "width" : 183,
+                "height" : 37
+              },
+              "position" : {
+                "x" : 110,
+                "y" : 62
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "Text input 3",
+              "label" : "Text input 3",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "Gib deinen gewünschten Text ein",
+                  "inputValue" : ""
+                } ]
+              } ],
+              "dimension" : {
+                "width" : 181,
+                "height" : 57
+              },
+              "position" : {
+                "x" : 111,
+                "y" : 113
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "Text input 4",
+              "label" : "Text input 4",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "Gib deinen gewünschten Text ein",
+                  "inputValue" : "Habibi"
+                } ],
+                "priceDelta" : {
+                  "amount" : 0
+                }
+              } ],
+              "dimension" : {
+                "width" : 178,
+                "height" : 54
+              },
+              "position" : {
+                "x" : 112,
+                "y" : 171
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "Text input 5",
+              "label" : "Text input 5",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "Gib deinen gewünschten Text ein",
+                  "inputValue" : ""
+                } ]
+              } ],
+              "dimension" : {
+                "width" : 174,
+                "height" : 53
+              },
+              "position" : {
+                "x" : 115,
+                "y" : 227
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "Text input 6",
+              "label" : "Text input 6",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "Gib deinen gewünschten Text ein",
+                  "inputValue" : ""
+                } ]
+              } ],
+              "dimension" : {
+                "width" : 174,
+                "height" : 52
+              },
+              "position" : {
+                "x" : 117,
+                "y" : 282
+              }
+            }, {
+              "type" : "PlacementContainerCustomization",
+              "name" : "Text input 7",
+              "label" : "Text input 7",
+              "children" : [ {
+                "type" : "FlatRatePriceDeltaContainerCustomization",
+                "children" : [ {
+                  "type" : "TextCustomization",
+                  "name" : "",
+                  "label" : "Gib deinen gewünschten Text ein ♥",
+                  "inputValue" : "Allosty🤍"
+                } ],
+                "priceDelta" : {
+                  "amount" : 0
+                }
+              } ],
+              "dimension" : {
+                "width" : 169,
+                "height" : 33
+              },
+              "position" : {
+                "x" : 122,
+                "y" : 336
+              }
+            } ]
+          } ]
+        } ]
+      } ],
+      "baseImage" : {
+        "imageUrl" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/c96ee45742839ea503282b9f4e29c7da.jpg",
+        "dimension" : {
+          "width" : 2000,
+          "height" : 2000
+        }
+      },
+      "snapshot" : {
+        "imageName" : "b4c1c95d-297d-3061-efc2-450a934cb3a7.jpg",
+        "dimension" : {
+          "width" : 400,
+          "height" : 400
+        }
+      },
+      "svg" : "4b434553-f5b0-d2ea-ed44-6e4ec7ad13aa.svg"
+    } ]
+  },
+  "customizationInfo" : {
+    "version3.0" : {
+      "surfaces" : [ {
+        "name" : "LADE EIN BILD HOCH !",
+        "areas" : [ {
+          "customizationType" : "Options",
+          "name" : "Bild gewünscht",
+          "label" : "BILD GEWÜNSCHT ?",
+          "optionValue" : "JA",
+          "priceDelta" : {
+            "value" : 4.9
+          },
+          "optionImage" : ""
+        }, {
+          "customizationType" : "ImagePrinting",
+          "Dimensions" : {
+            "width" : 188,
+            "height" : 250
+          },
+          "Position" : {
+            "x" : 112,
+            "y" : 118
+          },
+          "name" : "BILD HOCHLADEN",
+          "svgImage" : "a7c20054-8b85-0bf9-be89-51988ff6ac2a.svg"
+        }, {
+          "customizationType" : "Options",
+          "name" : "Geschenkbox",
+          "label" : "GESCHENKBOX",
+          "optionValue" : "JA | MIT GESCHENKBOX",
+          "priceDelta" : {
+            "value" : 4.9
+          },
+          "optionImage" : ""
+        } ]
+      }, 
+      {
+        "name" : "GRAVUR RÜCKSEITE",
+        "areas" : [ {
+          "customizationType" : "Options",
+          "name" : "GRAVUR RÜCKSEITE",
+          "label" : "GRAVUR RÜCKSEITE",
+          "optionValue" : "JA",
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "optionImage" : "https://m.media-amazon.com/images/S/gestalt-seller-images-prod-eu-west-1/A1PA6795UKMFR9/A3HKD4EJOSUJJW/c96ee45742839ea503282b9f4e29c7da.jpg"
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "Brontidev",
+          "Dimensions" : {
+            "width" : 184,
+            "height" : 41
+          },
+          "Position" : {
+            "x" : 111,
+            "y" : 17
+          },
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "name" : "Texteingabe 1",
+          "label" : "1. Gib deinen gewünschten Text ein",
+          "text" : "fefe"
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "Summer Rose",
+          "Dimensions" : {
+            "width" : 183,
+            "height" : 37
+          },
+          "Position" : {
+            "x" : 110,
+            "y" : 62
+          },
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "name" : "Text input 2",
+          "label" : "2. Gib deinen gewünschten Text ein",
+          "text" : "بحبك"
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "Summer Rose",
+          "Dimensions" : {
+            "width" : 181,
+            "height" : 57
+          },
+          "Position" : {
+            "x" : 111,
+            "y" : 113
+          },
+          "name" : "Text input 3",
+          "label" : "3. Gib deinen gewünschten Text ein",
+          "text" : ""
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "Summer Rose",
+          "Dimensions" : {
+            "width" : 178,
+            "height" : 54
+          },
+          "Position" : {
+            "x" : 112,
+            "y" : 171
+          },
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "name" : "Text input 4",
+          "label" : "4. Gib deinen gewünschten Text ein",
+          "text" : "Habibi"
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "Summer Rose",
+          "Dimensions" : {
+            "width" : 174,
+            "height" : 53
+          },
+          "Position" : {
+            "x" : 115,
+            "y" : 227
+          },
+          "name" : "Text input 5",
+          "label" : "5. Gib deinen gewünschten Text ein",
+          "text" : ""
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "Summer Rose",
+          "Dimensions" : {
+            "width" : 174,
+            "height" : 52
+          },
+          "Position" : {
+            "x" : 117,
+            "y" : 282
+          },
+          "name" : "Text input 6",
+          "label" : "6. Gib deinen gewünschten Text ein",
+          "text" : ""
+        }, {
+          "customizationType" : "TextPrinting",
+          "colorName" : "Weiß",
+          "fill" : "#ffffff",
+          "fontFamily" : "Summer Rose",
+          "Dimensions" : {
+            "width" : 169,
+            "height" : 33
+          },
+          "Position" : {
+            "x" : 122,
+            "y" : 336
+          },
+          "priceDelta" : {
+            "value" : 0.0
+          },
+          "name" : "Text input 7",
+          "label" : "Gib deinen gewünschten Text ein",
+          "text" : "Allosty🤍"
+        } ]
+      } ]
+    }
+  }
+}

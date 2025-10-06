@@ -5,6 +5,5 @@ dist/
 build/
 logs/
 outputs/
-inputs/
 readme.md
 *.spec
