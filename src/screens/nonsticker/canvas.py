@@ -12,7 +12,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
 
 from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL, MM_TO_PX, IMAGES_PATH, TEMP_FOLDER
-from src.core.app import COLOR_BG_SCREEN
+from src.core.app import COLOR_BG_SCREEN, validate_min1, vcmd_int
 from src.utils import *
 from src.core.state import ALL_PRODUCTS, FONTS_PATH, PRODUCTS_PATH, state
 from src.canvas import CanvasObject, CanvasSelection, MajorManager, JigController, SlotManager, ImageManager, PdfExporter, FontsManager
@@ -35,7 +35,7 @@ class NStickerCanvasScreen(Screen):
         super().__init__(master, app)
 
         # App title + left-aligned header row with SKU input
-        self.brand_bar(self)
+        # self.brand_bar(self)
         if not self.app.is_fullscreen:
             self.app.toggle_fullscreen()
 
@@ -81,43 +81,32 @@ class NStickerCanvasScreen(Screen):
         self._scene_store: dict[str, list[dict]] = {"front": [], "back": []}
         self._current_side: str = "front"
 
+        left_bar = tk.Frame(self, bg="black")
+        left_bar.pack(side="left", fill="y", padx=10, pady=(7, 60))
+
         # Top row: Write SKU (primary SKU field)
         header_row_top = ttk.Frame(self, style="Screen.TFrame")
-        header_row_top.pack(padx=0, pady=(35, 8))
-        tk.Label(header_row_top, text=" Write ASIN ", bg="#737373", fg=COLOR_TEXT,
-                 font=("Myriad Pro", 22), width=20).pack(side="left", padx=(8, 0))
-        self.sku_var = tk.StringVar(value=state.sku or "")
-        input_wrap_top = tk.Frame(header_row_top, bg="#000000")
-        input_wrap_top.pack(side="left") 
-        tk.Frame(input_wrap_top, width=15, height=1, bg="#000000").pack(side="left")
-        sku_entry_top = tk.Entry(input_wrap_top, textvariable=self.sku_var, width=22,
-                                 bg="#000000", fg="#ffffff", insertbackground="#ffffff",
-                                 relief="flat", bd=0, highlightthickness=0,
-                                 font=("Myriad Pro", 22))
-        sku_entry_top.pack(side="left", ipady=2)
+        header_row_top.pack(padx=0, pady=(5, 8))
+        self.sku_var = tk.StringVar(value="")
 
-        # Second row: Write name for SKU (independent, labels aligned by fixed width)
-        header_row_bottom = ttk.Frame(self, style="Screen.TFrame")
-        header_row_bottom.pack(padx=0, pady=(0, 25))
-        tk.Label(header_row_bottom, text=" Write name for ASIN ", bg="#737373", fg=COLOR_TEXT,
-                 font=("Myriad Pro", 22), width=20).pack(side="left", padx=(8, 0))
+        # Second field moved to top row: Write name for ASIN
+        tk.Label(header_row_top, text=" Write name for Product ", bg="#737373", fg=COLOR_TEXT,
+                 font=("Myriad Pro", 16), width=20).pack(side="left", padx=(80, 0))
         self.sku_name_var = tk.StringVar(value=state.sku_name or "")
-        input_wrap_bottom = tk.Frame(header_row_bottom, bg="#000000")
-        input_wrap_bottom.pack(side="left")
-        tk.Frame(input_wrap_bottom, width=15, height=1, bg="#000000").pack(side="left")
-        sku_entry_bottom = tk.Entry(input_wrap_bottom, textvariable=self.sku_name_var, width=22,
-                                    bg="#000000", fg="#ffffff", insertbackground="#ffffff",
-                                    relief="flat", bd=0, highlightthickness=0,
-                                    font=("Myriad Pro", 22))
-        sku_entry_bottom.pack(side="left", ipady=2)
+        input_wrap_name = tk.Frame(header_row_top, bg="#000000")
+        input_wrap_name.pack(side="left")
+        tk.Frame(input_wrap_name, width=15, height=1, bg="#000000").pack(side="left")
+        sku_name_entry_top = tk.Entry(input_wrap_name, textvariable=self.sku_name_var, width=16,
+                                      bg="#000000", fg="#ffffff", insertbackground="#ffffff",
+                                      relief="flat", bd=0, highlightthickness=0,
+                                      font=("Myriad Pro", 16))
+        sku_name_entry_top.pack(side="left", ipady=2)
 
         # Left vertical sidebar for Slot size, Origin Pos, Step Size
-        left_bar = tk.Frame(self, bg="black")
-        left_bar.pack(side="left", fill="y", padx=10, pady=(7, 75))
 
         # Top horizontal bar for Import, Jig size, tools, and shortcuts
         bar = tk.Frame(self, bg="black")
-        bar.pack(fill="x", padx=10, pady=(6, 10))
+        bar.pack(fill="x", padx=10, pady=(0, 10))
 
         # (Replaced) Old Import Image pill removed in favor of tool tile in tools section
 
@@ -652,7 +641,7 @@ class NStickerCanvasScreen(Screen):
         tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
 
         # Slot size label and fields
-        tk.Label(left_bar, text="Slot size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="top", anchor="w", padx=(20, 6), pady=(10, 0))
+        tk.Label(left_bar, text="Slot size:", fg="white", bg="black", font=("Myriad Pro", 14, "bold")).pack(side="top", anchor="w", padx=(40, 6), pady=(10, 0))
         self.slot_w = tk.StringVar(value="40.66")
         self.slot_h = tk.StringVar(value="28.9")
         slot_col = tk.Frame(left_bar, bg="black")
@@ -676,7 +665,7 @@ class NStickerCanvasScreen(Screen):
         tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
 
         # Origin Pos label and fields
-        tk.Label(left_bar, text="Origin Pos:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="top", anchor="w", padx=(8, 6))
+        tk.Label(left_bar, text="Origin Pos:", fg="white", bg="black", font=("Myriad Pro", 14, "bold")).pack(side="top", anchor="w", padx=(35, 6))
         self.origin_x = tk.StringVar(value="11.76")
         self.origin_y = tk.StringVar(value="12.52")
         origin_col = tk.Frame(left_bar, bg="black")
@@ -697,8 +686,11 @@ class NStickerCanvasScreen(Screen):
         tk.Label(_oybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
 
         tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
+        # Backside toggle between tool buttons and Step Size block
+
+
         # Step Size label and fields
-        tk.Label(left_bar, text="Step Size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="top", anchor="w", padx=(20, 6))
+        tk.Label(left_bar, text="Step Size:", fg="white", bg="black", font=("Myriad Pro", 14, "bold")).pack(side="top", anchor="w", padx=(40, 6))
         self.step_x = tk.StringVar(value="72.55")
         self.step_y = tk.StringVar(value="47.85")
         step_col = tk.Frame(left_bar, bg="black")
@@ -717,6 +709,260 @@ class NStickerCanvasScreen(Screen):
         tk.Entry(_sybox, textvariable=self.step_y, width=12, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         tk.Label(_sybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
+        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
+
+        # ASIN section (moved from top header): entry + combobox + Add/Remove
+        asin_col = tk.Frame(left_bar, bg="black")
+        asin_col.pack(side="top", padx=8, pady=8, anchor="w")
+        # Build ASIN list from existing product JSONs
+        def _asin_load_all() -> list[str]:
+            # If editing an existing product, load ASINs from its JSON; else default to 1 ASIN (current entry)
+            # try:
+            #     prod = str(getattr(state, "saved_product", "") or "").strip()
+            # except Exception:
+            #     prod = ""
+            asins: list[str] = [asin_pair[0] for asin_pair in state.asins]
+            # if prod:
+            #     try:
+            #         p = PRODUCTS_PATH / f"{prod}.json"
+            #         if p.exists():
+            #             with open(p, "r", encoding="utf-8") as _f:
+            #                 data = json.load(_f)
+            #             arr = data.get("ASINs") or []
+            #             for entry in arr:
+            #                 try:
+            #                     if isinstance(entry, (list, tuple)) and entry:
+            #                         a = str(entry[0]).strip()
+            #                     else:
+            #                         a = str(entry).strip()
+            #                     if a:
+            #                         asins.append(a)
+            #                 except Exception:
+            #                     continue
+            #     except Exception:
+            #         asins = []
+            # Default to zero ASINs when not editing or none found
+            if not asins:
+                asins = []
+            # Deduplicate while preserving order
+            seen = set()
+            uniq: list[str] = []
+            for v in asins:
+                if v not in seen:
+                    seen.add(v)
+                    uniq.append(v)
+            return uniq
+
+        def _asin_initial_counts() -> dict[str, int]:
+            counts: dict[str, int] = {asin_pair[0]: asin_pair[1] for asin_pair in state.asins}
+            # try:
+            #     prod = str(getattr(state, "saved_product", "") or "").strip()
+            # except Exception:
+            #     prod = ""
+            # if prod:
+            #     try:
+            #         p = PRODUCTS_PATH / f"{prod}.json"
+            #         if p.exists():
+            #             with open(p, "r", encoding="utf-8") as _f:
+            #                 data = json.load(_f)
+            #             arr = data.get("ASINs") or []
+            #             for entry in arr:
+            #                 try:
+            #                     if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+            #                         a = str(entry[0]).strip()
+            #                         try:
+            #                             c = int(entry[1])
+            #                         except Exception:
+            #                             c = 1
+            #                     else:
+            #                         a = str(entry).strip()
+            #                         c = 1
+            #                     if a:
+            #                         counts[a] = max(1, int(c))
+            #                 except Exception:
+            #                     continue
+            #     except Exception:
+            #         counts = {}
+            return counts
+
+        asin_combo_wrap = tk.Frame(asin_col, bg="#6f6f6f")
+        asin_combo_wrap.pack(side="top", pady=2, anchor="w")
+        tk.Label(asin_combo_wrap, text="Select:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        self._asin_list: list[str] = _asin_load_all()
+        self.asin_combo_var = tk.StringVar(value=(self._asin_list[0] if self._asin_list else ""))
+        _initial_counts = _asin_initial_counts()
+        self._asin_counts: dict[str, int] = {k: int(_initial_counts.get(k, 1)) for k in self._asin_list}
+
+        self._asin_combo = ttk.Combobox(asin_combo_wrap, textvariable=self.asin_combo_var, state="readonly", values=self._asin_list, justify="center", width=14)
+        self._asin_combo.pack(side="left")
+
+        _asinbox = tk.Frame(asin_col, bg="#6f6f6f")
+        _asinbox.pack(side="top", pady=2)
+        tk.Label(_asinbox, text="ASIN:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_asinbox, textvariable=self.sku_var, width=16, bg="#d9d9d9", justify="center").pack(side="left")
+
+        def _asin_refresh_values(select_value: Optional[str] = None):
+            try:
+                self._asin_combo.configure(values=self._asin_list)
+                # Enable/disable Remove button
+                if len(self._asin_list) == 0:
+                    self._asin_btn_remove.configure(state="disabled")
+                else:
+                    self._asin_btn_remove.configure(state="normal")
+                if select_value is not None:
+                    self.asin_combo_var.set(select_value)
+            except Exception:
+                pass
+
+        def _on_asin_combo(_e=None):
+            try:
+                sel = (self.asin_combo_var.get() or "").strip()
+                self.sku_var.set(sel)
+                state.asins = sel
+                try:
+                    _apply_count_from_selection()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+        self._asin_combo.bind("<<ComboboxSelected>>", _on_asin_combo)
+
+        # Guard to suppress applying count when we are programmatically switching selection
+        self._suppress_asin_apply = False
+        def _apply_count_from_selection():
+            try:
+                sel = (self.asin_combo_var.get() or "").strip()
+                if getattr(self, "_suppress_asin_apply", False):
+                    return
+                if sel:
+                    c = int(self._asin_counts.get(sel, 1))
+                    if c < 1:
+                        c = 1
+                    self.count_in_order.set(str(c))
+            except Exception:
+                pass
+
+        # Also react to any change of the combobox variable (covers programmatic changes)
+        try:
+            self.asin_combo_var.trace_add("write", lambda *_: _apply_count_from_selection())
+        except Exception:
+            pass
+
+        # Count field (moved here to be above Add/Remove)
+        self.count_in_order = tk.StringVar(value="1")
+        _countbox = tk.Frame(asin_col, bg="#6f6f6f")
+        _countbox.pack(side="top", pady=2)
+        tk.Label(_countbox, text="Count:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_countbox, textvariable=self.count_in_order, width=12, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(validate_min1(self), "%P")).pack(side="left")
+        tk.Label(_countbox, text="pcs", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
+
+        # Buttons similar to Major presets
+        asin_btns = tk.Frame(asin_col, bg="black")
+        asin_btns.pack(side="top", pady=0, anchor="w")
+        self._asin_btn_add = ttk.Button(asin_btns, text="Add", style="Small.TButton", width=6, padding=(10, 0, 10, 0))
+        self._asin_btn_add.pack(side="left")
+        self._asin_btn_remove = ttk.Button(asin_btns, text="Remove", style="Small.TButton", width=8, padding=(8, 0, 11, 0))
+        self._asin_btn_remove.pack(side="left", padx=(5, 0))
+
+        def _asin_add():
+            try:
+                val = (self.sku_var.get() or "").strip()
+                if not val:
+                    messagebox.showwarning("Missing ASIN", "Please enter an ASIN to add.")
+                    return
+                if len(val) < 3:
+                    messagebox.showwarning("Invalid ASIN", "ASIN is too short.")
+                    return
+                # Read the intended count BEFORE changing selection
+                try:
+                    cnt_txt = (self.count_in_order.get() or "1").strip()
+                    cnt = int(cnt_txt) if cnt_txt.isdigit() else 1
+                except Exception:
+                    cnt = 1
+                cnt = max(1, cnt)
+                if val not in self._asin_list:
+                    self._asin_list.append(val)
+                # Persist count for the new ASIN immediately
+                self._asin_counts[val] = cnt
+                # Select the new ASIN, but do not let selection overwrite the entered count
+                self._suppress_asin_apply = True
+                _asin_refresh_values(select_value=val)
+                self._suppress_asin_apply = False
+                # Ensure Count reflects stored value for newly selected ASIN
+                self.count_in_order.set(str(cnt))
+                state.asins = val
+                try:
+                    messagebox.showinfo("ASIN", f"Added ASIN '{val}' with count {self._asin_counts[val]}.")
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+        def _asin_remove():
+            try:
+                sel = (self.asin_combo_var.get() or "").strip()
+                if sel in self._asin_list:
+                    try:
+                        self._asin_list.remove(sel)
+                    except Exception:
+                        pass
+                    try:
+                        self._asin_counts.pop(sel, None)
+                    except Exception:
+                        pass
+                # Choose next selection
+                next_sel = self._asin_list[0] if self._asin_list else ""
+                _asin_refresh_values(select_value=next_sel)
+                self.sku_var.set(next_sel)
+                state.asins = next_sel
+                _apply_count_from_selection()
+            except Exception:
+                pass
+
+        self._asin_btn_add.configure(command=_asin_add)
+        self._asin_btn_remove.configure(command=_asin_remove)
+
+        # Do not sync combobox when typing in the ASIN entry; combobox reflects only added ASINs
+
+        # Update count map when count changes for the selected ASIN
+        def _on_count_change(*_):
+            try:
+                sel = (self.asin_combo_var.get() or "").strip()
+                if not sel:
+                    return
+                txt = (self.count_in_order.get() or "1").strip()
+                try:
+                    c = int(txt)
+                except Exception:
+                    c = 1
+                # Only update the selected ASIN's count when editing pertains to it:
+                # either the entry matches selection or entry is blank
+                entry_val = (self.sku_var.get() or "").strip()
+                if (entry_val == "") or (entry_val == sel):
+                    self._asin_counts[sel] = max(1, c)
+            except Exception:
+                pass
+        try:
+            self.count_in_order.trace_add("write", _on_count_change)
+        except Exception:
+            pass
+
+        # Initial refresh
+        _asin_refresh_values(select_value=self.asin_combo_var.get())
+        _apply_count_from_selection()
+
+        # sticker_wrap (Count moved above; keep sticker toggle state)
+        self.sticker_var = tk.BooleanVar(value=False)
+        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=(0, 6))
+
+        backside_wrap = tk.Frame(left_bar, bg="black")
+        backside_wrap.pack(side="top", padx=8, pady=(2, 0), anchor="center")
+        tk.Label(backside_wrap, text="Backside", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(0, 6))
+        self.backside = tk.BooleanVar(value=False)
+        ttk.Checkbutton(backside_wrap, variable=self.backside).pack(side="left", pady=4)
+        self.backside.trace_add("write", self._on_backside_toggle)
 
         # Ensure first preset mirrors current default scene values (not zeros)
         try:
@@ -744,9 +990,9 @@ class NStickerCanvasScreen(Screen):
         except Exception:
             pass
 
-        # 5) Tools next to the separator
-        tools = tk.Frame(bar, bg="black")
-        tools.pack(side="left", pady=(8, 0))
+        # 5) Tools moved to the left sidebar under the latest element
+        tools = tk.Frame(left_bar, bg="black")
+        tools.pack(side="top", padx=8, pady=8, anchor="center")
 
         # Load tool icons (keep references on self to avoid GC)
         self._img_cursor = None
@@ -765,7 +1011,11 @@ class NStickerCanvasScreen(Screen):
         except Exception:
             self._img_image = None
 
-        # Tool tiles like in the screenshot
+        # Tool tiles grouped into two rows: row1 (Image, Text), row2 (Arrange)
+        tools_row1 = tk.Frame(tools, bg="black")
+        tools_row1.pack(side="top", anchor="center")
+        tools_row2 = tk.Frame(tools, bg="black")
+        tools_row2.pack(side="top", anchor="center")
         # self._create_tool_tile(
         #     tools,
         #     icon_image=self._img_cursor,
@@ -775,7 +1025,7 @@ class NStickerCanvasScreen(Screen):
         # )
         # New Image import tool tile
         self._create_tool_tile(
-            tools,
+            tools_row1,
             icon_image=self._img_image,
             icon_text=None,
             label_text="Image",
@@ -783,21 +1033,21 @@ class NStickerCanvasScreen(Screen):
         )
         # Slots are auto-created from inputs; no manual button needed
         self._create_tool_tile(
-            tools,
+            tools_row1,
             icon_image=None,
             icon_text="T",
             label_text="Text",
             command=self._drop_text,
         )
         self._create_tool_tile(
-            tools,
+            tools_row2,
             icon_image=self._img_stick,
             icon_text=None,
             label_text="Arrange\nobjects",
             command=self._ai_arrange_objects,
         )
         self._create_tool_tile(
-            tools,
+            tools_row2,
             icon_image=self._img_stick,
             icon_text=None,
             label_text="Arrange\nmajors",
@@ -811,14 +1061,14 @@ class NStickerCanvasScreen(Screen):
         shortcuts.grid_columnconfigure(0, weight=0)
         shortcuts.grid_columnconfigure(1, weight=0)
 
-        tk.Label(shortcuts, text="+ / -", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=0, column=0, sticky="e", padx=(0, 0))
-        tk.Label(shortcuts, text="→    Zoom in/out", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=0, column=1, sticky="w")
+        # tk.Label(shortcuts, text="+ / -", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=0, column=0, sticky="e", padx=(0, 0))
+        # tk.Label(shortcuts, text="→    Zoom in/out", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=0, column=1, sticky="w")
 
-        tk.Label(shortcuts, text="CTRL + Middle Mouse", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=1, column=0, sticky="e", padx=(0, 0))
-        tk.Label(shortcuts, text="→    Zoom in/out", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=1, column=1, sticky="w")
+        # tk.Label(shortcuts, text="CTRL + Middle Mouse", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=1, column=0, sticky="e", padx=(0, 0))
+        # tk.Label(shortcuts, text="→    Zoom in/out", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=1, column=1, sticky="w")
 
-        tk.Label(shortcuts, text="Delete", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=2, column=0, sticky="e", padx=(0, 0))
-        tk.Label(shortcuts, text="→ Remove object", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=2, column=1, sticky="w")
+        # tk.Label(shortcuts, text="Delete", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=2, column=0, sticky="e", padx=(0, 0))
+        # tk.Label(shortcuts, text="→ Remove object", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=2, column=1, sticky="w")
 
 
         row2 = tk.Frame(self, bg="black")
@@ -856,6 +1106,7 @@ class NStickerCanvasScreen(Screen):
         # Options checkboxes placed after Amazon label
         _flags = tk.Frame(row2, bg="black")
         _flags.pack(side="left", padx=8)
+        self.row2 = row2
         # Suppress trace callbacks while programmatically updating checkboxes
         self._suppress_flag_traces = False
         self.sel_is_options = tk.BooleanVar(value=False)
@@ -898,13 +1149,7 @@ class NStickerCanvasScreen(Screen):
         self.sel_h.trace_add("write", self.selection.on_size_change)
         self.sel_angle.trace_add("write", self.selection.on_angle_change)
 
-        right = tk.Frame(row2, bg="black")
-        right.pack(side="right", padx=10)
-        tk.Label(right, text="Backside", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(0, 6))
-        self.backside = tk.BooleanVar(value=False)
-        ttk.Checkbutton(right, variable=self.backside).pack(side="left", pady=8)
-        # Switch front/back scenes on toggle
-        self.backside.trace_add("write", self._on_backside_toggle)
+        # Backside toggle moved above the left panel
 
         self.board = tk.Frame(self, bg="black")
         self.board.pack(expand=True, fill="both", padx=10, pady=10)
@@ -1048,7 +1293,7 @@ class NStickerCanvasScreen(Screen):
                     text_info=TextInfo(
                         text="Go Back",
                         color=COLOR_TEXT,
-                        font_size=22,
+                        font_size=16,
                     ),
                     button_color=COLOR_BG_DARK,
                     hover_color="#3f3f3f",
@@ -1066,7 +1311,7 @@ class NStickerCanvasScreen(Screen):
                     text_info=TextInfo(
                         text="Proceed",
                         color=COLOR_TEXT,
-                        font_size=22,
+                        font_size=16,
                     ),
                     button_color=COLOR_BG_DARK,
                     hover_color="#3f3f3f",
@@ -2495,21 +2740,21 @@ class NStickerCanvasScreen(Screen):
     def _proceed(self):
         # Сохраняем актуальные значения перед переходом
         # 2/3 mirrored for non-sticker flow
-        sku_val = self.sku_var.get().strip()
-        if not sku_val:
-            messagebox.showwarning("Missing SKU", "Please select an SKU before proceeding.")
+        # Require at least one ASIN to continue
+        try:
+            if not getattr(self, "_asin_list", None) or len(self._asin_list) == 0:
+                messagebox.showwarning("Missing ASINs", "Please add at least one ASIN before proceeding.")
+                return
+        except Exception:
+            messagebox.showwarning("Missing ASINs", "Please add at least one ASIN before proceeding.")
             return
-        if len(sku_val) < 3:
-            messagebox.showwarning("Invalid SKU", "SKU doesn't exist.")
-            return
-        state.sku = sku_val
         
         sku_name_val = self.sku_name_var.get().strip()
         if not sku_name_val:
-            messagebox.showwarning("Missing SKU", "Please select an SKU name before proceeding.")
+            messagebox.showwarning("Missing ASIN", "Please select an ASIN name before proceeding.")
             return
         if len(sku_name_val) < 3:
-            messagebox.showwarning("Invalid SKU", "SKU doesn't exist.")
+            messagebox.showwarning("Invalid ASIN", "ASIN name is too short.")
             return
 
         state.sku_name = sku_name_val
@@ -2536,6 +2781,9 @@ class NStickerCanvasScreen(Screen):
 
         # Ensure images are stored internally per product and update paths
         try:
+
+            is_sticker = self.sticker_var.get()
+
             import shutil as _shutil
             from pathlib import Path as _Path
             product_folder = PRODUCTS_PATH / (state.sku_name or "Product")
@@ -3040,10 +3288,21 @@ class NStickerCanvasScreen(Screen):
             front_grouped = _group_side_by_major(_compose_side(front_items, state.sku_name, state.prev_sku_name))
             back_grouped = _group_side_by_major(_compose_side(back_items, state.sku_name, state.prev_sku_name))
 
+            # Persist ASINs as [asin, count] pairs from current selection list and counts
+            try:
+                asin_pairs = []
+                for a in list(getattr(self, "_asin_list", []) or []):
+                    try:
+                        c = int((getattr(self, "_asin_counts", {}) or {}).get(a, 1))
+                    except Exception:
+                        c = 1
+                    asin_pairs.append([a, max(1, c)])
+            except Exception:
+                asin_pairs = []
+
             combined = {
-                "Sku": state.sku or "",
+                "ASINs": asin_pairs,
                 "SkuName": state.sku_name or "",
-                "IsSticker": False,
                 "Scene": scene_top,
                 "Frontside": front_grouped,
                 "Backside": back_grouped,
@@ -3600,14 +3859,13 @@ class NStickerCanvasScreen(Screen):
         with path.open("r", encoding="utf-8") as f:
             data = _json.load(f)
 
-        if bool(data.get("IsSticker", False)):
-            return
-        sku_val = str(data.get("Sku") or prod)
+        sku_val = data.get("ASINs") or []
         sku_name_val = str(data.get("SkuName") or prod)
         if sku_val:
-            self.sku_var.set(sku_val)
+            if sku_val:
+                self.sku_var.set(sku_val[0][0])
             self.sku_name_var.set(sku_name_val)
-            state.sku = sku_val
+            state.asins = sku_val
             state.sku_name = sku_name_val
 
         scene = data.get("Scene") or {}
@@ -3873,4 +4131,3 @@ class NStickerCanvasScreen(Screen):
                 self._refresh_major_visibility()
             except Exception:
                 raise
-        # Major rectangle management is delegated to MajorManager (see self.majors)

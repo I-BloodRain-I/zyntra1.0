@@ -1,0 +1,1625 @@
+{
+  "ASINs": [
+    [
+      "5436546",
+      1
+    ]
+  ],
+  "SkuName": "zalupa",
+  "Scene": {
+    "jig": {
+      "width_mm": 296.0,
+      "height_mm": 394.5831
+    },
+    "slot_count": 32,
+    "objects_count": {
+      "images": 32,
+      "text": 32
+    },
+    "Majors": [
+      {
+        "rect": {
+          "x_mm": 0.0,
+          "y_mm": 0.0,
+          "width_mm": 296.0,
+          "height_mm": 394.5831
+        },
+        "origin": {
+          "x_mm": 11.76,
+          "y_mm": 12.52
+        },
+        "slot_size": {
+          "width_mm": 40.66,
+          "height_mm": 28.9
+        },
+        "step_size": {
+          "x_mm": 72.55,
+          "y_mm": 47.85
+        },
+        "slot_count": 32
+      }
+    ]
+  },
+  "Frontside": [
+    {
+      "label": "Major 1",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 243.58000000000004,
+          "y_mm": 353.16310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -3,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 244.33333333333334,
+              "y_mm": 353.6666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 267.0,
+              "y_mm": 357.6666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 63,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 171.03000000000003,
+          "y_mm": 353.16310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -4,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 171.78333333333333,
+              "y_mm": 353.6666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 64,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 194.45,
+              "y_mm": 357.6666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 126,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 98.48000000000003,
+          "y_mm": 353.16310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -5,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 99.23333333333333,
+              "y_mm": 353.6666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 127,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 121.89999999999999,
+              "y_mm": 357.6666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 189,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 25.93000000000005,
+          "y_mm": 353.16310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -6,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 26.68333333333335,
+              "y_mm": 353.6666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 190,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 49.35000000000001,
+              "y_mm": 357.6666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 252,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 243.58000000000004,
+          "y_mm": 305.3131,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -7,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 244.33333333333334,
+              "y_mm": 305.81666666666666,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 253,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 267.0,
+              "y_mm": 309.81666666666666,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 315,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 171.03000000000003,
+          "y_mm": 305.3131,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -8,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 171.78333333333333,
+              "y_mm": 305.81666666666666,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 316,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 194.45,
+              "y_mm": 309.81666666666666,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 378,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 98.48000000000003,
+          "y_mm": 305.3131,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -9,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 99.23333333333333,
+              "y_mm": 305.81666666666666,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 379,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 121.89999999999999,
+              "y_mm": 309.81666666666666,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 441,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 25.93000000000005,
+          "y_mm": 305.3131,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -10,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 26.68333333333335,
+              "y_mm": 305.81666666666666,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 442,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 49.35000000000001,
+              "y_mm": 309.81666666666666,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 504,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 9",
+          "x_mm": 243.58000000000004,
+          "y_mm": 257.46310000000005,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -11,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 244.33333333333334,
+              "y_mm": 257.9666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 505,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 267.0,
+              "y_mm": 261.9666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 567,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 10",
+          "x_mm": 171.03000000000003,
+          "y_mm": 257.46310000000005,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -12,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 171.78333333333333,
+              "y_mm": 257.9666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 568,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 194.45,
+              "y_mm": 261.9666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 630,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 11",
+          "x_mm": 98.48000000000003,
+          "y_mm": 257.46310000000005,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -13,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 99.23333333333333,
+              "y_mm": 257.9666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 631,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 121.89999999999999,
+              "y_mm": 261.9666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 693,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 12",
+          "x_mm": 25.93000000000005,
+          "y_mm": 257.46310000000005,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -14,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 26.68333333333335,
+              "y_mm": 257.9666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 694,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 49.35000000000001,
+              "y_mm": 261.9666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 756,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 13",
+          "x_mm": 243.58000000000004,
+          "y_mm": 209.61310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -15,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 244.33333333333334,
+              "y_mm": 210.11666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 757,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 267.0,
+              "y_mm": 214.11666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 819,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 14",
+          "x_mm": 171.03000000000003,
+          "y_mm": 209.61310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -16,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 171.78333333333333,
+              "y_mm": 210.11666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 820,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 194.45,
+              "y_mm": 214.11666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 882,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 15",
+          "x_mm": 98.48000000000003,
+          "y_mm": 209.61310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -17,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 99.23333333333333,
+              "y_mm": 210.11666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 883,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 121.89999999999999,
+              "y_mm": 214.11666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 945,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 16",
+          "x_mm": 25.93000000000005,
+          "y_mm": 209.61310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -18,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 26.68333333333335,
+              "y_mm": 210.11666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 946,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 49.35000000000001,
+              "y_mm": 214.11666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1008,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 17",
+          "x_mm": 243.58000000000004,
+          "y_mm": 161.76310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -19,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 244.33333333333334,
+              "y_mm": 162.26666666666668,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1009,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 267.0,
+              "y_mm": 166.26666666666668,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1071,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 18",
+          "x_mm": 171.03000000000003,
+          "y_mm": 161.76310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -20,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 171.78333333333333,
+              "y_mm": 162.26666666666668,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1072,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 194.45,
+              "y_mm": 166.26666666666668,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1134,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 19",
+          "x_mm": 98.48000000000003,
+          "y_mm": 161.76310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -21,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 99.23333333333333,
+              "y_mm": 162.26666666666668,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1135,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 121.89999999999999,
+              "y_mm": 166.26666666666668,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1197,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 20",
+          "x_mm": 25.93000000000005,
+          "y_mm": 161.76310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -22,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 26.68333333333335,
+              "y_mm": 162.26666666666668,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1198,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 49.35000000000001,
+              "y_mm": 166.26666666666668,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1260,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 21",
+          "x_mm": 243.58000000000004,
+          "y_mm": 113.91310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -23,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 244.33333333333334,
+              "y_mm": 114.41666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1261,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 267.0,
+              "y_mm": 118.41666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1323,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 22",
+          "x_mm": 171.03000000000003,
+          "y_mm": 113.91310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -24,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 171.78333333333333,
+              "y_mm": 114.41666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1324,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 194.45,
+              "y_mm": 118.41666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1386,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 23",
+          "x_mm": 98.48000000000003,
+          "y_mm": 113.91310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -25,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 99.23333333333333,
+              "y_mm": 114.41666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1387,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 121.89999999999999,
+              "y_mm": 118.41666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1449,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 24",
+          "x_mm": 25.93000000000005,
+          "y_mm": 113.91310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -26,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 26.68333333333335,
+              "y_mm": 114.41666666666667,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1450,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 49.35000000000001,
+              "y_mm": 118.41666666666667,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1512,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 25",
+          "x_mm": 243.58000000000004,
+          "y_mm": 66.0631,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -27,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 244.33333333333334,
+              "y_mm": 66.56666666666665,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1513,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 267.0,
+              "y_mm": 70.56666666666665,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1575,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 26",
+          "x_mm": 171.03000000000003,
+          "y_mm": 66.0631,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -28,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 171.78333333333333,
+              "y_mm": 66.56666666666665,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1576,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 194.45,
+              "y_mm": 70.56666666666665,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1638,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 27",
+          "x_mm": 98.48000000000003,
+          "y_mm": 66.0631,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -29,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 99.23333333333333,
+              "y_mm": 66.56666666666665,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1639,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 121.89999999999999,
+              "y_mm": 70.56666666666665,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1701,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 28",
+          "x_mm": 25.93000000000005,
+          "y_mm": 66.0631,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -30,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 26.68333333333335,
+              "y_mm": 66.56666666666665,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1702,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 49.35000000000001,
+              "y_mm": 70.56666666666665,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1764,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 29",
+          "x_mm": 243.58000000000004,
+          "y_mm": 18.213100000000043,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -31,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 244.33333333333334,
+              "y_mm": 18.716666666666686,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1765,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 267.0,
+              "y_mm": 22.716666666666686,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1827,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 30",
+          "x_mm": 171.03000000000003,
+          "y_mm": 18.213100000000043,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -32,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 171.78333333333333,
+              "y_mm": 18.716666666666686,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1828,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 194.45,
+              "y_mm": 22.716666666666686,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1890,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 31",
+          "x_mm": 98.48000000000003,
+          "y_mm": 18.213100000000043,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -33,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 99.23333333333333,
+              "y_mm": 18.716666666666686,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1891,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 121.89999999999999,
+              "y_mm": 22.716666666666686,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 1953,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        },
+        {
+          "label": "Slot 32",
+          "x_mm": 25.93000000000005,
+          "y_mm": 18.213100000000043,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -34,
+          "objects": [
+            {
+              "type": "image",
+              "path": "zalupa/empty.jpg",
+              "x_mm": 26.68333333333335,
+              "y_mm": 18.716666666666686,
+              "w_mm": 28.89999999999999,
+              "h_mm": 22.815789473684205,
+              "angle": 270.0,
+              "z": 1954,
+              "amazon_label": "65767",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": ""
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "5465",
+              "x_mm": 49.35000000000001,
+              "y_mm": 22.716666666666686,
+              "w_mm": 20.0,
+              "h_mm": 20.0,
+              "angle": 0.0,
+              "z": 2016,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "Backside": [
+    {
+      "label": "Major 1",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 243.58000000000004,
+          "y_mm": 353.16310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -3,
+          "objects": []
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 171.03000000000003,
+          "y_mm": 353.16310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -4,
+          "objects": []
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 98.48000000000003,
+          "y_mm": 353.16310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -5,
+          "objects": []
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 25.93000000000005,
+          "y_mm": 353.16310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -6,
+          "objects": []
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 243.58000000000004,
+          "y_mm": 305.3131,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -7,
+          "objects": []
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 171.03000000000003,
+          "y_mm": 305.3131,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -8,
+          "objects": []
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 98.48000000000003,
+          "y_mm": 305.3131,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -9,
+          "objects": []
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 25.93000000000005,
+          "y_mm": 305.3131,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -10,
+          "objects": []
+        },
+        {
+          "label": "Slot 9",
+          "x_mm": 243.58000000000004,
+          "y_mm": 257.46310000000005,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -11,
+          "objects": []
+        },
+        {
+          "label": "Slot 10",
+          "x_mm": 171.03000000000003,
+          "y_mm": 257.46310000000005,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -12,
+          "objects": []
+        },
+        {
+          "label": "Slot 11",
+          "x_mm": 98.48000000000003,
+          "y_mm": 257.46310000000005,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -13,
+          "objects": []
+        },
+        {
+          "label": "Slot 12",
+          "x_mm": 25.93000000000005,
+          "y_mm": 257.46310000000005,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -14,
+          "objects": []
+        },
+        {
+          "label": "Slot 13",
+          "x_mm": 243.58000000000004,
+          "y_mm": 209.61310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -15,
+          "objects": []
+        },
+        {
+          "label": "Slot 14",
+          "x_mm": 171.03000000000003,
+          "y_mm": 209.61310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -16,
+          "objects": []
+        },
+        {
+          "label": "Slot 15",
+          "x_mm": 98.48000000000003,
+          "y_mm": 209.61310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -17,
+          "objects": []
+        },
+        {
+          "label": "Slot 16",
+          "x_mm": 25.93000000000005,
+          "y_mm": 209.61310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -18,
+          "objects": []
+        },
+        {
+          "label": "Slot 17",
+          "x_mm": 243.58000000000004,
+          "y_mm": 161.76310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -19,
+          "objects": []
+        },
+        {
+          "label": "Slot 18",
+          "x_mm": 171.03000000000003,
+          "y_mm": 161.76310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -20,
+          "objects": []
+        },
+        {
+          "label": "Slot 19",
+          "x_mm": 98.48000000000003,
+          "y_mm": 161.76310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -21,
+          "objects": []
+        },
+        {
+          "label": "Slot 20",
+          "x_mm": 25.93000000000005,
+          "y_mm": 161.76310000000004,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -22,
+          "objects": []
+        },
+        {
+          "label": "Slot 21",
+          "x_mm": 243.58000000000004,
+          "y_mm": 113.91310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -23,
+          "objects": []
+        },
+        {
+          "label": "Slot 22",
+          "x_mm": 171.03000000000003,
+          "y_mm": 113.91310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -24,
+          "objects": []
+        },
+        {
+          "label": "Slot 23",
+          "x_mm": 98.48000000000003,
+          "y_mm": 113.91310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -25,
+          "objects": []
+        },
+        {
+          "label": "Slot 24",
+          "x_mm": 25.93000000000005,
+          "y_mm": 113.91310000000003,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -26,
+          "objects": []
+        },
+        {
+          "label": "Slot 25",
+          "x_mm": 243.58000000000004,
+          "y_mm": 66.0631,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -27,
+          "objects": []
+        },
+        {
+          "label": "Slot 26",
+          "x_mm": 171.03000000000003,
+          "y_mm": 66.0631,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -28,
+          "objects": []
+        },
+        {
+          "label": "Slot 27",
+          "x_mm": 98.48000000000003,
+          "y_mm": 66.0631,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -29,
+          "objects": []
+        },
+        {
+          "label": "Slot 28",
+          "x_mm": 25.93000000000005,
+          "y_mm": 66.0631,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -30,
+          "objects": []
+        },
+        {
+          "label": "Slot 29",
+          "x_mm": 243.58000000000004,
+          "y_mm": 18.213100000000043,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -31,
+          "objects": []
+        },
+        {
+          "label": "Slot 30",
+          "x_mm": 171.03000000000003,
+          "y_mm": 18.213100000000043,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -32,
+          "objects": []
+        },
+        {
+          "label": "Slot 31",
+          "x_mm": 98.48000000000003,
+          "y_mm": 18.213100000000043,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -33,
+          "objects": []
+        },
+        {
+          "label": "Slot 32",
+          "x_mm": 25.93000000000005,
+          "y_mm": 18.213100000000043,
+          "w_mm": 40.66,
+          "h_mm": 28.9,
+          "z": -34,
+          "objects": []
+        }
+      ]
+    }
+  ]
+}

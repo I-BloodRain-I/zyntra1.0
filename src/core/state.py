@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from datetime import datetime
 from typing import List, Tuple, Optional
 from dataclasses import dataclass, field, asdict
 
@@ -12,14 +13,18 @@ INTERNAL_PATH.mkdir(exist_ok=True)
 
 IMAGES_PATH   = INTERNAL_PATH / "images"
 FONTS_PATH    = INTERNAL_PATH / "fonts"
+MODEL_PATH    = INTERNAL_PATH / "u2net.onnx"
 PRODUCTS_PATH = INTERNAL_PATH / "products"
 PRODUCTS_PATH.mkdir(exist_ok=True)
 LOGS_PATH     = INTERNAL_PATH / "logs"
 LOGS_PATH.mkdir(exist_ok=True)
 INPUT_PATH    = Path.cwd() / "inputs"
-INPUT_PATH.mkdir(exist_ok=True)
+# INPUT_PATH.mkdir(exist_ok=True)
 OUTPUT_PATH   = Path.cwd() / "outputs"
 OUTPUT_PATH.mkdir(exist_ok=True)
+
+ENV_PATH = INTERNAL_PATH / "env"
+CACHE_PATH = INTERNAL_PATH / "cache.json"
 
 ALL_PRODUCTS = [f.stem for f in INTERNAL_PATH.glob("products/*.json") if f.is_file()]
 
@@ -32,8 +37,11 @@ class AppState:
     order_from: str = "0"
     order_to: str = "0"
 
+    dropbox_from = datetime.now()
+    dropbox_to = datetime(day=1, month=1, year=datetime.now().year + 1)
+
     # Screen 1
-    sku: str = ""
+    asins: List[Tuple[str, int]] = field(default_factory=list)
     prev_sku_name: str = ""
     sku_name: str = ""
     pkg_x: str = ""

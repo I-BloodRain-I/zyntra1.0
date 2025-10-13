@@ -1,5 +1,6 @@
 import functools
 import logging
+import os
 import threading
 import time
 import requests
@@ -14,10 +15,11 @@ from tkinter import TclError, ttk, messagebox
 from typing import Any, Dict, List
 from PIL import ImageDraw, ImageChops, ImageFilter
 from PIL import Image as _PILImage
+from rembg import remove, new_session
 import numpy as np
 import math
 
-from src.core.state import FONTS_PATH, INPUT_PATH, state
+from src.core.state import FONTS_PATH, INPUT_PATH, INTERNAL_PATH, MODEL_PATH, state
 from src.core import (
     Screen,
     COLOR_BG_DARK,
@@ -33,15 +35,13 @@ from src.core import (
 )
 from src.utils import *
 from src.canvas import PdfExporter, ImageManager
-
-
-DEFAULT_COLOR = "#000000"
-SUCCESS_COLOR = "#228B22"
-WARNING_COLOR = "#ffff00"
-ERROR_COLOR = "#CE0000"
+from src.screens.common.dropbox_handler import DEFAULT_COLOR, SUCCESS_COLOR, WARNING_COLOR, ERROR_COLOR, BASE_FOLDER, FILES_FOLDER, get_orders_info, Dropbox
 
 logger = logging.getLogger(__name__)
 
+DROPBOX_CLIENT = Dropbox()
+
+model_session = new_session("u2net_custom", model_path=str(MODEL_PATH))
 
 class OrderRangeScreen(Screen):
     def __init__(self, master, app):
@@ -94,22 +94,56 @@ class OrderRangeScreen(Screen):
         row_inputs = tk.Frame(content, bg=COLOR_BG_SCREEN)
         row_inputs.pack()
 
-        tk.Label(row_inputs, text="From:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=lbl_font).pack(side="left", padx=(0, 0))
+        # tk.Label(row_inputs, text="From:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=lbl_font).pack(side="left", padx=(0, 0))
         self.from_var = tk.StringVar(value=state.order_from)
-        tk.Entry(row_inputs, textvariable=self.from_var, width=8, justify="center",
-                 font=ent_font, bg="#ffffff", relief="flat").pack(side="left")
+        tk.Entry(row_inputs, textvariable=self.from_var, width=30, justify="center",
+                 font=ent_font, bg="#ffffff", relief="flat").pack(side="left", pady=(4, 0))
 
-        tk.Label(row_inputs, text="To:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=lbl_font).pack(side="left", padx=(scale_px(50), 0))
-        self.to_var = tk.StringVar(value=state.order_to)
-        tk.Entry(row_inputs, textvariable=self.to_var, width=8, justify="center",
-                 font=ent_font, bg="#ffffff", relief="flat").pack(side="left")
+        # Date range (Dropbox) inputs below order input
+        date_font = ("Myriad Pro", int(round(19 * UI_SCALE)))
+        date_row = tk.Frame(content, bg=COLOR_BG_SCREEN)
+        date_row.pack(pady=(scale_px(8), 0))
+
+        tk.Label(date_row, text="From:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=date_font).pack(side="left", padx=(0, scale_px(4)))
+        self.drop_from_var = tk.StringVar(value=state.dropbox_from.strftime("%d-%m-%Y"))
+        vcmd = (self.register(self._validate_date_mask), "%P")
+        tk.Entry(
+            date_row,
+            textvariable=self.drop_from_var,
+            width=12,
+            justify="center",
+            font=date_font,
+            bg="#ffffff",
+            relief="flat",
+            validate="key",
+            validatecommand=vcmd,
+        ).pack(side="left")
+
+        tk.Label(date_row, text="To:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=date_font).pack(side="left", padx=(scale_px(20), scale_px(4)))
+        self.drop_to_var = tk.StringVar(value=state.dropbox_to.strftime("%d-%m-%Y"))
+        tk.Entry(
+            date_row,
+            textvariable=self.drop_to_var,
+            width=12,
+            justify="center",
+            font=date_font,
+            bg="#ffffff",
+            relief="flat",
+            validate="key",
+            validatecommand=vcmd,
+        ).pack(side="left")
+
+        # tk.Label(row_inputs, text="To:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=lbl_font).pack(side="left", padx=(scale_px(50), 0))
+        # self.to_var = tk.StringVar(value=state.order_to)
+        # tk.Entry(row_inputs, textvariable=self.to_var, width=8, justify="center",
+        #          font=ent_font, bg="#ffffff", relief="flat").pack(side="left")
 
         # ---------------------------------------------------------------------
         # Progress bar (between ID selection and logger)
         # ---------------------------------------------------------------------
         pb_wrap = tk.Frame(content, bg=COLOR_BG_SCREEN)
         pb_wrap.pack(pady=(scale_px(14), 0))
-        self.progress = ttk.Progressbar(pb_wrap, orient="horizontal", length=500, mode="determinate", maximum=100)
+        self.progress = ttk.Progressbar(pb_wrap, orient="horizontal", length=486, mode="determinate", maximum=100)
         self.progress.pack(ipady=scale_px(12), pady=(5, 36))
         self.progress["value"] = 100
         # ---------------------------------------------------------------------
@@ -117,7 +151,7 @@ class OrderRangeScreen(Screen):
         # Scrollable logger area inside a rounded "pill" container
         pill_info = PillLabelInfo(
             width=900,
-            height=600,
+            height=300,
             parent=self,
             text_info=TextInfo(
                 text="",
@@ -290,9 +324,9 @@ class OrderRangeScreen(Screen):
             side = "front" if i == 0 else "back"
             for area in surface['areas']:
                 if area["customizationType"] == "Options":
-                    if not area["optionImage"] or area["optionValue"].startswith("NEIN"):
+                    if not area["optionImage"] or not area["optionValue"] or area["optionValue"].lower().startswith("NEIN"):
                         continue
-                    if str(order_info).count(area["optionImage"]) > 3:
+                    if (area["optionValue"].lower() in ["nein", "ja"] or area["optionValue"].lower().startswith("nein ") or area["optionValue"].lower().startswith("ja ")) and str(order_info).count(area["optionImage"]) > 3:
                         continue
                     objects[side].append({
                         "type": "options",
@@ -343,7 +377,7 @@ class OrderRangeScreen(Screen):
         return {"status": "success", "data": objects}
 
     @functools.lru_cache(maxsize=4096)
-    def _download_image(self, image_url: str) -> Dict[str, Union[str, Image.Image]]:
+    def _download_image_from_amazon(self, image_url: str) -> Dict[str, Union[str, Image.Image]]:
         retries = 3
         image_name = image_url.split("/")[-1]
         while retries > 0:
@@ -368,13 +402,20 @@ class OrderRangeScreen(Screen):
     def _crop_image(self, image: Image.Image) -> Image.Image:
         return image.crop(image.getbbox())
 
-    def _load_image(self, image_path: str) -> Dict[str, Union[str, Image.Image]]:
-        path = Path(image_path)
-        if not path.exists():
-            return {"status": "error", "message": f"Image {image_path} does not exist"}
-        if not path.is_file():
-            return {"status": "error", "message": f"Path {image_path} is not a file"}
-        return {"status": "success", "image": Image.open(path)}
+    def _remove_background(self, image: Image.Image) -> Image.Image:
+        return remove(image, session=model_session)
+
+    def _download_image_from_dropbox(self, parent_folder: str, child_folder: str, image_path: str) -> Dict[str, Union[str, Image.Image]]:
+        try:
+            self.log(f"Downloading image {image_path} from Dropbox")
+            info = DROPBOX_CLIENT.download_big_file(f"{BASE_FOLDER}/{parent_folder}/{FILES_FOLDER}/{child_folder}/{image_path}", str(INTERNAL_PATH) + "/", raw_data=True)
+            if info is None:
+                return {"status": "error", "message": f"Image {child_folder}/{image_path} not found in Dropbox"}
+            img_ = Image.open(info[1])
+            return {"status": "success", "image": img_}
+        except Exception as e:
+            logger.exception("Failed download image from dropbox")
+            return {"status": "error", "message": f"Failed download image from dropbox: {e}"}
 
     def _transform_amazon_image(
         self,
@@ -621,18 +662,7 @@ class OrderRangeScreen(Screen):
         result = paste_with_alpha(template, fitted, matte, (left, top))
         return {"status": "success", "image": result}
 
-    def _prepare_order_data(self, path_to_json: str, order_i: int, total_orders: int) -> Dict[str, Any]:
-        path = Path(path_to_json)
-        
-        if not path.exists():
-            return {"status": "error", "message": f"Path {path_to_json} does not exist"}
-        
-        if not path.is_file():
-            return {"status": "error", "message": f"Path {path_to_json} is not a file"}
-        
-        with open(path, "r", encoding="utf-8") as f:
-            order_info = json.load(f)
-        
+    def _prepare_order_data(self, parent_folder: str, child_folder: str, order_info: Dict[str, Any], order_i: int, total_orders: int) -> Dict[str, Any]:
         if "quantity" not in order_info:
             return {"status": "error", "message": "Quantity not found"}
 
@@ -649,7 +679,7 @@ class OrderRangeScreen(Screen):
                     total_download_image_count += 1
                 if object["type"] == "image":
                     total_loaded_image_count += 1
-        self.log(f"[{order_i}/{total_orders}] Total images to download from Amazon: {total_download_image_count}; from disk: {total_loaded_image_count}")
+        self.log(f"[{order_i}/{total_orders}] Total images to download from Amazon: {total_download_image_count}; from Dropbox: {total_loaded_image_count}")
 
         downloaded_image_count = 0
         loaded_image_count = 0
@@ -659,12 +689,12 @@ class OrderRangeScreen(Screen):
                     return {"status": "error", "message": "Cancelled"}
                 
                 if object["type"] == "image":
-                    image_info = self._load_image(INPUT_PATH / object["image_path"])
+                    image_info = self._download_image_from_dropbox(parent_folder, child_folder, object["image_path"])
                     if image_info["status"] == "error":
                         return {"status": "error", "message": image_info["message"]}
                     else:
                         loaded_image_count += 1
-                        self.log(f"[{order_i}/{total_orders}] Image {loaded_image_count}/{total_loaded_image_count} loaded from disk")
+                        self.log(f"[{order_i}/{total_orders}] Image {loaded_image_count}/{total_loaded_image_count} downloaded from Dropbox")
                         image = self._transform_amazon_image(
                             im=image_info["image"], 
                             scale=object["scale"]["scaleX"], 
@@ -675,30 +705,33 @@ class OrderRangeScreen(Screen):
                         object["loaded_image"] = image
 
                 elif object["type"] == "options":
-                    image_info = self._download_image(object["image_url"])
+                    image_info = self._download_image_from_amazon(object["image_url"])
                     if image_info["status"] == "error":
                         return {"status": "error", "message": image_info["message"]}
                     else:
                         downloaded_image_count += 1
                         self.log(f"[{order_i}/{total_orders}] Image {downloaded_image_count}/{total_download_image_count} downloaded from Amazon")
+                        if not object["image_url"].lower().endswith(".png"):
+                            image_info["image"] = self._remove_background(image_info["image"])
                         image = self._crop_image(image_info["image"])
                         object["loaded_image"] = image
 
-        return {"status": "success", "data": customization_info, "quantity": order_info["quantity"]}
+        return {"status": "success", "data": customization_info, "asin": order_info["asin"], "quantity": order_info["quantity"]}
 
     def _make_pdf(
         self, 
         data: List[Tuple[Dict[str, Any], Dict[str, Any]]], 
         jig_size: Tuple[float, float], 
         pdf_start_oder_i: int, 
-        pdf_end_oder_i: int
+        pdf_end_oder_i: int,
+        pdf_order: int = 1
     ) -> Dict[str, str]:
         try:       
             def _remove_unprocessed_objs(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 return [item for item in items if item.get("processed", False)]
 
             exporter = PdfExporter(self)
-            p_front = str((OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_front.pdf").resolve())
+            p_front = str((OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_front{f'_{pdf_order}' if pdf_order > 1 else ''}.pdf").resolve())
             p_back  = str((OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_back.pdf").resolve())
 
             front_items = []
@@ -723,7 +756,43 @@ class OrderRangeScreen(Screen):
             logger.exception(e)
             return {"status": "error", "message": str(e)}
 
-    def _process_order(self, path_to_json: str, pattern_info: Dict[str, Any], order_i: int, total_orders: int) -> Dict[str, Any]:
+    def _process_order(
+        self, 
+        parent_folder: str, 
+        child_folder: str,
+        saved_slots: List[Tuple[Dict[str, Any], Dict[str, Any]]],
+        order_info: Dict[str, Any],
+        original_pattern_info: Dict[str, Any],
+        pattern_info: Dict[str, Any], 
+        pdf_start_oder_id: int,
+        order_id: int, 
+        last_order_id: int
+    ) -> Dict[str, Any]:
+
+        def _is_pattern_filled(pattern_info: Dict[str, Any], original_pattern_info: Dict[str, Any]) -> bool:
+                is_need_front = False
+                is_need_back = False
+                for major in original_pattern_info["Frontside"]:
+                    for slot in major["slots"]:
+                        if slot["objects"]:
+                            is_need_front = True
+                for major in original_pattern_info["Backside"]:
+                    for slot in major["slots"]:
+                        if slot["objects"]:
+                            is_need_back = True
+
+                is_filled_front = True if is_need_front else False
+                is_filled_back = True if is_need_back else False
+                for major in pattern_info["Frontside"]:
+                    for slot in major["slots"]:
+                        if slot["objects"]:
+                            is_filled_front = False
+                for major in pattern_info["Backside"]:
+                    for slot in major["slots"]:
+                        if slot["objects"]:
+                            is_filled_back = False
+
+                return is_filled_front or is_filled_back
 
         def _select_slot(order_side_data: Dict[str, Any], pattern_info: Dict[str, Any], side: str) -> Dict[str, Any]:
             for major_index, major in enumerate(pattern_info[side]):
@@ -767,42 +836,89 @@ class OrderRangeScreen(Screen):
                     object["label_font_family"] = order_object["font_family"]
                     object["processed"] = True
                    
-        result = self._prepare_order_data(path_to_json, order_i, total_orders)
+        result = self._prepare_order_data(parent_folder, child_folder, order_info, order_id, last_order_id)
         if result["status"] == "error":
             return {"status": "error", "message": result["message"]}
         order_data = result["data"]
+        order_asin = result["asin"]
+
+        link_to_pattern_info = pattern_info
+        started_pattern_info = deepcopy(pattern_info)
+        is_saved_slots_processed = False
 
         selected_slots = []
-        for _ in range(result["quantity"]):
+        asins_info = pattern_info.get("ASINs", None)
+        try:
+            if asins_info is None:
+                total_count = result["quantity"]
+            else:
+                order_count = [asin_pair[1] for asin_pair in asins_info if asin_pair[0] == order_asin][0]
+                total_count = int(result["quantity"] * order_count)
+        except Exception:
+            logger.exception("Failed to get order count")
+            return {"status": "error", "message": "Failed to get order count"}
+            
+        pdf_count = 1
+        self.log(f"[{order_id}/{last_order_id}] To process: {total_count} {'pcs' if total_count > 1 else 'pc'}")
+        for i in range(total_count):
             selected_slot_front = None
             selected_slot_back = None
             if order_data.get("front", {}):
                 selected_slot_front = _select_slot(order_data["front"], pattern_info, "Frontside")
                 if not selected_slot_front:
-                    return {"status": "error", "message": f"Not found front pattern slot for order {path_to_json}"}
+                    return {"status": "error", "message": f"Not found front pattern slot for order {order_id}"}
             if order_data.get("back", {}):
                 selected_slot_back = _select_slot(order_data["back"], pattern_info, "Backside")
                 if not selected_slot_back:
-                    return {"status": "error", "message": f"Not found back pattern slot for order {path_to_json}"}
+                    return {"status": "error", "message": f"Not found back pattern slot for order {order_id}"}
             
             if selected_slot_front:
                 _process_object(order_data["front"], selected_slot_front)
             if selected_slot_back:
                 _process_object(order_data["back"], selected_slot_back)
             selected_slots.append((selected_slot_front, selected_slot_back))
+
+            if _is_pattern_filled(pattern_info, original_pattern_info):
+                self.log(f"[{order_id}] [{i+1}/{total_count}] The pdf data is filled, making pdf...")
+                pattern_info = deepcopy(original_pattern_info)
+                jig_info = pattern_info["Scene"]["jig"]
+                result = self._make_pdf(saved_slots + selected_slots, (jig_info["width_mm"], jig_info["height_mm"]), pdf_start_oder_id, order_id, pdf_order=pdf_count)
+                if result["status"] == "error":
+                    link_to_pattern_info.clear()
+                    link_to_pattern_info.update(started_pattern_info)
+                    return {"status": "error", "message": "Failed to make pdf: " + result["message"]}
+                self.log(f"[{order_id}] [{i+1}/{total_count}] PDFs made successfully", SUCCESS_COLOR)
+                selected_slots.clear()
+                saved_slots.clear()
+                is_saved_slots_processed = True
+                pdf_count += 1
+                pdf_start_oder_id = order_id
             
-        return {"status": "success", "selected_slots": selected_slots}
+        if link_to_pattern_info != pattern_info:
+            link_to_pattern_info.clear()
+            link_to_pattern_info.update(pattern_info)
+        return {"status": "success", "selected_slots": selected_slots, "pdf_start_order_id": pdf_start_oder_id, "is_saved_slots_processed": is_saved_slots_processed}
 
     def _process_orders(self):
         try:
-            def _is_pattern_filled(pattern_info: Dict[str, Any]) -> bool:
-                is_filled_front = True
-                is_filled_back = True
+            def _is_pattern_filled(pattern_info: Dict[str, Any], original_pattern_info: Dict[str, Any]) -> bool:
+                is_need_front = False
+                is_need_back = False
+                for major in original_pattern_info["Frontside"]:
+                    for slot in major["slots"]:
+                        if slot["objects"]:
+                            is_need_front = True
+                for major in original_pattern_info["Backside"]:
+                    for slot in major["slots"]:
+                        if slot["objects"]:
+                            is_need_back = True
+
+                is_filled_front = True if is_need_front else False
+                is_filled_back = True if is_need_back else False
                 for major in pattern_info["Frontside"]:
                     for slot in major["slots"]:
                         if slot["objects"]:
                             is_filled_front = False
-
                 for major in pattern_info["Backside"]:
                     for slot in major["slots"]:
                         if slot["objects"]:
@@ -841,50 +957,49 @@ class OrderRangeScreen(Screen):
                 return
             self.log(f"{state.saved_product} pattern file opened successfully", SUCCESS_COLOR)
 
-            self.log(f"Starting processing for range [{state.order_from}..{state.order_to}]")
-            # order_paths = [f"data/15-09-2025 LIGHTER BULK/JSON/161804_Image1.json" for _ in range(6)]
-
-            json_paths = list(INPUT_PATH.glob("*.json"))
-            total_order_paths = []
-            for order_id in range(int(state.order_from), int(state.order_to) + 1):
-                total_order_paths.extend([order_path_ for order_path_ in json_paths if order_path_.stem.split("_")[0] == str(order_id)])
-            
-            if not total_order_paths:
-                self.log(f"No orders found for range [{state.order_from}..{state.order_to}]", ERROR_COLOR)
-                return
+            total_orders_items: Dict[str, Tuple[Dict[str, Any], str, str]] = {}
+            if state.order_from.find("-") != -1 and state.order_from.count("-") == 1:
+                self.log(f"Starting processing for range [{state.order_from}]")
+                orders_info = get_orders_info([str(i) for i in range(int(state.order_from.split("-")[0].strip()), int(state.order_from.split("-")[1].strip()) + 1)], self.log)
+                total_orders_items = orders_info["orders"]
+            elif state.order_from.find(",") != -1 or state.order_from.strip().isdigit():
+                orders_ = [order_.strip() for order_ in state.order_from.split(",")]
+                self.log(f"Starting processing for orders {orders_}")
+                orders_info = get_orders_info(orders_, self.log)
+                total_orders_items = orders_info["orders"]
             else:
-                self.log(f"Total orders in folder: {len(total_order_paths)}")
-            
-            order_paths = []
-            for order_path in total_order_paths:
-                with open(order_path, "r", encoding="utf-8") as f:
-                    order_info = json.load(f)
-                if "asin" not in order_info:
-                    self.log(f"Order {order_path} has no asin", ERROR_COLOR)
-                    order_paths.remove(order_path)
+                messagebox.showerror("Incorrect format", "Order input should be like 0-10 or 3,7,9 or just 3")
+                 
+            orders_to_process: Dict[str, Tuple[Dict[str, Any], str, str]] = {}
+            asins = [asin_ for asin_, _ in state.asins]
+            for order_file, order_info in total_orders_items.items():
+                if "asin" not in order_info[0]:
+                    self.log(f"Order {order_file} has no asin", ERROR_COLOR)
                     continue
                 
-                if order_info["asin"] == state.sku:
-                    order_paths.append(order_path)
+                if order_info[0]["asin"] in asins:
+                    orders_to_process[order_file] = order_info
 
-            if not order_paths:
-                self.log(f"No orders found for ASIN {state.sku}", ERROR_COLOR)
+            if not orders_to_process:
+                self.log(f"No orders found for ASINs: {asins}", ERROR_COLOR)
                 return
             else:
-                self.log(f"Found {len(order_paths)} orders for ASIN {state.sku}", SUCCESS_COLOR)
+                self.log(f"Found {len(orders_to_process)} orders for ASINs {asins}", SUCCESS_COLOR)
 
-            total_orders = len(order_paths) 
-            progress_step = 100 / len(order_paths)
-            order_paths = sorted(order_paths, key=lambda x: int(x.stem.split("_")[0]))
-            last_order_i = max(int(order_path.stem.split("_")[0]) for order_path in order_paths)
+            total_orders = len(orders_to_process) 
+            progress_step = 100 / len(orders_to_process)
+            orders_to_process = dict(sorted(orders_to_process.items(), key=lambda x: int(x[0].split("_")[0])))
+            last_order_i = max(int(order_path.split("_")[0]) for order_path in orders_to_process)
 
             failed_orders = []
             current_processing_orders = []
             pattern_data = deepcopy(pattern_info)
             pdf_data: List[Tuple[Dict[str, Any], Dict[str, Any]]] = []
             pdf_start_oder_i = None
-            for i, order_path in enumerate(order_paths):
-                order_id = int(order_path.stem.split("_")[0])
+            is_sucess = False
+            for i, (order_file, order_info_) in enumerate(orders_to_process.items()):
+                order_id = int(order_file.split("_")[0])
+                order_info, parent_folder, child_folder = order_info_
                 if pdf_start_oder_i is None:
                     pdf_start_oder_i = order_id
 
@@ -895,43 +1010,59 @@ class OrderRangeScreen(Screen):
 
                 self.log(f"Processing of Order {order_id}/{last_order_i} has been initiated")
                 logger.debug(f"Processing of Order {order_id}/{last_order_i} has been initiated")
-                order_result = self._process_order(order_path, pattern_data, order_id, last_order_i)
+                order_result = self._process_order(
+                    parent_folder,
+                    child_folder,
+                    pdf_data,
+                    order_info,
+                    deepcopy(pattern_info),
+                    pattern_data,
+                    pdf_start_oder_i,
+                    order_id,
+                    last_order_i
+                )
                 if order_result["status"] == "error":
                     if order_result.get("message") == "Cancelled":
                         self.log("Processing cancelled by user.", WARNING_COLOR)
                         break
-                    failed_orders.append(order_path.stem)
+                    failed_orders.append(order_file)
                     self.log(f"[{order_id}/{last_order_i}] Order processing failed: " + order_result["message"], ERROR_COLOR)
                 else:
                     self.log(f"[{order_id}/{last_order_i}] Order processed successfully", SUCCESS_COLOR)
+                    if order_result["is_saved_slots_processed"]:
+                        pdf_data.clear()
                     if order_result["selected_slots"] == (None, None):
                         self.log(f"[{order_id}/{last_order_i}] Order doesn't require customization", WARNING_COLOR)
                     else:
-                        pdf_data.extend(order_result["selected_slots"])
-                        current_processing_orders.append(order_path)
+                        if len(order_result["selected_slots"]) > 0:
+                            pdf_data.extend(order_result["selected_slots"])
+                        current_processing_orders.append(order_file)
+                    pdf_start_oder_i = order_result["pdf_start_order_id"]
 
                 if getattr(self, "_cancel_requested", False):
                     self.log("Processing cancelled by user.", WARNING_COLOR)
                     break
 
-                if _is_pattern_filled(pattern_data) or (i == total_orders - 1 and pdf_data):
+                if _is_pattern_filled(pattern_data, pattern_info) or (i == total_orders - 1 and pdf_data):
                     self.log(f"[{pdf_start_oder_i}-{order_id}] The pdf data is filled, making pdf...")
                     pattern_data = deepcopy(pattern_info)
                     jig_info = pattern_info["Scene"]["jig"]
                     result = self._make_pdf(pdf_data, (jig_info["width_mm"], jig_info["height_mm"]), pdf_start_oder_i, order_id)
                     if result["status"] == "error":
                         self.log(f"[{pdf_start_oder_i}-{order_id}] Failed to make pdf: " + result["message"], ERROR_COLOR)
-                        failed_orders.extend([order_path.stem for order_path in current_processing_orders])
+                        failed_orders.extend([order_path for order_path in current_processing_orders])
                     else:
                         self.log(f"[{pdf_start_oder_i}-{order_id}] PDFs made successfully", SUCCESS_COLOR)
+                        is_sucess = True
                     pdf_data.clear()
                     pdf_start_oder_i = None
 
                 self.progress["value"] += progress_step
 
-            self.log(f"Processing for range [{state.order_from}..{state.order_to}] completed", SUCCESS_COLOR)
-            if failed_orders:
-                self.log(f"Failed orders: {failed_orders}", ERROR_COLOR)
+            if is_sucess:
+                self.log(f"Processing completed! You can find PDFs in outputs/ folder", SUCCESS_COLOR)
+            # if failed_orders:
+            #     self.log(f"Failed orders: {failed_orders}", ERROR_COLOR)
 
         finally:
             # Re-enable Start button and reset processing flag when done
@@ -1005,6 +1136,28 @@ class OrderRangeScreen(Screen):
         except Exception:
             pass
 
+    def _validate_date_mask(self, proposed: str) -> bool:
+        """Allow only masks like dd-mm-YYYY while typing (digits and hyphens).
+        This validation is permissive during typing, enforcing segment lengths.
+        """
+        if proposed == "":
+            return True
+        if len(proposed) > 10:
+            return False
+        for ch in proposed:
+            if not (ch.isdigit() or ch == "-"):
+                return False
+        parts = proposed.split("-")
+        if len(parts) > 3:
+            return False
+        if len(parts) >= 1 and len(parts[0]) > 2:
+            return False
+        if len(parts) >= 2 and len(parts[1]) > 2:
+            return False
+        if len(parts) == 3 and len(parts[2]) > 4:
+            return False
+        return True
+
     def _start(self):
         # Prevent multiple concurrent starts via button or hotkey
         if getattr(self, "_is_processing", False):
@@ -1012,28 +1165,31 @@ class OrderRangeScreen(Screen):
         # Clear any previous cancellation
         self._cancel_requested = False
         from_s = self.from_var.get().strip()
-        to_s = self.to_var.get().strip()
 
         # 1) Order number does not exist / invalid
-        if not from_s or not to_s:
+        if not from_s:
             messagebox.showerror("Error", "Order number does not exist.")
-            return
-
-        # Both must be integers
-        try:
-            from_n = int(from_s)
-            to_n = int(to_s)
-        except ValueError:
-            messagebox.showerror("Error", "Order number does not exist.")
-            return
-
-        # Range sanity
-        if from_n > to_n:
-            messagebox.showwarning("Warning", "'From' must be less than or equal to 'To'.")
             return
 
         state.order_from = from_s
-        state.order_to = to_s
+
+        # 2) Dropbox date range validation and save
+        df_s = self.drop_from_var.get().strip()
+        dt_s = self.drop_to_var.get().strip()
+        if not df_s or not dt_s:
+            messagebox.showerror("Error", "Please enter date range (From and To) in format dd-mm-YYYY.")
+            return
+        try:
+            df = datetime.strptime("-".join([f"0{el}" if len(el) == 1 else el for el in df_s.split('-')]), "%d-%m-%Y")
+            dt = datetime.strptime("-".join([f"0{el}" if len(el) == 1 else el for el in dt_s.split('-')]), "%d-%m-%Y")
+        except Exception:
+            messagebox.showerror("Error", "Date format must be dd-mm-YYYY.")
+            return
+        if df > dt:
+            messagebox.showerror("Error", "'From' date must be before or equal to 'To' date.")
+            return
+        state.dropbox_from = df
+        state.dropbox_to = dt
 
         self.progress["value"] = 0
         # Visually disable start button and block hover/press animations
@@ -1046,9 +1202,11 @@ class OrderRangeScreen(Screen):
         self.start_btn.configure(state="disabled")
         self._is_processing = True
 
-        threading.Thread(target=self._process_orders).start()
+        threading.Thread(target=self._process_orders, daemon=True).start()
+   
     def _on_cancel(self):
         """If processing, request cancellation; otherwise go back."""
+        state.is_cancelled = True
         if getattr(self, "_is_processing", False):
             if not getattr(self, "_cancel_requested", False):
                 self._cancel_requested = True

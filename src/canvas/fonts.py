@@ -185,8 +185,9 @@ class FontsManager:
             return
         else:
             try:
+                y = self.s.row2.winfo_height() + self.s.row2.winfo_y()
                 if not self.s.row_text.winfo_ismapped():
-                    self.s.row_text.place(x=203, y=330, relwidth=1.0, width=-212, height=38)
+                    self.s.row_text.place(x=203, y=y, relwidth=1.0, width=-212, height=38)
                     self.s.row_text.lift()
                 if not self.s.text_bar.winfo_ismapped():
                     self.s.text_bar.pack(side="left", padx=12)

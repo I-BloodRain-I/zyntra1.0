@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import os
 import logging
+import numpy as np
 from typing import List, Tuple, Optional
 from io import BytesIO
 import functools
@@ -131,6 +132,30 @@ class PdfExporter:
             except Exception:
                 raise
             return default
+
+        def _darken_white_color(image: Image.Image, reduce_pct: int = 2, cap_white: bool = True, cap_value: int = 250) -> Image.Image:
+            if image.mode != "RGBA":
+                image = image.convert("RGBA")
+
+            arr = np.array(image, dtype=np.uint8)
+            rgb = arr[:, :, :3]
+            alpha = arr[:, :, 3]
+
+            opaque_mask = alpha > 0
+            rgb[opaque_mask] = (rgb[opaque_mask].astype(np.float32) * (1 - reduce_pct / 100.0)).astype(np.uint8)
+
+            if cap_white:
+
+                mask_white = (
+                    (rgb[:, :, 0] >= 255) &
+                    (rgb[:, :, 1] >= 255) &
+                    (rgb[:, :, 2] >= 255) &
+                    opaque_mask
+                )
+                rgb[mask_white] = cap_value
+
+            result = np.dstack((rgb, alpha))
+            return Image.fromarray(result, mode="RGBA")
 
         def _draw_rotated_text_center(
             text: str,
@@ -650,6 +675,7 @@ class PdfExporter:
         out_rgb = _PIL_Image.new("RGBA", (page_w_px, page_h_px), (255, 255, 255, 0))
         alpha = img.split()[-1]
         out_rgb.paste(img.convert("RGB"), mask=alpha)
+        out_rgb = _darken_white_color(out_rgb)
 
         width_px, height_px = out_rgb.size
 

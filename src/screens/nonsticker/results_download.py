@@ -310,7 +310,7 @@ class NStickerResultsDownloadScreen(Screen):
             time.sleep(1.0)
             
     def _back_home(self):
-        state.sku = ""
+        state.asins = ""
         state.sku_name = ""
         state.saved_product = ""
         try:

@@ -6,7 +6,7 @@ from src.utils import *
 from src.core import Screen, warn, COLOR_TEXT, COLOR_BG_LIGHT, COLOR_BG_SCREEN, COLOR_BG_DARK, COLOR_PILL, UI_SCALE, scale_px
 from src.core.state import state
 from src.utils import *
-from .sticker_copy import Screen6
+# from .sticker_copy import Screen6
 
 
 class StickerDefineImageScreen(Screen):

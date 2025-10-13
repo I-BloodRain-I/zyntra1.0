@@ -1,8 +1,10 @@
 from collections import defaultdict
+from copy import deepcopy
 import json
 
 
 import re
+import shutil
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
@@ -22,9 +24,7 @@ class SelectProductScreen(Screen):
         super().__init__(master, app)
         self._popup_just_opened = False
         self._suppress_auto_open = False
-
-        threading.Thread(target=self._detect_inputs_orders).start()
-
+        
         title = tk.Frame(self, bg=COLOR_BG_DARK, height="31p"); title.pack(fill="x")
         title.pack_propagate(False)
         tk.Label(title, text=APP_TITLE, bg=COLOR_BG_DARK, fg=COLOR_TEXT,
@@ -631,6 +631,48 @@ class SelectProductScreen(Screen):
         btn_remove_prod.place(relx=0.0, rely=1.0, x=scale_px(12),
                               y=-(scale_px(12) + add_height_px + gap_px + rem_prod_h + gap_px), anchor="sw")
 
+
+        def _on_copy_button():
+            selected_product = self.product_var.get()
+            if not selected_product:
+                messagebox.showerror("Error", "Please select a product to copy")
+                return
+            if selected_product not in ALL_PRODUCTS:
+                messagebox.showerror("Error", "Invalid product")
+                return
+            with open(PRODUCTS_PATH / f"{selected_product}.json", "r", encoding="utf-8") as f:
+                product_info = json.load(f)
+            new_product_name = product_info["SkuName"] + "_copy"
+            while new_product_name in ALL_PRODUCTS:
+                new_product_name = new_product_name + "_copy"
+            ALL_PRODUCTS.append(new_product_name)
+            with open(PRODUCTS_PATH / f"{new_product_name}.json", "w", encoding="utf-8") as f:
+                new_product_info = deepcopy(product_info)
+                new_product_info["SkuName"] = new_product_name
+                json.dump(new_product_info, f, ensure_ascii=False, indent=2)
+            shutil.copytree(PRODUCTS_PATH / selected_product, PRODUCTS_PATH / new_product_name)
+            messagebox.showinfo("Copied", f"Product '{selected_product}' has been copied to '{new_product_name}'")
+
+        copy_prod_button = create_button(
+            ButtonInfo(
+                parent=self,
+                text_info=TextInfo(
+                    text="COPY PRODUCT",
+                    color=COLOR_TEXT,
+                    font_size=15.74,
+                ),
+                button_color=COLOR_BG_DARK,
+                hover_color=COLOR_BG_DARK,
+                active_color=COLOR_BG_DARK,
+                padding_x=8,
+                padding_y=8,
+                command=_on_copy_button,
+            )
+        )
+        copy_prod_button.place(relx=0.0, rely=1.0, x=scale_px(12),
+                              y=-(scale_px(12) + add_height_px + gap_px + rem_prod_h + gap_px + rem_prod_h + gap_px), anchor="sw")
+        
+
         # Remove Font button (opens small top dialog)
         rem_font_text = "REMOVE FONT"
         rem_font_font = font_from_pt(15.74)
@@ -668,7 +710,7 @@ class SelectProductScreen(Screen):
         btn_remove_font.bind("<ButtonPress-1>", _rf_press)
         btn_remove_font.bind("<ButtonRelease-1>", _rf_release)
         btn_remove_font.place(relx=0.0, rely=1.0, x=scale_px(12),
-                              y=-(scale_px(12) + add_height_px + gap_px + rem_prod_h + gap_px + rem_font_h + gap_px), anchor="sw")
+                              y=-(scale_px(12) + add_height_px + gap_px + rem_prod_h + gap_px + rem_font_h + gap_px + rem_font_h + gap_px), anchor="sw")
 
         # Proceed (styled like font_info)
         proceed_btn = create_button(
@@ -701,15 +743,24 @@ class SelectProductScreen(Screen):
         
         with open(PRODUCTS_PATH / f"{product}.json", "r", encoding="utf-8") as f:
             product_info = json.load(f)
-            state.sku = product_info["Sku"]
+            asins = product_info.get("ASINs", None)
+            if asins is None:
+                asins = product_info.get("Sku", None)
+                if asins is None:
+                    messagebox.showerror("Error", "Product was corrupted")
+                    return
+                else:
+                    asins = [(asins, 1)]
+
+            state.asins = asins
             state.sku_name = product_info["SkuName"]
             state.prev_sku_name = product_info["SkuName"]
             
-        if product_info["IsSticker"]:
-            from src.screens.sticker import StickerBasicInfoScreen
-            self.app.show_screen(StickerBasicInfoScreen)
-        else:
-            self.app.show_screen(NStickerCanvasScreen)
+        # if product_info["IsSticker"]:
+        #     from src.screens.sticker import StickerBasicInfoScreen
+        #     self.app.show_screen(StickerBasicInfoScreen)
+        # else:
+        self.app.show_screen(NStickerCanvasScreen)
 
     def _proceed(self):
         product = self.product_var.get()
@@ -722,16 +773,26 @@ class SelectProductScreen(Screen):
             
         with open(PRODUCTS_PATH / f"{product}.json", "r", encoding="utf-8") as f:
             product_info = json.load(f)
-            state.sku = product_info["Sku"]
+            asins = product_info.get("ASINs", None)
+            if asins is None:
+                asins = product_info.get("Sku", None)
+                if asins is None:
+                    messagebox.showerror("Error", "Product was corrupted")
+                    return
+                else:
+                    asins = [(asins, 1)]
+
+            state.asins = asins
             state.sku_name = product_info["SkuName"]
             state.prev_sku_name = product_info["SkuName"]
         state.saved_product = product
+        state.is_cancelled = False
         
         self.app.show_screen(OrderRangeScreen)
 
     def _add_new(self):
         state.saved_product = ""
-        state.sku = ""
+        state.asins = ""
         state.sku_name = ""
         state.prev_sku_name = ""
         self.app.show_screen(NStickerCanvasScreen)
@@ -750,6 +811,9 @@ class SelectProductScreen(Screen):
             path = PRODUCTS_PATH / f"{product}.json"
             if path.exists():
                 path.unlink()
+            path = PRODUCTS_PATH / product
+            if path.exists():
+                shutil.rmtree(path, ignore_errors=True)
             try:
                 ALL_PRODUCTS.remove(product)
             except ValueError:

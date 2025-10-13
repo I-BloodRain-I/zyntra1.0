@@ -39,6 +39,20 @@ def font_from_pt(pt_value: float) -> tkfont.Font:
     px = int(round((pt_value * UI_SCALE) * DPI_PX_PER_INCH / 72.0))
     return tkfont.Font(family="Myriad Pro", size=-px)
 
+def validate_min1(root):
+    def _is_int(new_value: str) -> bool:
+        # Разрешаем временно пустое поле, чтобы можно было редактировать
+        if new_value == "":
+            return True
+
+        # Проверяем, что строка — целое число и ≥ 1
+        if new_value.isdigit():
+            return int(new_value) >= 1
+
+        return False
+
+    return root.register(_is_int)
+
 def vcmd_int(root):
     def _is_int(new_value: str) -> bool:
         return new_value.isdigit() or new_value == ""

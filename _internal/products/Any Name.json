@@ -1,7 +1,11 @@
 {
-  "Sku": "B0F1NZ5JDM",
+  "ASINs": [
+    [
+      "B0DMQ1BYN7",
+      1
+    ]
+  ],
   "SkuName": "Any Name",
-  "IsSticker": false,
   "Scene": {
     "jig": {
       "width_mm": 296.0,
