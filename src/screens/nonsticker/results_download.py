@@ -54,30 +54,25 @@ class NStickerResultsDownloadScreen(Screen):
         self._chip_h = int(chip_font.metrics("linespace") + 20)
 
         # Three file rows with pill-style Download buttons
-        self._file_row(content, "Cut Jig", lambda: self._download_pdf("jig")).pack(pady=(10, 8))
+        # self._file_row(content, "Cut Jig", lambda: self._download_pdf("jig")).pack(pady=(10, 8))
         # self._file_row(content, "Single Pattern", lambda: self._download_pdf("pattern")).pack(pady=(8, 8))
-        self._file_row(content, "Test File Frontside", lambda: self._download_pdf("front")).pack(pady=(8, 8))
-        self._file_row(content, "Test File Backside", lambda: self._download_pdf("back")).pack(pady=(8, 8))
 
-        # Report row: left strip for "Report:", then dynamic status label
-        report_row = tk.Frame(content, bg=COLOR_BG_SCREEN)
-        report_row.pack(fill="x", pady=(16, 10))
-        report_strip = tk.Frame(report_row, bg=COLOR_BG_SCREEN_FOR_LABELS)
-        report_strip.pack(side="left", fill="x")
-        tk.Label(report_strip, text="Report:", bg=COLOR_BG_SCREEN_FOR_LABELS, fg="#000000",
-                 font=("Myriad Pro", 24)).pack(side="left", padx=(0, 8))
-        self._status_value = tk.Label(
-            report_row,
-            text=("Processing" if getattr(state, "is_processing", False) else "Successful"),
-            bg=COLOR_BG_SCREEN,
-            fg=("#bbbbbb" if getattr(state, "is_processing", False) else "#6fe28f"),
-            font=("Myriad Pro", 24),
-        )
-        self._status_value.pack(side="left", padx=(12, 0))
+        self._file_row(
+            content,
+            "Test File Frontside",
+            lambda: self._download_file("front", "PDF"),
+            "front",
+        ).pack(pady=(8, 8))
+        self._file_row(
+            content,
+            "Test File Backside",
+            lambda: self._download_file("back", "PDF"),
+            "back",
+        ).pack(pady=(8, 8))
 
         # Totals row: left strip with the label, then value on screen bg
         totals_row = tk.Frame(content, bg=COLOR_BG_SCREEN)
-        totals_row.pack(fill="x", pady=(6, 2))
+        totals_row.pack(fill="x", pady=(6, 2), padx=(300, 0))
         totals_strip = tk.Frame(totals_row, bg=COLOR_BG_SCREEN_FOR_LABELS)
         totals_strip.pack(side="left")
         tk.Label(totals_strip, text="Total items in 1 batch:", bg=COLOR_BG_SCREEN_FOR_LABELS, fg="#000000",
@@ -193,35 +188,107 @@ class NStickerResultsDownloadScreen(Screen):
         cnv.create_text(pad_x, h_px // 2, text=text, font=("Myriad Pro", 12), fill=COLOR_TEXT, anchor="w")
         return cnv
 
-    def _file_row(self, parent, label_text: str, command, small_note: str | None = None):
+    def _file_row(self, parent, label_text: str, command, side_type: str | None = None, small_note: str | None = None):
         row = ttk.Frame(parent, style="Screen.TFrame")
         # Fixed-width wrapper to ensure same x start; give explicit height to avoid collapse
         chip_wrap = tk.Frame(row, bg=COLOR_BG_DARK,
                              width=getattr(self, "_chip_w", 450),
                              height=getattr(self, "_chip_h", 48))
-        chip_wrap.pack(side="left")
+        chip_wrap.pack(side="left", padx=(300, 0))
         chip_wrap.pack_propagate(False)
         chip = tk.Frame(chip_wrap, bg=COLOR_BG_SCREEN_FOR_LABELS)
         chip.pack(expand=True, fill="both")
         tk.Label(chip, text=label_text, bg=COLOR_BG_SCREEN_FOR_LABELS, fg="#000000",
                  font=("Myriad Pro", 24)).pack(padx=10, pady=10)
-        col = ttk.Frame(row, style="Screen.TFrame")
-        col.pack(side="left", padx=14)
-        b = self._pill_button(col, "Download", command)
-        b.pack()
-        try:
-            # Track for enabling/disabling
-            if not hasattr(self, "_download_buttons"):
-                self._download_buttons = []
-            self._download_buttons.append(b)
-        except Exception:
-            logger.exception("Failed to register download button for state management")
-        if small_note:
-            tk.Label(col, text=small_note, bg=COLOR_BG_SCREEN_FOR_LABELS, fg="#333333",
-                     font=("Myriad Pro", 10)).pack(pady=(4, 0))
+        
+        # Create status label for this side (positioned after the chip with fixed width)
+        if side_type == "front":
+            self._front_status_value = tk.Label(
+                row,
+                text="In queue",
+                bg=COLOR_BG_SCREEN,
+                fg="#bbbbbb",
+                font=("Myriad Pro", 24),
+                width=30,  # Fixed width to prevent shifting
+                anchor="w",  # Left-align text within the fixed width
+            )
+            self._front_status_value.pack(side="left", padx=(14, 0))
+        elif side_type == "back":
+            self._back_status_value = tk.Label(
+                row,
+                text="In queue",
+                bg=COLOR_BG_SCREEN,
+                fg="#bbbbbb",
+                font=("Myriad Pro", 24),
+                width=30,  # Fixed width to prevent shifting
+                anchor="w",  # Left-align text within the fixed width
+            )
+            self._back_status_value.pack(side="left", padx=(14, 0))
+
+        # b = self._pill_button(col, "Download", command)
+        # b.pack(side="left")
+        # try:
+        #     # Track for enabling/disabling
+        #     if not hasattr(self, "_download_buttons"):
+        #         self._download_buttons = []
+        #     self._download_buttons.append(b)
+        # except Exception:
+        #     logger.exception("Failed to register download button for state management")
+        # if small_note:
+        #     tk.Label(col, text=small_note, bg=COLOR_BG_SCREEN_FOR_LABELS, fg="#333333",
+        #              font=("Myriad Pro", 10)).pack(pady=(4, 0))
         return row
 
     # ---------- actions ----------
+    def _download_file(self, type: str, fmt: str):
+        fmt_lower = (fmt or "").strip().lower()
+        # Default/export mapping
+        if type == "front":
+            base = "Test_file_frontside"
+        elif type == "back":
+            base = "Test_file_backside"
+        elif type == "jig":
+            base = "Cut_jig"
+        elif type == "pattern":
+            base = "Single_pattern"
+        else:
+            base = "export"
+
+        if fmt_lower == "svg":
+            ext = ".svg"
+            dialog_title = "Save SVG File"
+            filetypes = [("SVG files", "*.svg"), ("All files", "*.*")]
+        elif fmt_lower == "png":
+            ext = ".png"
+            dialog_title = "Save PNG File"
+            filetypes = [("PNG images", "*.png")]
+        elif fmt_lower in ("jpg", "jpeg"):
+            ext = ".jpg"
+            dialog_title = "Save JPG File"
+            filetypes = [("JPEG images", "*.jpg;*.jpeg")]
+        else:
+            # Default to PDF for now
+            ext = ".pdf"
+            dialog_title = "Save PDF File"
+            filetypes = [("PDF files", "*.pdf")]
+
+        filename = f"{base}{ext}"
+
+        fname = filedialog.asksaveasfilename(
+            title=dialog_title,
+            defaultextension=ext,
+            filetypes=filetypes,
+            initialfile=filename,
+        )
+        if not fname:
+            return
+        try:
+            shutil.copy(os.path.join(TEMP_FOLDER, filename), fname)
+            messagebox.showinfo("Saved", f"File saved to:\n{fname}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not save file:\n{e}")
+        return
+
     def _download_pdf(self, type: str):
         filename = ""
         if type == "jig":
@@ -284,17 +351,68 @@ class NStickerResultsDownloadScreen(Screen):
 
     def _apply_processing_state(self) -> None:
         processing = bool(getattr(state, "is_processing", False))
-        text = state.processing_message if processing else (
-            f"Failed: {state.error_message if state.error_message else "Unknown error"}" if state.is_failed else "Successful"
+        error_message = getattr(state, "error_message", "")
+        processing_message = getattr(state, "processing_message", "") or ""
+        msg_lower = processing_message.lower()
+
+        # Default: both always "In queue"
+        front_text = "In queue"
+        back_text = "In queue"
+        front_color = "#bbbbbb"
+        back_color = "#bbbbbb"
+
+        if getattr(state, "is_failed", False):
+            # On failure, show which side failed
+            fail_text = f"Failed: {error_message or 'Unknown error'}"
+            if "frontside" in msg_lower:
+                front_text = fail_text
+                front_color = "#e50000"
+                back_text = "In queue"
+                back_color = "#bbbbbb"
+            elif "backside" in msg_lower:
+                front_text = "Successful"
+                front_color = "#6fe28f"
+                back_text = fail_text
+                back_color = "#e50000"
+            else:
+                # Generic failure
+                front_text = back_text = fail_text
+                front_color = back_color = "#e50000"
+        elif processing:
+            if "frontside" in msg_lower:
+                # Frontside is processing
+                front_text = processing_message or "Processing"
+                front_color = "#bbbbbb"
+                back_text = "In queue"
+                back_color = "#bbbbbb"
+            elif "backside" in msg_lower:
+                # Backside is processing → front is done
+                front_text = "Successful"
+                front_color = "#6fe28f"
+                back_text = processing_message or "Processing"
+                back_color = "#bbbbbb"
+            else:
+                # Unknown processing state - keep both as "In queue"
+                front_text = back_text = "In queue"
+                front_color = back_color = "#bbbbbb"
+        else:
+            # Processing completed successfully
+            front_text = back_text = "Successful"
+            front_color = back_color = "#6fe28f"
+
+        logger.debug(
+            "Processing state → processing=%s failed=%s msg='%s' front=(%s) back=(%s)",
+            processing,
+            state.is_failed,
+            processing_message,
+            front_text,
+            back_text,
         )
-        color = "#bbbbbb" if processing else (
-            "#e50000" if state.is_failed else "#6fe28f"
-        )
-        logger.debug(f"Processing state: Processing=%s, Failed: %s, Text: %s, Color: %s", processing, state.is_failed, text, color)
         try:
-            self._status_value.configure(text=text, fg=color)
+            self._front_status_value.configure(text=front_text, fg=front_color)
+            self._back_status_value.configure(text=back_text, fg=back_color)
         except Exception:
-            logger.exception("Failed to update processing state")
+            logger.exception("Failed to update processing state labels")
         self._set_buttons_enabled(not processing and not state.is_failed)
 
     def _poll_processing(self) -> None:

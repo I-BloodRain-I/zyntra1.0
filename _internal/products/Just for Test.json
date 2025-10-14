@@ -1,7 +1,11 @@
 {
-  "Sku": "B0F4DQR21L",
+  "ASINs": [
+    [
+      "B0F4DQR21L",
+      1
+    ]
+  ],
   "SkuName": "Just for Test",
-  "IsSticker": false,
   "Scene": {
     "jig": {
       "width_mm": 296.0,

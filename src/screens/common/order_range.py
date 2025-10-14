@@ -1,4 +1,3 @@
-import functools
 import logging
 import os
 import threading
@@ -48,7 +47,7 @@ class OrderRangeScreen(Screen):
         super().__init__(master, app)
 
         # Top line identical to LauncherSelectProduct
-        self.brand_bar(self)
+        # self.brand_bar(self)
 
         self.images = ImageManager(self)
         self._rotated_bounds_px = self.images.rotated_bounds_px
@@ -119,6 +118,34 @@ class OrderRangeScreen(Screen):
             validatecommand=vcmd,
         ).pack(side="left")
 
+        # Formats + DPI row (below date range)
+        fmt_row = tk.Frame(content, bg=COLOR_BG_SCREEN)
+        fmt_row.pack(pady=(scale_px(8), 0))
+
+        tk.Label(fmt_row, text="Formats:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=date_font).pack(side="left", padx=(0, scale_px(4)))
+        self.format_var = tk.StringVar(value="pdf")
+        tk.Entry(
+            fmt_row,
+            textvariable=self.format_var,
+            width=15,
+            justify="center",
+            font=date_font,
+            bg="#ffffff",
+            relief="flat",
+        ).pack(side="left")
+
+        tk.Label(fmt_row, text="DPI:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=date_font).pack(side="left", padx=(scale_px(20), scale_px(4)))
+        self.dpi_var = tk.StringVar(value="1200")
+        tk.Entry(
+            fmt_row,
+            textvariable=self.dpi_var,
+            width=6,
+            justify="center",
+            font=date_font,
+            bg="#ffffff",
+            relief="flat",
+        ).pack(side="left")
+
         tk.Label(date_row, text="To:", bg=COLOR_BG_SCREEN, fg=COLOR_TEXT, font=date_font).pack(side="left", padx=(scale_px(20), scale_px(4)))
         self.drop_to_var = tk.StringVar(value=state.dropbox_to.strftime("%d-%m-%Y"))
         tk.Entry(
@@ -144,7 +171,7 @@ class OrderRangeScreen(Screen):
         pb_wrap = tk.Frame(content, bg=COLOR_BG_SCREEN)
         pb_wrap.pack(pady=(scale_px(14), 0))
         self.progress = ttk.Progressbar(pb_wrap, orient="horizontal", length=486, mode="determinate", maximum=100)
-        self.progress.pack(ipady=scale_px(12), pady=(5, 36))
+        self.progress.pack(ipady=scale_px(12), pady=(5, 5))
         self.progress["value"] = 100
         # ---------------------------------------------------------------------
 
@@ -376,7 +403,6 @@ class OrderRangeScreen(Screen):
 
         return {"status": "success", "data": objects}
 
-    @functools.lru_cache(maxsize=4096)
     def _download_image_from_amazon(self, image_url: str) -> Dict[str, Union[str, Image.Image]]:
         retries = 3
         image_name = image_url.split("/")[-1]
@@ -724,15 +750,33 @@ class OrderRangeScreen(Screen):
         jig_size: Tuple[float, float], 
         pdf_start_oder_i: int, 
         pdf_end_oder_i: int,
-        pdf_order: int = 1
+        pdf_order: int = 1,
+        dpi: int = 1200,
+        formats: List[str] = None
     ) -> Dict[str, str]:
         try:       
             def _remove_unprocessed_objs(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 return [item for item in items if item.get("processed", False)]
 
             exporter = PdfExporter(self)
-            p_front = str((OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_front{f'_{pdf_order}' if pdf_order > 1 else ''}.pdf").resolve())
-            p_back  = str((OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_back.pdf").resolve())
+            from pathlib import Path as _Path
+            if formats is None:
+                formats = ["pdf"]
+            # Normalize formats
+            fmts_norm: List[str] = []
+            seen = set()
+            for f in formats:
+                ff = (f or "").strip().lower()
+                if ff == "jpeg":
+                    ff = "jpg"
+                if ff in ("pdf", "png", "jpg") and ff not in seen:
+                    seen.add(ff)
+                    fmts_norm.append(ff)
+            if not fmts_norm:
+                fmts_norm = ["pdf"]
+
+            base_front = (OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_front{f'_{pdf_order}' if pdf_order > 1 else ''}").resolve()
+            base_back  = (OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_back").resolve()
 
             front_items = []
             back_items = []
@@ -741,11 +785,39 @@ class OrderRangeScreen(Screen):
                 if back:
                     back_items.extend(back["objects"] if back else [])
 
-            logger.debug("Rendering front PDF...")
-            exporter.render_scene_to_pdf(p_front, _remove_unprocessed_objs(front_items), jig_size[0], jig_size[1], dpi=1200)
+            def _render_and_save(side_items: List[Dict[str, Any]], base: _Path) -> None:
+                if not side_items:
+                    return
+                items = _remove_unprocessed_objs(side_items)
+                if not items:
+                    return
+                did_pdf = False
+                if "pdf" in fmts_norm:
+                    p_pdf = str(base.with_suffix(".pdf"))
+                    logger.debug("Rendering PDF: %s", p_pdf)
+                    exporter.render_scene_to_pdf(p_pdf, items, jig_size[0], jig_size[1], dpi=dpi)
+                    did_pdf = True
+                # Ensure last render image exists even if PDF not requested
+                if not did_pdf and ("png" in fmts_norm or "jpg" in fmts_norm):
+                    import time as _time
+                    tmp_pdf = str((OUTPUT_PATH / f"__tmp_{int(_time.time()*1000)}.pdf").resolve())
+                    try:
+                        exporter.render_scene_to_pdf(tmp_pdf, items, jig_size[0], jig_size[1], dpi=dpi)
+                    finally:
+                        try:
+                            os.remove(tmp_pdf)
+                        except Exception:
+                            pass
+                if "png" in fmts_norm:
+                    p_png = str(base.with_suffix(".png"))
+                    exporter.save_last_render_as_png(p_png)
+                if "jpg" in fmts_norm:
+                    p_jpg = str(base.with_suffix(".jpg"))
+                    exporter.save_last_render_as_jpg(p_jpg)
+
+            _render_and_save(front_items, _Path(base_front))
             if back_items and any(item is not None for item in back_items):
-                logger.debug("Rendering back PDF...")
-                exporter.render_scene_to_pdf(p_back, _remove_unprocessed_objs(back_items), jig_size[0], jig_size[1], dpi=1200)
+                _render_and_save(back_items, _Path(base_back))
 
             return {"status": "success"}
 
@@ -879,15 +951,23 @@ class OrderRangeScreen(Screen):
             selected_slots.append((selected_slot_front, selected_slot_back))
 
             if _is_pattern_filled(pattern_info, original_pattern_info):
-                self.log(f"[{order_id}] [{i+1}/{total_count}] The pdf data is filled, making pdf...")
+                self.log(f"[{order_id}] [{i+1}/{total_count}] The export data is filled, making files...")
                 pattern_info = deepcopy(original_pattern_info)
                 jig_info = pattern_info["Scene"]["jig"]
-                result = self._make_pdf(saved_slots + selected_slots, (jig_info["width_mm"], jig_info["height_mm"]), pdf_start_oder_id, order_id, pdf_order=pdf_count)
+                result = self._make_pdf(
+                    saved_slots + selected_slots,
+                    (jig_info["width_mm"], jig_info["height_mm"]),
+                    pdf_start_oder_id,
+                    order_id,
+                    pdf_order=pdf_count,
+                    dpi=getattr(self, "_export_dpi", 1200),
+                    formats=getattr(self, "_export_formats", ["pdf"]) ,
+                )
                 if result["status"] == "error":
                     link_to_pattern_info.clear()
                     link_to_pattern_info.update(started_pattern_info)
                     return {"status": "error", "message": "Failed to make pdf: " + result["message"]}
-                self.log(f"[{order_id}] [{i+1}/{total_count}] PDFs made successfully", SUCCESS_COLOR)
+                self.log(f"[{order_id}] [{i+1}/{total_count}] Files made successfully", SUCCESS_COLOR)
                 selected_slots.clear()
                 saved_slots.clear()
                 is_saved_slots_processed = True
@@ -1044,15 +1124,22 @@ class OrderRangeScreen(Screen):
                     break
 
                 if _is_pattern_filled(pattern_data, pattern_info) or (i == total_orders - 1 and pdf_data):
-                    self.log(f"[{pdf_start_oder_i}-{order_id}] The pdf data is filled, making pdf...")
+                    self.log(f"[{pdf_start_oder_i}-{order_id}] The export data is filled, making files...")
                     pattern_data = deepcopy(pattern_info)
                     jig_info = pattern_info["Scene"]["jig"]
-                    result = self._make_pdf(pdf_data, (jig_info["width_mm"], jig_info["height_mm"]), pdf_start_oder_i, order_id)
+                    result = self._make_pdf(
+                        pdf_data,
+                        (jig_info["width_mm"], jig_info["height_mm"]),
+                        pdf_start_oder_i,
+                        order_id,
+                        dpi=getattr(self, "_export_dpi", 1200),
+                        formats=getattr(self, "_export_formats", ["pdf"]) ,
+                    )
                     if result["status"] == "error":
-                        self.log(f"[{pdf_start_oder_i}-{order_id}] Failed to make pdf: " + result["message"], ERROR_COLOR)
+                        self.log(f"[{pdf_start_oder_i}-{order_id}] Failed to export files: " + result["message"], ERROR_COLOR)
                         failed_orders.extend([order_path for order_path in current_processing_orders])
                     else:
-                        self.log(f"[{pdf_start_oder_i}-{order_id}] PDFs made successfully", SUCCESS_COLOR)
+                        self.log(f"[{pdf_start_oder_i}-{order_id}] Files made successfully", SUCCESS_COLOR)
                         is_sucess = True
                     pdf_data.clear()
                     pdf_start_oder_i = None
@@ -1060,7 +1147,7 @@ class OrderRangeScreen(Screen):
                 self.progress["value"] += progress_step
 
             if is_sucess:
-                self.log(f"Processing completed! You can find PDFs in outputs/ folder", SUCCESS_COLOR)
+                self.log(f"Processing completed! You can find files in outputs/ folder", SUCCESS_COLOR)
             # if failed_orders:
             #     self.log(f"Failed orders: {failed_orders}", ERROR_COLOR)
 
@@ -1190,6 +1277,31 @@ class OrderRangeScreen(Screen):
             return
         state.dropbox_from = df
         state.dropbox_to = dt
+
+        # 3) Formats + DPI
+        fmt_s = (self.format_var.get() if hasattr(self, "format_var") else "pdf").strip()
+        fmts = [f.strip().lower() for f in fmt_s.split(",") if f.strip()]
+        formats_norm: List[str] = []
+        seen = set()
+        for f in fmts:
+            if f == "jpeg":
+                f = "jpg"
+            if f in ("pdf", "png", "jpg") and f not in seen:
+                seen.add(f)
+                formats_norm.append(f)
+        if not formats_norm:
+            messagebox.showerror("Error", "Please enter at least one valid format: pdf, png, jpg.")
+            return
+        dpi_s = (self.dpi_var.get() if hasattr(self, "dpi_var") else "1200").strip()
+        try:
+            dpi_v = int(dpi_s or "1200")
+            if dpi_v <= 0:
+                raise ValueError
+        except Exception:
+            messagebox.showerror("Error", "DPI must be a positive integer (e.g. 1200).")
+            return
+        self._export_formats = formats_norm
+        self._export_dpi = dpi_v
 
         self.progress["value"] = 0
         # Visually disable start button and block hover/press animations

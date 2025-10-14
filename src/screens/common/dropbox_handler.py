@@ -26,12 +26,13 @@ ERROR_COLOR = "#CE0000"
 
 BASE_FOLDER = "/ORDERS APRIL"
 FILES_FOLDER = "IMAGESTEST"
+# FILES_FOLDER = "IMAGES"
 JSON_FOLDER = "JSON"
 
 logger = logging.getLogger(__name__)
 
 
-class Dropbox:
+class Dropbox:      
     def __init__(self):
         if ENV_PATH.exists():
             load_dotenv(ENV_PATH)
@@ -52,7 +53,7 @@ class Dropbox:
         if not self.app_key:
             messagebox.showerror("APP KEY", "Please provide APP KEY in _internal/env")
             logger.debug("APP key didn't provide")
-            exit(0)
+            return
 
         session = {}
         flow = dropbox.DropboxOAuth2Flow(

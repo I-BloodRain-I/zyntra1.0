@@ -1,2 +1,0 @@
-4. send backward should be apply to all nereaset objects
-6. Big rectangle in canvas

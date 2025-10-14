@@ -431,14 +431,14 @@ class PdfExporter:
         # TEXT_PT_TO_PX_SCALE = 1.33
         TEXT_PT_TO_PX_SCALE = 1.0
 
-        # Рамка «джига»
+        # Рамка «джига» — не рисуем в растре, чтобы PNG/JPG были без рамки.
+        # Рамку добавим в PDF на этапе Cairo (см. ниже).
         jw = max(1, int(round(jig_w_mm * px_per_mm)))
         jh = max(1, int(round(jig_h_mm * px_per_mm)))
         jx0 = 0
         jy0 = 0
         jx1 = page_w_px - 1
         jy1 = page_h_px - 1
-        draw.rectangle([jx0, jy0, jx1, jy1], outline=(221, 221, 221, 255), width=3)
 
         def mm_to_px(m: float) -> int:
             return int(round(float(m) * px_per_mm))
@@ -703,6 +703,62 @@ class PdfExporter:
 
         # Завершаем PDF
         surface.finish()
+
+        # Expose last rendered raster (for PNG/JPG export)
+        try:
+            # Keep a copy so later modifications do not affect stored reference
+            self._last_render_image = out_rgb.copy()
+            self._last_render_dpi = int(dpi)
+        except Exception:
+            # Non-fatal: auxiliary export may be unavailable
+            self._last_render_image = None
+            self._last_render_dpi = None
+
+    def save_last_render_as_png(self, path: str) -> None:
+        try:
+            if getattr(self, "_last_render_image", None) is None:
+                raise RuntimeError("No last render image available for PNG export")
+            # Ensure 8-bit per channel RGBA
+            img = self._last_render_image
+            if img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGBA")
+            try:
+                dpi = int(getattr(self, "_last_render_dpi", 300) or 300)
+            except Exception:
+                dpi = 300
+            img.save(path, format="PNG", dpi=(dpi, dpi))
+        except Exception as e:
+            logger.exception(f"Failed to save PNG: {e}")
+            raise
+
+    def save_last_render_as_jpg(self, path: str, quality: int = 95) -> None:
+        try:
+            if getattr(self, "_last_render_image", None) is None:
+                raise RuntimeError("No last render image available for JPG export")
+            img = self._last_render_image
+            if img.mode != "RGB":
+                # Flatten alpha over white
+                if img.mode == "RGBA":
+                    bg = Image.new("RGB", img.size, (255, 255, 255))
+                    bg.paste(img, mask=img.split()[-1])
+                    img = bg
+                else:
+                    img = img.convert("RGB")
+            try:
+                dpi = int(getattr(self, "_last_render_dpi", 300) or 300)
+            except Exception:
+                dpi = 300
+            img.save(
+                path,
+                format="JPEG",
+                quality=max(1, min(100, int(quality))),
+                dpi=(dpi, dpi),
+                subsampling=0,
+                optimize=True,
+            )
+        except Exception as e:
+            logger.exception(f"Failed to save JPG: {e}")
+            raise
         
         # out_rgb.save(path, "PDF", resolution=dpi)
         

@@ -39,20 +39,23 @@ class FontsManager:
         self._fonts_map = self._load_fonts_map()
         self._font_families = self._list_font_families(self._fonts_map)
 
-        # Build UI (hidden by default)
-        self.s.row_text = tk.Frame(self.s, bg="black")
+        # Build UI (hidden by default). Attach to left sidebar if available
+        parent_for_text = getattr(self.s, "left_bar", self.s)
+        self.s.row_text = tk.Frame(parent_for_text, bg="black")
         self.s.text_bar = tk.Frame(self.s.row_text, bg="black")
 
-        tk.Label(self.s.text_bar, text="Text:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(4, 9))
+        tk.Label(self.s.text_bar, text="Text:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="top", anchor="w", padx=(60, 9))
 
         # Text size (pt)
         self.s.text_size = tk.StringVar(value="12")
-        _sb = self.s._chip(self.s.text_bar, "Size:", self.s.text_size, width=6)
+        _size_line = tk.Frame(self.s.text_bar, bg="black"); _size_line.pack(side="top", anchor="w")
+        _sb = self.s._chip(_size_line, "Size:", self.s.text_size, label_padx=15, width=11, pady=(8,0))
         tk.Label(_sb, text="pt", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
 
         # Text color (hex)
         self.s.text_color = tk.StringVar(value="#ffffff")
-        _cb = self.s._chip(self.s.text_bar, "Color:", self.s.text_color, width=10)
+        _color_line = tk.Frame(self.s.text_bar, bg="black"); _color_line.pack(side="top", anchor="w")
+        _cb = self.s._chip(_color_line, "Color:", self.s.text_color, label_padx=10, width=14, pady=(8,0))
         # Bind color picker to the entry inside the chip
         try:
             entry_widget = None
@@ -80,7 +83,8 @@ class FontsManager:
         except Exception:
             logger.exception("Failed to bind color picker to color entry")
         # Family combobox
-        fam_wrap = tk.Frame(self.s.text_bar, bg="#6f6f6f")
+        fam_line = tk.Frame(self.s.text_bar, bg="black"); fam_line.pack(side="top", anchor="w")
+        fam_wrap = tk.Frame(fam_line, bg="#6f6f6f")
         fam_wrap.pack(side="left", padx=6, pady=8)
         tk.Label(fam_wrap, text="Family:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
         default_family = (self._font_families[0] if self._font_families else "Myriad Pro")
@@ -91,43 +95,44 @@ class FontsManager:
             state="readonly",
             values=self._font_families,
             justify="center",
-            width=18,
+            width=12,
         )
         self.s._family_combo.pack(side="left")
 
+        # Buttons line (Import/Remove) stacked below family
+        btn_line = tk.Frame(self.s.text_bar, bg="black"); btn_line.pack(side="top", anchor="w")
         # Import font
         imp_btn = create_button(
             ButtonInfo(
-                parent=self.s.text_bar,
-                text_info=TextInfo(text="Import font", color=COLOR_TEXT, font_size=10),
+                parent=btn_line,
+                text_info=TextInfo(text="Import", color=COLOR_TEXT, font_size=10),
                 command=self._on_import_font,
                 background_color="#000000",
                 button_color=COLOR_PILL,
                 hover_color=COLOR_BG_DARK,
                 active_color=COLOR_PILL,
-                padding_x=8,
+                padding_x=15,
                 padding_y=4,
-                radius=10,
             )
         )
-        imp_btn.pack(side="left", padx=8)
+        imp_btn.pack(side="left", padx=(6, 4))
 
         # Remove font
         rem_btn = create_button(
             ButtonInfo(
-                parent=self.s.text_bar,
-                text_info=TextInfo(text="Remove font", color=COLOR_TEXT, font_size=10),
+                parent=btn_line,
+                text_info=TextInfo(text="Remove", color=COLOR_TEXT, font_size=10),
                 command=self._on_remove_font,
                 background_color="#000000",
                 button_color=COLOR_PILL,
                 hover_color=COLOR_BG_DARK,
                 active_color=COLOR_PILL,
-                padding_x=8,
+                padding_x=12,
                 padding_y=4,
-                radius=10,
             )
         )
         rem_btn.pack(side="left", padx=8)
+        tk.Frame(self.s.text_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=(10, 6))
 
         # Initial hidden state
         try:
@@ -166,7 +171,7 @@ class FontsManager:
                 self.s.text_size.set("")
                 self.s.text_color.set("")
                 self.s.text_bar.pack_forget()
-                self.s.row_text.place_forget()
+                self.s.row_text.pack_forget()
             except Exception:
                 logger.exception("Failed to clear/hide text controls on deselect")
             return
@@ -179,18 +184,22 @@ class FontsManager:
         if not is_text_block:
             try:
                 self.s.text_bar.pack_forget()
-                self.s.row_text.place_forget()
+                self.s.row_text.pack_forget()
             except Exception:
                 logger.exception("Failed to hide text controls for non-text selection")
             return
         else:
             try:
-                y = self.s.row2.winfo_height() + self.s.row2.winfo_y()
-                if not self.s.row_text.winfo_ismapped():
-                    self.s.row_text.place(x=203, y=y, relwidth=1.0, width=-212, height=38)
-                    self.s.row_text.lift()
+                # Show font controls in the left sidebar under the object controls
+                before_widget = getattr(self.s, "backside_wrap", None) or getattr(self.s, "tools_panel", None)
+                if self.s.row_text.winfo_ismapped():
+                    self.s.row_text.pack_forget()
+                if before_widget is not None:
+                    self.s.row_text.pack(side="top", fill="x", padx=0, pady=(0, 6), anchor="w", before=before_widget)
+                else:
+                    self.s.row_text.pack(side="top", fill="x", padx=0, pady=(0, 6), anchor="w")
                 if not self.s.text_bar.winfo_ismapped():
-                    self.s.text_bar.pack(side="left", padx=12)
+                    self.s.text_bar.pack(side="left", padx=0)
             except Exception:
                 logger.exception("Failed to show text controls for text selection")
         tid = meta.get("label_id") if t == "rect" else (meta.get("label_id") or sel)

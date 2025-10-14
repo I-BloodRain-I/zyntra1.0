@@ -14,7 +14,7 @@ from tkinter import ttk, messagebox, filedialog, simpledialog
 from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL, MM_TO_PX, IMAGES_PATH, TEMP_FOLDER
 from src.core.app import COLOR_BG_SCREEN, validate_min1, vcmd_int
 from src.utils import *
-from src.core.state import ALL_PRODUCTS, FONTS_PATH, PRODUCTS_PATH, state
+from src.core.state import ALL_PRODUCTS, FONTS_PATH, OUTPUT_PATH, PRODUCTS_PATH, state
 from src.canvas import CanvasObject, CanvasSelection, MajorManager, JigController, SlotManager, ImageManager, PdfExporter, FontsManager
 from .results_download import NStickerResultsDownloadScreen
 
@@ -83,35 +83,20 @@ class NStickerCanvasScreen(Screen):
 
         left_bar = tk.Frame(self, bg="black")
         left_bar.pack(side="left", fill="y", padx=10, pady=(7, 60))
+        # Expose left bar for child managers (e.g., Fonts) to attach their UI
+        self.left_bar = left_bar
 
-        # Top row: Write SKU (primary SKU field)
-        header_row_top = ttk.Frame(self, style="Screen.TFrame")
-        header_row_top.pack(padx=0, pady=(5, 8))
         self.sku_var = tk.StringVar(value="")
-
-        # Second field moved to top row: Write name for ASIN
-        tk.Label(header_row_top, text=" Write name for Product ", bg="#737373", fg=COLOR_TEXT,
-                 font=("Myriad Pro", 16), width=20).pack(side="left", padx=(80, 0))
         self.sku_name_var = tk.StringVar(value=state.sku_name or "")
-        input_wrap_name = tk.Frame(header_row_top, bg="#000000")
-        input_wrap_name.pack(side="left")
-        tk.Frame(input_wrap_name, width=15, height=1, bg="#000000").pack(side="left")
-        sku_name_entry_top = tk.Entry(input_wrap_name, textvariable=self.sku_name_var, width=16,
-                                      bg="#000000", fg="#ffffff", insertbackground="#ffffff",
-                                      relief="flat", bd=0, highlightthickness=0,
-                                      font=("Myriad Pro", 16))
-        sku_name_entry_top.pack(side="left", ipady=2)
-
-        # Left vertical sidebar for Slot size, Origin Pos, Step Size
 
         # Top horizontal bar for Import, Jig size, tools, and shortcuts
-        bar = tk.Frame(self, bg="black")
-        bar.pack(fill="x", padx=10, pady=(0, 10))
+        bar = tk.Frame(self, bg="green")
+        bar.pack(fill="none", padx=0, pady=(0, 0))
 
         # (Replaced) Old Import Image pill removed in favor of tool tile in tools section
 
         # 2) Jig size label and fields
-        tk.Label(bar, text="Jig size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left", padx=(16, 6))
+        tk.Label(bar, text="Jig size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left")
         self.jig_x = tk.StringVar(value=state.pkg_x or "296.0")
         self.jig_y = tk.StringVar(value=state.pkg_y or "394.5831")
         jig_col = tk.Frame(bar, bg="black")
@@ -145,7 +130,6 @@ class NStickerCanvasScreen(Screen):
         ms_preset_col.pack(side="left", padx=8, pady=8)
         ms_wrap = tk.Frame(ms_preset_col, bg="#6f6f6f")
         ms_wrap.pack(side="top", pady=2)
-        tk.Label(ms_wrap, text="Preset:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
         self._major_sizes = {
             "Major size 1": {
                 "x": str(DEFAULT_MAJOR_POS[0]), "y": str(DEFAULT_MAJOR_POS[1]),
@@ -195,7 +179,13 @@ class NStickerCanvasScreen(Screen):
 
         # Add/Remove buttons (end of column 2)
         def _ms_refresh_values():
-            self._major_combo.configure(values=list(self._major_sizes.keys()))
+            values = list(self._major_sizes.keys())
+            self._major_combo.configure(values=values)
+            try:
+                if hasattr(self, "_major_combo_basic"):
+                    self._major_combo_basic.configure(values=values)
+            except Exception:
+                pass
             # Enable/disable Remove based on count
             if len(self._major_sizes) <= 1:
                 self._ms_btn_remove.configure(state="disabled")
@@ -641,7 +631,7 @@ class NStickerCanvasScreen(Screen):
         tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
 
         # Slot size label and fields
-        tk.Label(left_bar, text="Slot size:", fg="white", bg="black", font=("Myriad Pro", 14, "bold")).pack(side="top", anchor="w", padx=(40, 6), pady=(10, 0))
+        tk.Label(left_bar, text="Slot size:", fg="white", bg="black", font=("Myriad Pro", 10, "bold")).pack(side="top", anchor="w", padx=(40, 6), pady=(10, 0))
         self.slot_w = tk.StringVar(value="40.66")
         self.slot_h = tk.StringVar(value="28.9")
         slot_col = tk.Frame(left_bar, bg="black")
@@ -665,7 +655,7 @@ class NStickerCanvasScreen(Screen):
         tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
 
         # Origin Pos label and fields
-        tk.Label(left_bar, text="Origin Pos:", fg="white", bg="black", font=("Myriad Pro", 14, "bold")).pack(side="top", anchor="w", padx=(35, 6))
+        tk.Label(left_bar, text="Origin Pos:", fg="white", bg="black", font=("Myriad Pro", 10, "bold")).pack(side="top", anchor="w", padx=(35, 6))
         self.origin_x = tk.StringVar(value="11.76")
         self.origin_y = tk.StringVar(value="12.52")
         origin_col = tk.Frame(left_bar, bg="black")
@@ -690,7 +680,7 @@ class NStickerCanvasScreen(Screen):
 
 
         # Step Size label and fields
-        tk.Label(left_bar, text="Step Size:", fg="white", bg="black", font=("Myriad Pro", 14, "bold")).pack(side="top", anchor="w", padx=(40, 6))
+        tk.Label(left_bar, text="Step Size:", fg="white", bg="black", font=("Myriad Pro", 10, "bold")).pack(side="top", anchor="w", padx=(40, 6))
         self.step_x = tk.StringVar(value="72.55")
         self.step_y = tk.StringVar(value="47.85")
         step_col = tk.Frame(left_bar, bg="black")
@@ -713,7 +703,7 @@ class NStickerCanvasScreen(Screen):
 
         # ASIN section (moved from top header): entry + combobox + Add/Remove
         asin_col = tk.Frame(left_bar, bg="black")
-        asin_col.pack(side="top", padx=8, pady=8, anchor="w")
+        asin_col.pack(side="top", padx=8, pady=8, anchor="w", fill="x")
         # Build ASIN list from existing product JSONs
         def _asin_load_all() -> list[str]:
             # If editing an existing product, load ASINs from its JSON; else default to 1 ASIN (current entry)
@@ -786,24 +776,52 @@ class NStickerCanvasScreen(Screen):
             return counts
 
         asin_combo_wrap = tk.Frame(asin_col, bg="#6f6f6f")
-        asin_combo_wrap.pack(side="top", pady=2, anchor="w")
+        asin_combo_wrap.pack(side="top", pady=2, anchor="w", fill="x")
+        try:
+            asin_combo_wrap.configure(width=500)
+            asin_combo_wrap.pack_propagate(False)
+        except Exception:
+            pass
         tk.Label(asin_combo_wrap, text="Select:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
         self._asin_list: list[str] = _asin_load_all()
         self.asin_combo_var = tk.StringVar(value=(self._asin_list[0] if self._asin_list else ""))
         _initial_counts = _asin_initial_counts()
         self._asin_counts: dict[str, int] = {k: int(_initial_counts.get(k, 1)) for k in self._asin_list}
 
-        self._asin_combo = ttk.Combobox(asin_combo_wrap, textvariable=self.asin_combo_var, state="readonly", values=self._asin_list, justify="center", width=14)
-        self._asin_combo.pack(side="left")
+        self._asin_combo = ttk.Combobox(
+            asin_combo_wrap,
+            textvariable=self.asin_combo_var,
+            state="readonly",
+            values=self._asin_list,
+            justify="center",
+            width=500
+        )
+        self._asin_combo.pack(side="left", fill="x", expand=True)
 
         _asinbox = tk.Frame(asin_col, bg="#6f6f6f")
         _asinbox.pack(side="top", pady=2)
         tk.Label(_asinbox, text="ASIN:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_asinbox, textvariable=self.sku_var, width=16, bg="#d9d9d9", justify="center").pack(side="left")
+        tk.Entry(_asinbox, textvariable=self.sku_var, width=12, bg="#d9d9d9", justify="center").pack(side="left")
+        # Flat style for ASIN buttons without padding
+        _asin_btn_style = ttk.Style()
+        _asin_btn_style.configure("Asin.TButton", font=("Myriad Pro", 9), padding=0)
+        # Buttons similar to Major presets (placed under ASIN entry)
+        asin_btns = tk.Frame(asin_col, bg="black")
+        asin_btns.pack(side="top", pady=0, anchor="w")
+        self._asin_btn_add = ttk.Button(asin_btns, text="Add", style="Asin.TButton", width=10)
+        self._asin_btn_add.pack(side="left")
+        self._asin_btn_remove = ttk.Button(asin_btns, text="Remove", style="Asin.TButton", width=8)
+        self._asin_btn_remove.pack(side="left", padx=(5, 0))
 
         def _asin_refresh_values(select_value: Optional[str] = None):
             try:
-                self._asin_combo.configure(values=self._asin_list)
+                values = list(self._asin_list)
+                self._asin_combo.configure(values=values)
+                try:
+                    if hasattr(self, "_asin_combo_top"):
+                        self._asin_combo_top.configure(values=values)
+                except Exception:
+                    pass
                 # Enable/disable Remove button
                 if len(self._asin_list) == 0:
                     self._asin_btn_remove.configure(state="disabled")
@@ -827,6 +845,12 @@ class NStickerCanvasScreen(Screen):
                 pass
 
         self._asin_combo.bind("<<ComboboxSelected>>", _on_asin_combo)
+        try:
+            # Top-menu combobox shares the same variable; ensure it also triggers selection logic
+            if hasattr(self, "_asin_combo_top"):
+                self._asin_combo_top.bind("<<ComboboxSelected>>", _on_asin_combo)
+        except Exception:
+            pass
 
         # Guard to suppress applying count when we are programmatically switching selection
         self._suppress_asin_apply = False
@@ -854,17 +878,11 @@ class NStickerCanvasScreen(Screen):
         _countbox = tk.Frame(asin_col, bg="#6f6f6f")
         _countbox.pack(side="top", pady=2)
         tk.Label(_countbox, text="Count:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_countbox, textvariable=self.count_in_order, width=12, bg="#d9d9d9", justify="center",
+        tk.Entry(_countbox, textvariable=self.count_in_order, width=1, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(validate_min1(self), "%P")).pack(side="left")
         tk.Label(_countbox, text="pcs", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
 
-        # Buttons similar to Major presets
-        asin_btns = tk.Frame(asin_col, bg="black")
-        asin_btns.pack(side="top", pady=0, anchor="w")
-        self._asin_btn_add = ttk.Button(asin_btns, text="Add", style="Small.TButton", width=6, padding=(10, 0, 10, 0))
-        self._asin_btn_add.pack(side="left")
-        self._asin_btn_remove = ttk.Button(asin_btns, text="Remove", style="Small.TButton", width=8, padding=(8, 0, 11, 0))
-        self._asin_btn_remove.pack(side="left", padx=(5, 0))
+        
 
         def _asin_add():
             try:
@@ -957,12 +975,229 @@ class NStickerCanvasScreen(Screen):
         self.sticker_var = tk.BooleanVar(value=False)
         tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=(0, 6))
 
-        backside_wrap = tk.Frame(left_bar, bg="black")
-        backside_wrap.pack(side="top", padx=8, pady=(2, 0), anchor="center")
-        tk.Label(backside_wrap, text="Backside", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(0, 6))
-        self.backside = tk.BooleanVar(value=False)
-        ttk.Checkbutton(backside_wrap, variable=self.backside).pack(side="left", pady=4)
-        self.backside.trace_add("write", self._on_backside_toggle)
+        # Backside toggle will be re-inserted below the Object controls further down
+
+        # Feature flag to enable/disable the experimental top menu without changing original layout
+        self._use_top_menu = True
+
+        # --- Top Menu (Basic / Scene / Amazon) ---
+        # Create a fixed 3-column layout: Basic | Scene | Amazon
+        top_menu = tk.Frame(self, bg="black")
+        top_menu.pack(side="top", fill="x", padx=10, pady=(6, 8))
+
+        columns = tk.Frame(top_menu, bg="black")
+        columns.pack(side="top", fill="x", expand=True)
+        # Use grid for three equal columns
+        # try:
+        #     columns.grid_columnconfigure(0, weight=1, uniform="cols")
+        #     columns.grid_columnconfigure(1, weight=1, uniform="cols")
+        #     columns.grid_columnconfigure(2, weight=1, uniform="cols")
+        #     columns.grid_rowconfigure(0, weight=1)
+        # except Exception:
+        #     pass
+
+        # Panels
+        panel_basic = tk.Frame(columns, bg="black")
+        panel_scene = tk.Frame(columns, bg="black")
+        panel_amazon = tk.Frame(columns, bg="black")
+
+        # Grid three columns side by side
+        panel_basic.grid(row=0, column=0, sticky="nsew", padx=(6, 24), pady=(0, 6))
+        panel_scene.grid(row=0, column=1, sticky="nsew", padx=(0, 24))
+        panel_amazon.grid(row=0, column=2, sticky="nsew")
+        try:
+            panel_basic.grid_columnconfigure(0, weight=1)
+            panel_scene.grid_columnconfigure(0, weight=1)
+            panel_amazon.grid_columnconfigure(0, weight=1)
+        except Exception:
+            pass
+
+        # ---- BASIC PANEL ----
+        tk.Label(panel_basic, text="Basic", bg="black", fg=COLOR_TEXT, font=("Myriad Pro", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(0, 6))
+        # Product name (chip label + light input for contrast)
+        _b_row1 = tk.Frame(panel_basic, bg="black")
+        _b_row1.grid(row=1, column=0, sticky="ew")
+        _prod_chip = tk.Frame(_b_row1, bg="#6f6f6f"); _prod_chip.pack(side="left")
+        tk.Label(_prod_chip, text="Product name:", bg="#6f6f6f", fg="white").pack(side="left")
+        tk.Entry(_b_row1, textvariable=self.sku_name_var, width=33,
+                 bg="#d9d9d9", fg="#000000", insertbackground="#000000",
+                 relief="flat", bd=0, highlightthickness=0,
+                 font=("Myriad Pro", 11), justify="center").pack(side="left", padx=(0, 0))
+        # Formats + DPI row (like order_range)
+        _fmt_row = tk.Frame(panel_basic, bg="black"); _fmt_row.grid(row=2, column=0, sticky="ew")
+        # Formats
+        if not hasattr(self, "format_var"):
+            self.format_var = tk.StringVar(value="pdf")
+        _fmt_chip = tk.Frame(_fmt_row, bg="#6f6f6f"); _fmt_chip.pack(side="left")
+        tk.Label(_fmt_chip, text="Export:", bg="#6f6f6f", fg="white", width=11).pack(side="left", padx=0)
+        tk.Entry(_fmt_row, textvariable=self.format_var, width=24, bg="#d9d9d9", justify="center").pack(side="left")
+        # DPI
+        if not hasattr(self, "dpi_var"):
+            self.dpi_var = tk.StringVar(value="1200")
+        _dpi_chip = tk.Frame(_fmt_row, bg="#6f6f6f"); _dpi_chip.pack(side="left", padx=(16, 0))
+        tk.Label(_dpi_chip, text="DPI:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        tk.Entry(_fmt_row, textvariable=self.dpi_var, width=10, bg="#d9d9d9", justify="center").pack(side="left")
+        tk.Frame(panel_basic, bg="white", height=2).grid(row=3, column=0, sticky="ew", pady=(6, 6))
+
+        # Jig size (show visible label)
+        _b_row2 = tk.Frame(panel_basic, bg="black")
+        _b_row2.grid(row=4, column=0, sticky="ew", pady=(6, 0))
+        _jig_chip = tk.Frame(_b_row2, bg="#6f6f6f"); _jig_chip.pack(side="left")
+        tk.Label(_jig_chip, text="Jig size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold")).pack(side="left", padx=8)
+        _jx = tk.Frame(_b_row2, bg="#6f6f6f"); _jx.pack(side="left", padx=(9, 6))
+        tk.Label(_jx, text="W:", bg="#6f6f6f", fg="white").pack(side="left")
+        tk.Entry(_jx, textvariable=self.jig_x, width=18, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        _jy = tk.Frame(_b_row2, bg="#6f6f6f"); _jy.pack(side="left", padx=(5, 0))
+        tk.Label(_jy, text="H:", bg="#6f6f6f", fg="white").pack(side="left")
+        tk.Entry(_jy, textvariable=self.jig_y, width=18, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+
+        # Major size (Preset + fields + Add/Remove)
+        _b_row3 = tk.Frame(panel_basic, bg="black"); _b_row3.grid(row=5, column=0, sticky="ew", pady=(6, 0))
+        tk.Label(_b_row3, text="Major size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold")).pack(side="left", padx=(0, 8))
+
+        # Preset + buttons stacked (buttons under combobox)
+        ms_preset_col = tk.Frame(_b_row3, bg="black"); ms_preset_col.pack(side="left", padx=(0, 8))
+        _ms_wrap = tk.Frame(ms_preset_col, bg="#6f6f6f"); _ms_wrap.pack(side="top")
+        self._major_combo_basic = ttk.Combobox(_ms_wrap, textvariable=self.major_name, state="readonly",
+                                               values=list(self._major_sizes.keys()), justify="center", width=13)
+        self._major_combo_basic.pack(side="left")
+        ms_btns2 = tk.Frame(ms_preset_col, bg="black"); ms_btns2.pack(side="top", pady=(2, 0), anchor="w")
+        ttk.Button(ms_btns2, text="Add", style="Small.TButton",
+                   command=lambda: None if not hasattr(self, "_ms_btn_add") else self._ms_btn_add.invoke(), width=5).pack(side="left")
+        ttk.Button(ms_btns2, text="Remove", style="Small.TButton",
+                   command=lambda: None if not hasattr(self, "_ms_btn_remove") else self._ms_btn_remove.invoke(), width=7).pack(side="left", padx=(5, 0))
+
+        # X/Y column (Y below X)
+        ms_xy = tk.Frame(_b_row3, bg="black"); ms_xy.pack(side="left", padx=(2, 6))
+        _mxbox = tk.Frame(ms_xy, bg="#6f6f6f"); _mxbox.pack(side="top")
+        tk.Label(_mxbox, text="X:", bg="#6f6f6f", fg="white").pack(side="left")
+        tk.Entry(_mxbox, textvariable=self.major_x, width=8, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        _mybox = tk.Frame(ms_xy, bg="#6f6f6f"); _mybox.pack(side="top", pady=(4, 0))
+        tk.Label(_mybox, text="Y:", bg="#6f6f6f", fg="white").pack(side="left")
+        tk.Entry(_mybox, textvariable=self.major_y, width=8, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+
+        # W/H column (H below W)
+        ms_wh = tk.Frame(_b_row3, bg="black"); ms_wh.pack(side="left", padx=(8, 0))
+        _mwbox = tk.Frame(ms_wh, bg="#6f6f6f"); _mwbox.pack(side="top")
+        tk.Label(_mwbox, text="W:", bg="#6f6f6f", fg="white").pack(side="left")
+        tk.Entry(_mwbox, textvariable=self.major_w, width=9, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        _mhbox = tk.Frame(ms_wh, bg="#6f6f6f"); _mhbox.pack(side="top", pady=(4, 0))
+        tk.Label(_mhbox, text="H:", bg="#6f6f6f", fg="white").pack(side="left")
+        tk.Entry(_mhbox, textvariable=self.major_h, width=9, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+
+        # ---- SCENE PANEL ----
+        tk.Label(panel_scene, text="Scene", bg="black", fg=COLOR_TEXT, font=("Myriad Pro", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(0, 6))
+        # Slot size row
+        _s_row1 = tk.Frame(panel_scene, bg="black"); _s_row1.grid(row=1, column=0, sticky="ew")
+        tk.Label(_s_row1, text="Slot size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
+        _sw = tk.Frame(_s_row1, bg="#6f6f6f"); _sw.pack(side="left", padx=(0, 6))
+        tk.Label(_sw, text="W:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
+        tk.Entry(_sw, textvariable=self.slot_w, width=6, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        _sh = tk.Frame(_s_row1, bg="#6f6f6f"); _sh.pack(side="left")
+        tk.Label(_sh, text="H:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
+        tk.Entry(_sh, textvariable=self.slot_h, width=6, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        # Origin pos row
+        _s_row2 = tk.Frame(panel_scene, bg="black"); _s_row2.grid(row=2, column=0, sticky="ew")
+        tk.Label(_s_row2, text="Origin Pos", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
+        _ox = tk.Frame(_s_row2, bg="#6f6f6f"); _ox.pack(side="left", padx=(0, 6))
+        tk.Label(_ox, text="X:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
+        tk.Entry(_ox, textvariable=self.origin_x, width=6, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        _oy = tk.Frame(_s_row2, bg="#6f6f6f"); _oy.pack(side="left")
+        tk.Label(_oy, text="Y:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
+        tk.Entry(_oy, textvariable=self.origin_y, width=6, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        # Step size row
+        _s_row3 = tk.Frame(panel_scene, bg="black"); _s_row3.grid(row=3, column=0, sticky="ew", pady=(6, 0))
+        tk.Label(_s_row3, text="Step size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
+        _sx = tk.Frame(_s_row3, bg="#6f6f6f"); _sx.pack(side="left", padx=(0, 6))
+        tk.Label(_sx, text="X:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
+        tk.Entry(_sx, textvariable=self.step_x, width=6, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        _sy = tk.Frame(_s_row3, bg="#6f6f6f"); _sy.pack(side="left")
+        tk.Label(_sy, text="Y:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
+        tk.Entry(_sy, textvariable=self.step_y, width=6, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+
+        # ---- AMAZON PANEL ----
+        # Ensure label var exists before binding to Entry
+        if not hasattr(self, "sel_amazon_label"):
+            self.sel_amazon_label = tk.StringVar(value="")
+        tk.Label(panel_amazon, text="Amazon", bg="black", fg=COLOR_TEXT, font=("Myriad Pro", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(0, 6))
+        # Row 1: ASIN selector (no label)
+        _a_row1 = tk.Frame(panel_amazon, bg="black"); _a_row1.grid(row=1, column=0, sticky="ew")
+        _asin_wrap = tk.Frame(_a_row1, bg="#6f6f6f"); _asin_wrap.pack(side="left", fill="x", expand=True)
+        # tk.Label(_asin_wrap, text="Amazon", bg="black", fg=COLOR_TEXT, font=("Myriad Pro", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(0, 6))
+        # Keep reference to top-menu ASIN combobox so we can refresh its values
+        self._asin_combo_top = ttk.Combobox(
+            _asin_wrap,
+            textvariable=self.asin_combo_var,
+            state="readonly",
+            values=self._asin_list,
+            justify="center",
+            width=16,
+        )
+        self._asin_combo_top.pack(side="left", fill="x", expand=True)
+
+        # Row 2: ASIN entry + Add/Remove buttons
+        _a_row2 = tk.Frame(panel_amazon, bg="black"); _a_row2.grid(row=2, column=0, sticky="ew")
+        _asin_edit = tk.Frame(_a_row2, bg="#6f6f6f"); _asin_edit.pack(side="left")
+        tk.Label(_asin_edit, text="ASIN:", bg="#6f6f6f", fg="white").pack(side="left")
+        tk.Entry(_asin_edit, textvariable=self.sku_var, width=18, bg="#d9d9d9", justify="center").pack(side="left")
+        # Buttons under the ASIN entry, like in Major size combobox
+        _a_row2b = tk.Frame(panel_amazon, bg="black"); _a_row2b.grid(row=3, column=0, sticky="w", pady=(4, 0))
+        _btns_row = tk.Frame(_a_row2b, bg="black"); _btns_row.pack(side="left")
+        ttk.Button(_btns_row, text="Add", width=8, style="Asin.TButton", command=lambda: _asin_add()).pack(side="left")
+        ttk.Button(_btns_row, text="Remove", width=10, style="Asin.TButton", command=lambda: _asin_remove()).pack(side="left", padx=(10, 0))
+
+        # Row 3: Count (moved below buttons)
+        _a_row3 = tk.Frame(panel_amazon, bg="black"); _a_row3.grid(row=4, column=0, sticky="ew", pady=(6, 0))
+        _cnt = tk.Frame(_a_row3, bg="#6f6f6f"); _cnt.pack(side="left")
+        tk.Label(_cnt, text="Count:", bg="#6f6f6f", fg="white").pack(side="left")
+        tk.Entry(_cnt, textvariable=self.count_in_order, width=13, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(validate_min1(self), "%P")).pack(side="left")
+        tk.Label(_cnt, text="pcs", bg="#6f6f6f", fg="white").pack(side="left")
+
+        
+
+        # No menu buttons; all three panels are visible simultaneously
+
+        # If top menu is disabled, destroy it and keep original layout and placements intact
+        if not getattr(self, "_use_top_menu", False):
+            try:
+                top_menu.destroy()
+            except Exception:
+                pass
+        else:
+            try:
+                bar.pack_forget()
+            except Exception:
+                pass
+            for _legacy in (locals().get("slot_col"), locals().get("origin_col"), locals().get("step_col"), locals().get("asin_col")):
+                try:
+                    if _legacy is not None:
+                        _legacy.pack_forget()
+                except Exception:
+                    pass
+            # Proactively remove any leftover labels/boxes under left_bar except the backside toggle and tools
+            try:
+                whitelist = set([id(locals().get("tools")), id(locals().get("backside_wrap"))])
+                for ch in list(left_bar.winfo_children()):
+                    try:
+                        if id(ch) not in whitelist:
+                            ch.pack_forget()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
 
         # Ensure first preset mirrors current default scene values (not zeros)
         try:
@@ -993,6 +1228,8 @@ class NStickerCanvasScreen(Screen):
         # 5) Tools moved to the left sidebar under the latest element
         tools = tk.Frame(left_bar, bg="black")
         tools.pack(side="top", padx=8, pady=8, anchor="center")
+        # Keep a reference for other components (e.g., Fonts) to insert before/after
+        self.tools_panel = tools
 
         # Load tool icons (keep references on self to avoid GC)
         self._img_cursor = None
@@ -1071,41 +1308,46 @@ class NStickerCanvasScreen(Screen):
         # tk.Label(shortcuts, text="→ Remove object", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=2, column=1, sticky="w")
 
 
-        row2 = tk.Frame(self, bg="black")
-        row2.pack(fill="x", padx=10, pady=(0, 6))
-        # Image size label at start of the line
-        tk.Label(row2, text="Object:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(2, 8))
-        # Position fields (X, Y) in mm (restored)
+        # Object controls moved to the left sidebar (above backside checkbox), vertically stacked
+        row2 = tk.Frame(left_bar, bg="black")
+        row2.pack(side="top", fill="x", padx=0, pady=(6, 6), anchor="w")
+        # Section label
+        tk.Label(row2, text="  Object:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="top", anchor="w", padx=(45, 8))
+        # Position fields (X, Y) in mm (each on its own line)
         self.sel_x = tk.StringVar(value="0")
         self.sel_y = tk.StringVar(value="0")
-        _xb = self._chip(row2, "X:", self.sel_x, width=8)
+        _xline = tk.Frame(row2, bg="black"); _xline.pack(side="top", anchor="w")
+        _xb = self._chip(_xline, "X:", self.sel_x, width=11, label_padx=20, pady=(8, 0))
         tk.Label(_xb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        _yb = self._chip(row2, "Y:", self.sel_y, width=8)
+        _yline = tk.Frame(row2, bg="black"); _yline.pack(side="top", anchor="w")
+        _yb = self._chip(_yline, "Y:", self.sel_y, width=11, label_padx=20, pady=(8, 0))
         tk.Label(_yb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         # Width/Height controls
         self.sel_w = tk.StringVar(value=state.pkg_x or "296.0")
         self.sel_h = tk.StringVar(value=state.pkg_y or "394.5831")
-        _wb = self._chip(row2, "Width:", self.sel_w, width=8)
+        _wline = tk.Frame(row2, bg="black"); _wline.pack(side="top", anchor="w")
+        _wb = self._chip(_wline, "Width:", self.sel_w, width=11, label_padx=8, pady=(8, 0))
         tk.Label(_wb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        _hb = self._chip(row2, "Height:", self.sel_h, width=8)
+        _hline = tk.Frame(row2, bg="black"); _hline.pack(side="top", anchor="w")
+        _hb = self._chip(_hline, "Height:", self.sel_h, width=11, pady=(8, 0))
         tk.Label(_hb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         # Angle control (degrees)
         self.sel_angle = tk.StringVar(value="0")
-        _ab = self._chip(row2, "Angle:", self.sel_angle, width=6)
+        _aline = tk.Frame(row2, bg="black"); _aline.pack(side="top", anchor="w")
+        _ab = self._chip(_aline, "Angle:", self.sel_angle, label_padx=9, width=11, pady=(8, 0))
         tk.Label(_ab, text="deg", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
 
-        # Separator and label before Name input
-        tk.Frame(row2, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
-        tk.Label(row2, text="Amazon:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(2, 8))
-        # Name control (free text) – added after Angle
-        self.sel_amazon_label = tk.StringVar(value="")
-        _nb = tk.Frame(row2, bg="#6f6f6f")
-        _nb.pack(side="left", padx=6, pady=8)
-        tk.Label(_nb, text="Label:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        tk.Entry(_nb, textvariable=self.sel_amazon_label, width=18, bg="#d9d9d9", justify="center").pack(side="left")
+        # Amazon label entry (moved from Amazon panel) directly under angle
+        _amazon_line = tk.Frame(row2, bg="black"); _amazon_line.pack(side="top", anchor="w")
+        _amazon_box = tk.Frame(_amazon_line, bg="#6f6f6f")
+        _amazon_box.pack(side="left", padx=6, pady=(8, 0))
+        tk.Label(_amazon_box, text="Label:", bg="#6f6f6f", fg="white").pack(side="left", padx=10)
+        tk.Entry(_amazon_box, textvariable=self.sel_amazon_label, width=15, bg="#d9d9d9", justify="center").pack(side="left")
+
+        # Separator and Amazon label
         # Options checkboxes placed after Amazon label
         _flags = tk.Frame(row2, bg="black")
-        _flags.pack(side="left", padx=8)
+        _flags.pack(side="top", anchor="w", padx=8)
         self.row2 = row2
         # Suppress trace callbacks while programmatically updating checkboxes
         self._suppress_flag_traces = False
@@ -1149,7 +1391,24 @@ class NStickerCanvasScreen(Screen):
         self.sel_h.trace_add("write", self.selection.on_size_change)
         self.sel_angle.trace_add("write", self.selection.on_angle_change)
 
-        # Backside toggle moved above the left panel
+        # Insert backside toggle below Object controls and above the tools panel
+        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=(0, 6))
+        self.backside_wrap = tk.Frame(left_bar, bg="black")
+        self.backside_wrap.pack(side="top", padx=8, pady=(2, 0), anchor="center")
+        tk.Label(self.backside_wrap, text="Backside", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(0, 6))
+        self.backside = tk.BooleanVar(value=False)
+        ttk.Checkbutton(self.backside_wrap, variable=self.backside).pack(side="left", pady=4)
+        self.backside.trace_add("write", self._on_backside_toggle)
+
+        # Ensure tools (Image, Text, Arrange) are placed under the backside checkbox
+        try:
+            if hasattr(self, "tools_panel"):
+                if self.tools_panel.winfo_ismapped():
+                    self.tools_panel.pack_forget()
+                # Explicitly pack after backside checkbox
+                self.tools_panel.pack(in_=left_bar, side="top", padx=8, pady=8, anchor="center", after=self.backside_wrap)
+        except Exception:
+            pass
 
         self.board = tk.Frame(self, bg="black")
         self.board.pack(expand=True, fill="both", padx=10, pady=10)
@@ -1496,10 +1755,10 @@ class NStickerCanvasScreen(Screen):
         except Exception:
             logger.exception("Failed to update rotated label image")
 
-    def _chip(self, parent, label, var, width=8):
+    def _chip(self, parent, label, var, width=8, label_padx=6, pady=8):
         box = tk.Frame(parent, bg="#6f6f6f")
-        box.pack(side="left", padx=6, pady=8)
-        tk.Label(box, text=label, bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        box.pack(side="left", padx=6, pady=pady)
+        tk.Label(box, text=label, bg="#6f6f6f", fg="white").pack(side="left", padx=label_padx)
         tk.Entry(box, textvariable=var, width=width, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         return box
@@ -2767,10 +3026,14 @@ class NStickerCanvasScreen(Screen):
         # Collect slots from the current canvas (slots are shared across sides)
         slots_only = [it for it in self._serialize_scene() if it.get("type") == "slot"]
         # Prepare background job to render PDFs and write JSON without blocking UI
-        p_jig = os.path.join(TEMP_FOLDER, "Cut_jig.svg")
-        p_pattern = os.path.join(TEMP_FOLDER, "Single_pattern.svg")
-        p_front = os.path.join(TEMP_FOLDER, "Test_file_frontside.pdf")
-        p_back = os.path.join(TEMP_FOLDER, "Test_file_backside.pdf")
+        p_jig = os.path.join(OUTPUT_PATH, "Cut_jig.svg")
+        p_pattern = os.path.join(OUTPUT_PATH, "Single_pattern.svg")
+        p_front = os.path.join(OUTPUT_PATH, "Test_file_frontside.pdf")
+        p_front_png = os.path.join(OUTPUT_PATH, "Test_file_frontside.png")
+        p_front_jpg = os.path.join(OUTPUT_PATH, "Test_file_frontside.jpg")
+        p_back = os.path.join(OUTPUT_PATH, "Test_file_backside.pdf")
+        p_back_png = os.path.join(OUTPUT_PATH, "Test_file_backside.png")
+        p_back_jpg = os.path.join(OUTPUT_PATH, "Test_file_backside.jpg")
         try:
             jx = float(self.jig_x.get() or 0.0)
             jy = float(self.jig_y.get() or 0.0)
@@ -3312,54 +3575,129 @@ class NStickerCanvasScreen(Screen):
             combined = {"Sku": str(state.sku_name or ""), "Scene": {}, "Frontside": {}, "Backside": {}}
         json_path = PRODUCTS_PATH / f"{state.sku_name}.json"
 
+        # Parse export formats and DPI like order_range.py
+        try:
+            fmt_s = (self.format_var.get() if hasattr(self, "format_var") else "pdf").strip()
+        except Exception:
+            fmt_s = "pdf"
+        fmts = [f.strip().lower() for f in fmt_s.split(",") if f.strip()]
+        export_formats: list[str] = []
+        seen = set()
+        for f in fmts:
+            if f == "jpeg":
+                f = "jpg"
+            if f in ("pdf", "png", "jpg") and f not in seen:
+                seen.add(f)
+                export_formats.append(f)
+        if not export_formats:
+            export_formats = ["pdf"]
+        try:
+            dpi_s = (self.dpi_var.get() if hasattr(self, "dpi_var") else "1200").strip()
+            export_dpi = int(dpi_s or "1200")
+            if export_dpi <= 0:
+                export_dpi = 1200
+        except Exception:
+            export_dpi = 1200
+        self._export_formats = export_formats
+        self._export_dpi = int(export_dpi)
+
         # Mark processing and launch worker thread
         state.is_processing = True
 
         def _worker():
             try:
                 # Render PDFs
-                logger.debug(f"Rendering jig SVG...")
-                state.processing_message = "Rendering jig SVG..."
-                # For the jig cut file we only need the outer jig frame and slot rectangles
-                if state.is_cancelled:
-                    logger.debug(f"Processing cancelled")
-                    return
-                self._render_jig_to_svg(p_jig, slots_only, jx, jy)
+                # logger.debug(f"Rendering jig SVG...")
+                # state.processing_message = "Rendering jig SVG..."
+                # # For the jig cut file we only need the outer jig frame and slot rectangles
+                # if state.is_cancelled:
+                #     logger.debug(f"Processing cancelled")
+                #     return
+                # self._render_jig_to_svg(p_jig, slots_only, jx, jy)
                 # Render Single Pattern (first slot with its objects from front side)
-                try:
-                    state.processing_message = "Rendering single pattern SVG..."
-                    logger.debug(f"Rendering single pattern SVG...")
-                    front_sections = combined.get("Frontside", [])
-                    slots_desc = []
-                    if isinstance(front_sections, list) and front_sections:
-                        first_section = front_sections[0] or {}
-                        slots_desc = list(first_section.get("slots", []))
-                    if slots_desc:
-                        state.processing_message = "Rendering single pattern SVG..."
-                        if state.is_cancelled:
-                            logger.debug(f"Processing cancelled")
-                            return
-                        self._render_single_pattern_svg(p_pattern, slots_desc[0])
-                except Exception as e:
-                    state.is_failed = True
-                    state.error_message = str(e)
-                    logger.exception(f"Failed to render single pattern: {e}")
+                # try:
+                    # state.processing_message = "Rendering single pattern SVG..."
+                    # logger.debug(f"Rendering single pattern SVG...")
+                #     front_sections = combined.get("Frontside", [])
+                #     slots_desc = []
+                #     if isinstance(front_sections, list) and front_sections:
+                #         first_section = front_sections[0] or {}
+                #         slots_desc = list(first_section.get("slots", []))
+                #     if slots_desc:
+                #         state.processing_message = "Rendering single pattern SVG..."
+                #         if state.is_cancelled:
+                #             logger.debug(f"Processing cancelled")
+                #             return
+                #         self._render_single_pattern_svg(p_pattern, slots_desc[0])
+                # except Exception as e:
+                #     state.is_failed = True
+                #     state.error_message = str(e)
+                #     logger.exception(f"Failed to render single pattern: {e}")
 
-                logger.debug(f"Rendering front PDF...")
-                state.processing_message = "Rendering front PDF..."
+                logger.debug(f"Rendering frontside...")
+                state.processing_message = "Rendering frontside..."
                 if state.is_cancelled:
                     logger.debug(f"Processing cancelled")
                     return
 
+                fmts = list(getattr(self, "_export_formats", ["pdf"]))
+                dpi_v = int(getattr(self, "_export_dpi", 1200))
                 front_items_without_slots = [item for item in front_items if item.get("type") != "slot"]
-                self._render_scene_to_pdf(p_front, front_items_without_slots, jx, jy, dpi=1200)
-                logger.debug(f"Rendering back PDF...")
-                state.processing_message = "Rendering back PDF..."
+                did_pdf = False
+                if "pdf" in fmts:
+                    self._render_scene_to_pdf(p_front, front_items_without_slots, jx, jy, dpi=dpi_v)
+                    did_pdf = True
+                elif ("png" in fmts) or ("jpg" in fmts):
+                    # Render to a temporary pdf to initialize last render for raster outputs
+                    tmp_pdf = os.path.join(TEMP_FOLDER, "__tmp_front.pdf")
+                    try:
+                        self._render_scene_to_pdf(tmp_pdf, front_items_without_slots, jx, jy, dpi=dpi_v)
+                    finally:
+                        try:
+                            os.remove(tmp_pdf)
+                        except Exception:
+                            pass
+                # Save raster outputs as requested
+                if "png" in fmts:
+                    try:
+                        self.exporter.save_last_render_as_png(p_front_png)
+                    except Exception:
+                        logger.exception("Failed to save front PNG; continuing")
+                if "jpg" in fmts:
+                    try:
+                        self.exporter.save_last_render_as_jpg(p_front_jpg)
+                    except Exception:
+                        logger.exception("Failed to save front JPG; continuing")
+
+                logger.debug(f"Rendering backside...")
+                state.processing_message = "Rendering backside..."
                 if state.is_cancelled:
                     logger.debug(f"Processing cancelled")
                     return
                 back_items_without_slots = [item for item in back_items if item.get("type") != "slot"]
-                self._render_scene_to_pdf(p_back, back_items_without_slots, jx, jy, dpi=1200)
+                did_pdf = False
+                if "pdf" in fmts:
+                    self._render_scene_to_pdf(p_back, back_items_without_slots, jx, jy, dpi=dpi_v)
+                    did_pdf = True
+                elif ("png" in fmts) or ("jpg" in fmts):
+                    tmp_pdf_b = os.path.join(TEMP_FOLDER, "__tmp_back.pdf")
+                    try:
+                        self._render_scene_to_pdf(tmp_pdf_b, back_items_without_slots, jx, jy, dpi=dpi_v)
+                    finally:
+                        try:
+                            os.remove(tmp_pdf_b)
+                        except Exception:
+                            pass
+                if "png" in fmts:
+                    try:
+                        self.exporter.save_last_render_as_png(p_back_png)
+                    except Exception:
+                        logger.exception("Failed to save back PNG; continuing")
+                if "jpg" in fmts:
+                    try:
+                        self.exporter.save_last_render_as_jpg(p_back_jpg)
+                    except Exception:
+                        logger.exception("Failed to save back JPG; continuing")
                 # Write JSON
                 try:
                     logger.debug(f"Writing JSON file...")
