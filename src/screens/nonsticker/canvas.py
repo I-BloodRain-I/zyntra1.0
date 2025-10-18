@@ -95,31 +95,15 @@ class NStickerCanvasScreen(Screen):
 
         # (Replaced) Old Import Image pill removed in favor of tool tile in tools section
 
-        # 2) Jig size label and fields
-        tk.Label(bar, text="Jig size:", fg="white", bg="black", font=("Myriad Pro", 20, "bold")).pack(side="left")
+        # 2) Jig size values (UI moved to left bar below)
+        # Keep StringVars here so other logic can reference them early
         self.jig_x = tk.StringVar(value=state.pkg_x or "296.0")
         self.jig_y = tk.StringVar(value=state.pkg_y or "394.5831")
-        jig_col = tk.Frame(bar, bg="black")
-        jig_col.pack(side="left", padx=8, pady=8)
-        # Jig X row
-        _jxbox = tk.Frame(jig_col, bg="#6f6f6f")
-        _jxbox.pack(side="top", pady=2)
-        tk.Label(_jxbox, text="Width: ", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_jxbox, textvariable=self.jig_x, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        tk.Label(_jxbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        # Jig Y row
-        _jybox = tk.Frame(jig_col, bg="#6f6f6f")
-        _jybox.pack(side="top", pady=2)
-        tk.Label(_jybox, text="Height:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_jybox, textvariable=self.jig_y, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        tk.Label(_jybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         # live redraw and slot re-create when jig size changes
         self.jig_x.trace_add("write", self._on_jig_change)
         self.jig_y.trace_add("write", self._on_jig_change)
 
-        # 4) White vertical separator (between jig and tools)
+        # 4) White vertical separator (between jig/tools and Major Info)
         tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
 
         # Major Size columns: label | presets | x,y | w,h | vertical separator
@@ -630,6 +614,26 @@ class NStickerCanvasScreen(Screen):
         # Column 5: white vertical separator after Major Size block
         tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
 
+        # Jig size label and fields (moved from top bar)
+        tk.Label(left_bar, text="Jig size:", fg="white", bg="black", font=("Myriad Pro", 10, "bold")).pack(side="top", anchor="w", padx=(40, 6), pady=(10, 0))
+        # Reuse existing StringVars: self.jig_x, self.jig_y
+        jig_col_left = tk.Frame(left_bar, bg="black")
+        jig_col_left.pack(side="top", padx=8, pady=8, anchor="w")
+        # Jig Width row
+        _jlxbox = tk.Frame(jig_col_left, bg="#6f6f6f")
+        _jlxbox.pack(side="top", pady=2)
+        tk.Label(_jlxbox, text="Width: ", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_jlxbox, textvariable=self.jig_x, width=12, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        tk.Label(_jlxbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
+        # Jig Height row
+        _jlybox = tk.Frame(jig_col_left, bg="#6f6f6f")
+        _jlybox.pack(side="top", pady=2)
+        tk.Label(_jlybox, text="Height:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
+        tk.Entry(_jlybox, textvariable=self.jig_y, width=12, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        tk.Label(_jlybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
+
         # Slot size label and fields
         tk.Label(left_bar, text="Slot size:", fg="white", bg="black", font=("Myriad Pro", 10, "bold")).pack(side="top", anchor="w", padx=(40, 6), pady=(10, 0))
         self.slot_w = tk.StringVar(value="40.66")
@@ -1037,21 +1041,83 @@ class NStickerCanvasScreen(Screen):
         _dpi_chip = tk.Frame(_fmt_row, bg="#6f6f6f"); _dpi_chip.pack(side="left", padx=(16, 0))
         tk.Label(_dpi_chip, text="DPI:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
         tk.Entry(_fmt_row, textvariable=self.dpi_var, width=10, bg="#d9d9d9", justify="center").pack(side="left")
-        tk.Frame(panel_basic, bg="white", height=2).grid(row=3, column=0, sticky="ew", pady=(6, 6))
+        if not hasattr(self, "jig_cmyk"):
+            self.jig_cmyk = tk.StringVar(value="75,0,75,0")
+        if not hasattr(self, "obj_cmyk"):
+            self.obj_cmyk = tk.StringVar(value="0,100,0,0")
+        # Track per-field invalid state (do not auto-correct user input on restore)
+        self._jig_cmyk_invalid = False
+        self._obj_cmyk_invalid = False
+        _fmt_row2 = tk.Frame(panel_basic, bg="black"); _fmt_row2.grid(row=3, column=0, sticky="ew", pady=(6, 6))
+        _jig_chip = tk.Frame(_fmt_row2, bg="#6f6f6f"); _jig_chip.pack(side="left", padx=(0, 0))
+        tk.Label(_jig_chip, text="Jig CMYK:", bg="#6f6f6f", fg="white").pack(side="left")
+        self._jig_cmyk_entry = tk.Entry(_fmt_row2, textvariable=self.jig_cmyk, width=16, bg="#d9d9d9", justify="center")
+        self._jig_cmyk_entry.pack(side="left")
+        # Enforce exactly 4 comma-separated values (no numeric check)
+        def _on_jig_cmyk_focus_in(event=None):
+            try:
+                self._prev_jig_cmyk = self.jig_cmyk.get()
+            except Exception:
+                self._prev_jig_cmyk = "75,0,75,0"
 
-        # Jig size (show visible label)
-        _b_row2 = tk.Frame(panel_basic, bg="black")
-        _b_row2.grid(row=4, column=0, sticky="ew", pady=(6, 0))
-        _jig_chip = tk.Frame(_b_row2, bg="#6f6f6f"); _jig_chip.pack(side="left")
-        tk.Label(_jig_chip, text="Jig size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold")).pack(side="left", padx=8)
-        _jx = tk.Frame(_b_row2, bg="#6f6f6f"); _jx.pack(side="left", padx=(9, 6))
-        tk.Label(_jx, text="W:", bg="#6f6f6f", fg="white").pack(side="left")
-        tk.Entry(_jx, textvariable=self.jig_x, width=18, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        _jy = tk.Frame(_b_row2, bg="#6f6f6f"); _jy.pack(side="left", padx=(5, 0))
-        tk.Label(_jy, text="H:", bg="#6f6f6f", fg="white").pack(side="left")
-        tk.Entry(_jy, textvariable=self.jig_y, width=18, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        def _on_jig_cmyk_focus_out(event=None):
+            # Do NOT show messagebox here to avoid duplicate dialogs.
+            # If invalid, mark field invalid and refocus; user will be prompted on proceed.
+            try:
+                orig = str(self.jig_cmyk.get() or "")
+                parts = orig.split(",")
+                if len(parts) != 4:
+                    # Do NOT change the user's typed value; mark invalid so proceed will prompt the user.
+                    self._jig_cmyk_invalid = True
+                    try:
+                        self._jig_cmyk_entry.focus_set()
+                    except Exception:
+                        pass
+                    return
+                # If valid, trim spaces and accept the value (no numeric coercion)
+                parts = [p.strip() for p in parts]
+                self.jig_cmyk.set(",".join(parts))
+                self._jig_cmyk_invalid = False
+            except Exception:
+                logger.exception("Failed to validate jig CMYK")
+                self._jig_cmyk_invalid = True
+        self._jig_cmyk_entry.bind("<FocusIn>", _on_jig_cmyk_focus_in)
+        self._jig_cmyk_entry.bind("<FocusOut>", _on_jig_cmyk_focus_out)
+        _obj_chip = tk.Frame(_fmt_row2, bg="#6f6f6f"); _obj_chip.pack(side="left", padx=(12, 0))
+        tk.Label(_obj_chip, text="Object CMYK:", bg="#6f6f6f", fg="white").pack(side="left")
+        self._obj_cmyk_entry = tk.Entry(_fmt_row2, textvariable=self.obj_cmyk, width=16, bg="#d9d9d9", justify="center")
+        self._obj_cmyk_entry.pack(side="left")
+        def _on_obj_cmyk_focus_in(event=None):
+            try:
+                self._prev_obj_cmyk = self.obj_cmyk.get()
+            except Exception:
+                self._prev_obj_cmyk = "0,100,0,0"
+
+        def _on_obj_cmyk_focus_out(event=None):
+            # Do NOT show messagebox here to avoid duplicate dialogs.
+            try:
+                orig = str(self.obj_cmyk.get() or "")
+                parts = orig.split(",")
+                if len(parts) != 4:
+                    # Do NOT change the user's typed value; mark invalid and refocus so user corrects it.
+                    self._obj_cmyk_invalid = True
+                    try:
+                        self._obj_cmyk_entry.focus_set()
+                    except Exception:
+                        pass
+                    return
+                parts = [p.strip() for p in parts]
+                self.obj_cmyk.set(",".join(parts))
+                self._obj_cmyk_invalid = False
+            except Exception:
+                logger.exception("Failed to validate object CMYK")
+                self._obj_cmyk_invalid = True
+        self._obj_cmyk_entry.bind("<FocusIn>", _on_obj_cmyk_focus_in)
+        self._obj_cmyk_entry.bind("<FocusOut>", _on_obj_cmyk_focus_out)
+        # horizontal separator (moved down)
+        tk.Frame(panel_basic, bg="white", height=2).grid(row=4, column=0, sticky="ew", pady=(6, 6))
+
+    # (Jig size visible label removed from Basic panel — moved to left bar)
 
         # Major size (Preset + fields + Add/Remove)
         _b_row3 = tk.Frame(panel_basic, bg="black"); _b_row3.grid(row=5, column=0, sticky="ew", pady=(6, 0))
@@ -1093,38 +1159,53 @@ class NStickerCanvasScreen(Screen):
 
         # ---- SCENE PANEL ----
         tk.Label(panel_scene, text="Scene", bg="black", fg=COLOR_TEXT, font=("Myriad Pro", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(0, 6))
-        # Slot size row
-        _s_row1 = tk.Frame(panel_scene, bg="black"); _s_row1.grid(row=1, column=0, sticky="ew")
+
+        # Jig size row (inserted at row=1)
+        _j_row = tk.Frame(panel_scene, bg="black"); _j_row.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        tk.Label(_j_row, text="Jig size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
+        _j_w = tk.Frame(_j_row, bg="#6f6f6f"); _j_w.pack(side="left", padx=(0, 6))
+        tk.Label(_j_w, text="W:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
+        tk.Entry(_j_w, textvariable=self.jig_x, width=8, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        _j_h = tk.Frame(_j_row, bg="#6f6f6f"); _j_h.pack(side="left")
+        tk.Label(_j_h, text="H:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
+        tk.Entry(_j_h, textvariable=self.jig_y, width=8, bg="#d9d9d9", justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+
+        # Slot size row (moved to row=2)
+        _s_row1 = tk.Frame(panel_scene, bg="black"); _s_row1.grid(row=2, column=0, sticky="ew", pady=(2, 6))
         tk.Label(_s_row1, text="Slot size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
         _sw = tk.Frame(_s_row1, bg="#6f6f6f"); _sw.pack(side="left", padx=(0, 6))
         tk.Label(_sw, text="W:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_sw, textvariable=self.slot_w, width=6, bg="#d9d9d9", justify="center",
+        tk.Entry(_sw, textvariable=self.slot_w, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         _sh = tk.Frame(_s_row1, bg="#6f6f6f"); _sh.pack(side="left")
         tk.Label(_sh, text="H:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_sh, textvariable=self.slot_h, width=6, bg="#d9d9d9", justify="center",
+        tk.Entry(_sh, textvariable=self.slot_h, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+
         # Origin pos row
-        _s_row2 = tk.Frame(panel_scene, bg="black"); _s_row2.grid(row=2, column=0, sticky="ew")
+        _s_row2 = tk.Frame(panel_scene, bg="black"); _s_row2.grid(row=3, column=0, sticky="ew")
         tk.Label(_s_row2, text="Origin Pos", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
         _ox = tk.Frame(_s_row2, bg="#6f6f6f"); _ox.pack(side="left", padx=(0, 6))
         tk.Label(_ox, text="X:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_ox, textvariable=self.origin_x, width=6, bg="#d9d9d9", justify="center",
+        tk.Entry(_ox, textvariable=self.origin_x, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         _oy = tk.Frame(_s_row2, bg="#6f6f6f"); _oy.pack(side="left")
         tk.Label(_oy, text="Y:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_oy, textvariable=self.origin_y, width=6, bg="#d9d9d9", justify="center",
+        tk.Entry(_oy, textvariable=self.origin_y, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+
         # Step size row
-        _s_row3 = tk.Frame(panel_scene, bg="black"); _s_row3.grid(row=3, column=0, sticky="ew", pady=(6, 0))
+        _s_row3 = tk.Frame(panel_scene, bg="black"); _s_row3.grid(row=4, column=0, sticky="ew", pady=(6, 0))
         tk.Label(_s_row3, text="Step size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
         _sx = tk.Frame(_s_row3, bg="#6f6f6f"); _sx.pack(side="left", padx=(0, 6))
         tk.Label(_sx, text="X:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_sx, textvariable=self.step_x, width=6, bg="#d9d9d9", justify="center",
+        tk.Entry(_sx, textvariable=self.step_x, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
         _sy = tk.Frame(_s_row3, bg="#6f6f6f"); _sy.pack(side="left")
         tk.Label(_sy, text="Y:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_sy, textvariable=self.step_y, width=6, bg="#d9d9d9", justify="center",
+        tk.Entry(_sy, textvariable=self.step_y, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
 
         # ---- AMAZON PANEL ----
@@ -1275,6 +1356,13 @@ class NStickerCanvasScreen(Screen):
             icon_text="T",
             label_text="Text",
             command=self._drop_text,
+        )
+        self._create_tool_tile(
+            tools_row1,
+            icon_image=None,
+            icon_text="|||",
+            label_text="Barcode",
+            command=self._drop_barcode,
         )
         self._create_tool_tile(
             tools_row2,
@@ -1618,7 +1706,8 @@ class NStickerCanvasScreen(Screen):
                 try:
                     if cid == meta.get("canvas_id") and meta.get("label_id"):
                         lbl_id = meta.get("label_id")
-                        if meta.get("type") in ("rect", "major"):
+                        # Treat barcode the same as rect: label must be above the rotated overlay polygon
+                        if meta.get("type") in ("rect", "barcode", "major"):
                             # For rects, overlay polygon sits above base; raise label above overlay
                             try:
                                 rid = int(meta.get("rot_id", 0) or 0)
@@ -1646,7 +1735,8 @@ class NStickerCanvasScreen(Screen):
         """Render/update a rect's label as a rotated image and center it inside the rect."""
         try:
             meta = self._items.get(rect_cid, {})
-            if meta.get("type") != "rect":
+            item_type = meta.get("type")
+            if item_type not in ("rect", "barcode"):
                 return
             # Current displayed rect bbox and center
             bx = self.canvas.bbox(rect_cid)
@@ -1702,13 +1792,21 @@ class NStickerCanvasScreen(Screen):
             img_h = int(th + 2 * pad)
             img = Image.new("RGBA", (max(1, img_w), max(1, img_h)), (0, 0, 0, 0))
             d2 = ImageDraw.Draw(img)
-            # Parse hex color
+            # Resolve color: support hex (#rrggbb) and named colors via tkinter
             try:
-                if fill.startswith("#") and len(fill) == 7:
-                    r = int(fill[1:3], 16); g = int(fill[3:5], 16); b = int(fill[5:7], 16)
-                    color_rgba = (r, g, b, 255)
-                else:
-                    color_rgba = (255, 255, 255, 255)
+                color_rgba = (255, 255, 255, 255)
+                if isinstance(fill, str) and fill:
+                    if fill.startswith("#") and len(fill) == 7:
+                        r = int(fill[1:3], 16); g = int(fill[3:5], 16); b = int(fill[5:7], 16)
+                        color_rgba = (r, g, b, 255)
+                    else:
+                        # Attempt tkinter color resolution
+                        try:
+                            r, g, b = self.canvas.winfo_rgb(fill)
+                            # winfo_rgb returns 16-bit per channel; convert to 8-bit
+                            color_rgba = (r // 256, g // 256, b // 256, 255)
+                        except Exception:
+                            pass
             except Exception:
                 color_rgba = (255, 255, 255, 255)
             d2.text((pad + off_x, pad + off_y), label_text, font=font, fill=color_rgba)
@@ -1768,7 +1866,7 @@ class NStickerCanvasScreen(Screen):
         wrap = tk.Frame(parent, bg="black")
         wrap.pack(side="left", padx=6, pady=6)
 
-        tile_size = 40
+        tile_size = 30
         tile = tk.Frame(wrap, bg="#c7c7c7", width=tile_size, height=tile_size, relief="flat", bd=0)
         tile.pack()
         tile.pack_propagate(False)
@@ -1777,7 +1875,7 @@ class NStickerCanvasScreen(Screen):
             icon_lbl = tk.Label(tile, image=icon_image, bg="#c7c7c7")
             icon_lbl.pack(expand=True)
         else:
-            icon_lbl = tk.Label(tile, text=(icon_text or ""), bg="#c7c7c7", fg="#000000", font=("Myriad Pro", 24, "bold"))
+            icon_lbl = tk.Label(tile, text=(icon_text or ""), bg="#c7c7c7", fg="#000000", font=("Myriad Pro", 20, "bold"))
             icon_lbl.pack(expand=True)
 
         lbl = tk.Label(wrap, text=label_text, fg="white", bg="black", font=("Myriad Pro", 8))
@@ -1945,7 +2043,7 @@ class NStickerCanvasScreen(Screen):
         # Ensure top-left sits just inside jig accounting for our item outline
         ox = self._item_outline_half_px()
         oy = self._item_outline_half_px()
-        # Base rect is invisible; overlay polygon handles visuals and rotation
+        # Base rect initially invisible for general rects; barcode will be made visible below
         rect = self.canvas.create_rectangle(
             cx - scaled_w / 2 + ox, cy - scaled_h / 2 + oy, cx + scaled_w / 2 - ox, cy + scaled_h / 2 - oy,
             fill="", outline="", width=0
@@ -1990,7 +2088,7 @@ class NStickerCanvasScreen(Screen):
         # compute next z to keep newer items above older ones
         max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
         obj = CanvasObject(
-            type="rect",
+            type="rect" if label != "Barcode" else "barcode",
             w_mm=float(qw_mm),
             h_mm=float(qh_mm),
             x_mm=float(sx_mm),
@@ -2029,14 +2127,16 @@ class NStickerCanvasScreen(Screen):
         self._items[rect] = obj
         try:
             self._items[rect]["label"] = str(label)
+            self._items[rect]["label_fill"] = str(text_fill)
         except Exception:
             raise
+        # Base rect stays invisible for both rect and barcode - overlay provides visibility
         # Create rotated label image now
         try:
             self._update_rect_label_image(rect)
         except Exception:
             logger.exception("Failed to create rotated label image for placeholder")
-        # Create initial overlay polygon to visualize rotation/selection consistently
+        # Create initial overlay polygon for both rects and barcodes to show rotation
         try:
             self._update_rect_overlay(rect, self._items[rect], new_left, new_top, scaled_w, scaled_h)
         except Exception as e:
@@ -2058,6 +2158,39 @@ class NStickerCanvasScreen(Screen):
         default_h = 40.0
         # Text rectangles use green outline
         self.create_placeholder("Text", default_w, default_h, text_fill="#17a24b", outline="#17a24b")
+
+    def _drop_barcode(self):
+        """Create a barcode on the canvas. Only allow 1 barcode at a time."""
+        # Count existing barcodes BEFORE creating new one
+        barcode_count = sum(1 for cid, meta in self._items.items() if meta.get("type") == "barcode")
+        if barcode_count >= 1:
+            # Already have 1 barcode, do nothing silently
+            return
+        
+        # Create a rectangle with black border and "Barcode" text label
+        default_w = 80.0  # mm
+        default_h = 30.0  # mm
+        
+        # Create using the standard placeholder method (handles zoom, scaling, etc.)
+        self.create_placeholder("Barcode", default_w, default_h, text_fill="#000000", outline="black")
+        
+        # Locate the newly created barcode by label and highest z, ensure it's configured correctly
+        max_z = -1
+        barcode_id = None
+        for cid, meta in self._items.items():
+            if str(meta.get("label", "")) == "Barcode":
+                z = int(meta.get("z", 0))
+                if z > max_z:
+                    max_z = z
+                    barcode_id = cid
+        if barcode_id:
+            # Ensure type is barcode (in case of legacy behavior)
+            self._items[barcode_id]["type"] = "barcode"
+            # Barcode uses overlay polygon like rect to show rotation visually
+            # Base rect stays invisible, overlay provides the visual representation
+            # Label styling default for barcode
+            self._items[barcode_id]["label_fill"] = "black"
+            logger.info("Created barcode rect")
 
     def _ai_arrange(self):
         # For backward compatibility, delegate to objects-only arrange within selected major
@@ -3017,6 +3150,26 @@ class NStickerCanvasScreen(Screen):
             return
 
         state.sku_name = sku_name_val
+        # Validate CMYK fields before proceeding: prefer per-field invalid flags set by focus handlers/restore.
+        try:
+            jig_invalid = getattr(self, "_jig_cmyk_invalid", False)
+            obj_invalid = getattr(self, "_obj_cmyk_invalid", False)
+            # Also double-check current split length in case user bypassed focus events
+            if hasattr(self, "jig_cmyk") and not jig_invalid:
+                jig_invalid = (len(str(self.jig_cmyk.get() or "").split(",")) != 4)
+            if hasattr(self, "obj_cmyk") and not obj_invalid:
+                obj_invalid = (len(str(self.obj_cmyk.get() or "").split(",")) != 4)
+            if jig_invalid or obj_invalid:
+                # Build a single consolidated message
+                msgs = []
+                if jig_invalid:
+                    msgs.append("Jig CMYK must contain exactly 4 comma-separated values (C,M,Y,K).")
+                if obj_invalid:
+                    msgs.append("Object CMYK must contain exactly 4 comma-separated values (C,M,Y,K).")
+                messagebox.showerror("Invalid CMYK", "\n".join(msgs))
+                return
+        except Exception:
+            logger.exception("Failed to validate CMYK before proceeding")
         state.pkg_x = self.jig_x.get().strip()
         state.pkg_y = self.jig_y.get().strip()
         # Count only image items. Text items are stored with type 'text'
@@ -3128,11 +3281,13 @@ class NStickerCanvasScreen(Screen):
         except Exception:
             logger.exception("Failed to prepare internal product images and update paths")
 
-        # Validate that all non-slot objects have a non-empty amazon_label
+        # Validate that all non-slot, non-barcode objects have a non-empty amazon_label
         try:
             def _missing_label(obj: dict) -> bool:
                 try:
-                    if str(obj.get("type", "")) == "slot":
+                    obj_type = str(obj.get("type", ""))
+                    # Skip validation for slots and barcodes
+                    if obj_type in ("slot", "barcode"):
                         return False
                     return str(obj.get("amazon_label", "") or "").strip() == ""
                 except Exception:
@@ -3459,13 +3614,18 @@ class NStickerCanvasScreen(Screen):
             text_cnt_back = sum(1 for it in back_items if (str(it.get("type", "")) == "text") or (str(it.get("type", "")) == "rect" and str(it.get("outline", "")) == "#17a24b"))
             slot_count = sum(1 for it in slots_only)
             scene_top = {
-                "jig": {"width_mm": float(jx), "height_mm": float(jy)},
+                "jig": {"width_mm": float(jx), "height_mm": float(jy), "cmyk": self._normalize_cmyk(self.jig_cmyk.get() if hasattr(self, "jig_cmyk") else "75,0,75,0")},
                 "slot_count": int(slot_count),
                 "objects_count": {
                     "images": int(images_cnt_front + images_cnt_back),
                     "text": int(text_cnt_front + text_cnt_back),
                 },
             }
+            # Persist object CMYK at scene level
+            try:
+                scene_top["object_cmyk"] = self._normalize_cmyk(self.obj_cmyk.get() if hasattr(self, "obj_cmyk") else "0,100,0,0")
+            except Exception:
+                scene_top["object_cmyk"] = "0,0,0,0"
             state.nonsticker_image_count = int(images_cnt_front + images_cnt_back + text_cnt_front + text_cnt_back)
             # Build Scene.Majors summary and group sides by major
             def _ordered_major_names() -> list[str]:
@@ -3551,6 +3711,20 @@ class NStickerCanvasScreen(Screen):
             front_grouped = _group_side_by_major(_compose_side(front_items, state.sku_name, state.prev_sku_name))
             back_grouped = _group_side_by_major(_compose_side(back_items, state.sku_name, state.prev_sku_name))
 
+            # Extract optional barcode objects per side (barcode does not belong to slots)
+            def _extract_barcode(items_for_side: list[dict]) -> dict | None:
+                try:
+                    for it in items_for_side:
+                        if str(it.get("type", "")) == "barcode":
+                            # Return a shallow copy to avoid accidental mutations later
+                            return dict(it)
+                except Exception:
+                    logger.exception("Failed to extract barcode from items_for_side")
+                return None
+
+            front_barcode = _extract_barcode(self._scene_store.get("front") or [])
+            back_barcode = _extract_barcode(self._scene_store.get("back") or [])
+
             # Persist ASINs as [asin, count] pairs from current selection list and counts
             try:
                 asin_pairs = []
@@ -3570,6 +3744,17 @@ class NStickerCanvasScreen(Screen):
                 "Frontside": front_grouped,
                 "Backside": back_grouped,
             }
+            # Persist optional barcode objects outside of slots per side
+            if front_barcode:
+                try:
+                    combined["FrontsideBarcode"] = front_barcode
+                except Exception:
+                    logger.exception("Failed to attach FrontsideBarcode to combined JSON")
+            if back_barcode:
+                try:
+                    combined["BacksideBarcode"] = back_barcode
+                except Exception:
+                    logger.exception("Failed to attach BacksideBarcode to combined JSON")
         except Exception as e:
             logger.exception(f"Failed to build combined JSON: {e}")
             combined = {"Sku": str(state.sku_name or ""), "Scene": {}, "Frontside": {}, "Backside": {}}
@@ -3824,14 +4009,21 @@ class NStickerCanvasScreen(Screen):
         # Invisible base rect; visual is drawn via overlay polygon
         rect = self.canvas.create_rectangle(new_left, new_top, new_left + w, new_top + h, fill="", outline="", width=0)
 
+        # Persist actual clamped mm (top-left of rotated bounds)
+        try:
+            ax_mm = self._snap_mm((new_left - (x0 + ox)) / (MM_TO_PX * max(self._zoom, 1e-6)))
+            ay_mm = self._snap_mm((new_top - (y0 + oy)) / (MM_TO_PX * max(self._zoom, 1e-6)))
+        except Exception:
+            ax_mm, ay_mm = float(x_mm_i), float(y_mm_i)
+
         # next z
         max_z = max(int(m.get("z", 0)) for _cid, m in self._items.items()) if self._items else 0
         self._items[rect] = CanvasObject(
             type="rect",
             w_mm=float(w_mm_i),
             h_mm=float(h_mm_i),
-            x_mm=float(x_mm_i),
-            y_mm=float(y_mm_i),
+            x_mm=float(ax_mm),
+            y_mm=float(ay_mm),
             label_id=None,
             outline=outline,
             canvas_id=rect,
@@ -3840,6 +4032,8 @@ class NStickerCanvasScreen(Screen):
         )
         try:
             self._items[rect]["label"] = str(label)
+            # Set label_fill so it persists and is used by _update_rect_label_image
+            self._items[rect]["label_fill"] = str(text_fill)
         except Exception:
             raise
         try:
@@ -3960,7 +4154,68 @@ class NStickerCanvasScreen(Screen):
                 except Exception as e:
                     logger.exception(f"Failed to serialize text item {cid}: {e}")
                     continue
+            elif t == "barcode":
+                try:
+                    label_text = str(meta.get("label", "Barcode"))
+                    items.append({
+                        "type": "barcode",
+                        "amazon_label": meta.amazon_label,
+                        "is_options": bool(meta.get("is_options", False)),
+                        "is_static": bool(meta.get("is_static", False)),
+                        "label": label_text,
+                        "w_mm": float(meta.get("w_mm", 0.0)),
+                        "h_mm": float(meta.get("h_mm", 0.0)),
+                        "x_mm": float(meta.get("x_mm", 0.0)),
+                        "y_mm": float(meta.get("y_mm", 0.0)),
+                        "outline": str(meta.get("outline", "black")),
+                        "angle": float(meta.get("angle", 0.0) or 0.0),
+                        "z": int(meta.get("z", 0)),
+                        # Persist text styling for barcode labels
+                        "label_fill": str(meta.get("label_fill", "black")),
+                        "label_font_size": int(round(float(meta.get("label_font_size", 10)))),
+                        "label_font_family": str(meta.get("label_font_family", "Myriad Pro")),
+                        "owner_major": str(meta.get("owner_major", "")),
+                    })
+                except Exception as e:
+                    logger.exception(f"Failed to serialize barcode item {cid}: {e}")
+                    continue
         return items
+
+    def _normalize_cmyk(self, value) -> str:
+        """Normalize a CMYK-like value into a 4-part comma-separated numeric string.
+
+        Rules:
+        - Accept strings like "C,M,Y,K" or numeric values; tolerate spaces.
+        - Non-numeric parts are treated as 0.
+        - If fewer than 4 parts, pad with 0s; if more than 4, truncate to first 4.
+        - Returns a string like "C,M,Y,K" where each is an integer if possible or a float.
+        """
+        try:
+            s = str(value or "")
+        except Exception:
+            return "0,0,0,100"
+        parts = [p.strip() for p in s.split(",") if p is not None]
+        nums: list[str] = []
+        for p in parts:
+            if p == "":
+                nums.append("0")
+                continue
+            try:
+                f = float(p)
+                if f.is_integer():
+                    nums.append(str(int(f)))
+                else:
+                    # keep minimal float representation
+                    nums.append(str(f))
+            except Exception:
+                # non-numeric -> 0
+                nums.append("0")
+        # pad/truncate to exactly 4
+        if len(nums) < 4:
+            nums += ["0"] * (4 - len(nums))
+        elif len(nums) > 4:
+            nums = nums[:4]
+        return ",".join(nums)
 
     def _restore_scene(self, items: list[dict]):
         for it in items:
@@ -4184,6 +4439,63 @@ class NStickerCanvasScreen(Screen):
                                 logger.exception("Failed to apply restored text-rect label styling")
                     except Exception as e:
                         logger.exception(f"Failed to apply text-rect z from JSON: {e}")
+            elif t == "barcode":
+                # Restore barcode as a rectangle with saved styling and label
+                outline = str(it.get("outline", "black"))
+                text_fill = str(it.get("label_fill", "black"))
+                label_text = str(it.get("label", "Barcode"))
+                rid = self._create_rect_at_mm(
+                    label_text,
+                    float(it.get("w_mm", 80.0)),
+                    float(it.get("h_mm", 30.0)),
+                    float(it.get("x_mm", 0.0)),
+                    float(it.get("y_mm", 0.0)),
+                    outline=outline,
+                    text_fill=text_fill,
+                    angle=float(it.get("angle", 0.0) or 0.0),
+                )
+                try:
+                    if rid in self._items:
+                        # Change type from rect to barcode
+                        self._items[rid]["type"] = "barcode"
+                        self._items[rid]["amazon_label"] = it.get("amazon_label", "")
+                        # Restore flags if present
+                        self._items[rid]["is_options"] = self._as_bool(it.get("is_options", False))
+                        self._items[rid]["is_static"] = self._as_bool(it.get("is_static", False))
+                        z_val = it.get("z")
+                        if z_val is not None:
+                            self._items[rid]["z"] = int(z_val)
+                        # Remove rotated overlay for barcode (not used) and ensure base rect is visible
+                        try:
+                            old_rot = int(self._items[rid].get("rot_id", 0) or 0)
+                        except Exception:
+                            old_rot = 0
+                        if old_rot:
+                            try:
+                                self.canvas.delete(old_rot)
+                            except Exception:
+                                pass
+                            self._items[rid]["rot_id"] = None
+                        # Ensure the base rect has a visible fill and outline for barcode
+                        try:
+                            self.canvas.itemconfig(rid, outline=outline or "black", fill="white", width=2)
+                        except Exception:
+                            pass
+                        # Keep barcode label in black by default unless overridden by saved data
+                        self._items[rid]["label_fill"] = text_fill or "black"
+                        # Apply restored label styling if present
+                        try:
+                            if "label_fill" in it:
+                                self._items[rid]["label_fill"] = str(it.get("label_fill"))
+                            if "label_font_size" in it:
+                                self._items[rid]["label_font_size"] = int(round(float(it.get("label_font_size", 10))))
+                            if "label_font_family" in it:
+                                self._items[rid]["label_font_family"] = str(it.get("label_font_family", "Myriad Pro"))
+                            self._update_rect_label_image(rid)
+                        except Exception:
+                            logger.exception("Failed to apply restored barcode label styling")
+                except Exception as e:
+                    logger.exception(f"Failed to restore barcode from JSON: {e}")
 
     def _maybe_load_saved_product(self):
         # Load saved non-sticker scene when editing an existing product
@@ -4226,6 +4538,38 @@ class NStickerCanvasScreen(Screen):
 
         _set_str(self.jig_x, jig.get("width_mm", self.jig_x.get()))
         _set_str(self.jig_y, jig.get("height_mm", self.jig_y.get()))
+        # Restore jig/object CMYK values if present.
+        # Do NOT auto-normalize saved values. If the saved value doesn't contain exactly 4 comma-separated parts,
+        # mark the field invalid and leave the current UI value untouched so the user must correct it.
+        try:
+            if hasattr(self, "jig_cmyk") and "cmyk" in jig:
+                saved = jig.get("cmyk")
+                if saved is None:
+                    _set_str(self.jig_cmyk, self.jig_cmyk.get())
+                    self._jig_cmyk_invalid = False
+                else:
+                    parts = str(saved).split(",")
+                    if len(parts) != 4:
+                        # don't change UI, but mark invalid so proceed will prompt the user
+                        self._jig_cmyk_invalid = True
+                    else:
+                        # Accept as-is but trim spaces
+                        _set_str(self.jig_cmyk, ",".join([p.strip() for p in parts]))
+                        self._jig_cmyk_invalid = False
+            if hasattr(self, "obj_cmyk") and "object_cmyk" in scene:
+                saved2 = scene.get("object_cmyk")
+                if saved2 is None:
+                    _set_str(self.obj_cmyk, self.obj_cmyk.get())
+                    self._obj_cmyk_invalid = False
+                else:
+                    parts2 = str(saved2).split(",")
+                    if len(parts2) != 4:
+                        self._obj_cmyk_invalid = True
+                    else:
+                        _set_str(self.obj_cmyk, ",".join([p.strip() for p in parts2]))
+                        self._obj_cmyk_invalid = False
+        except Exception:
+            logger.exception("Failed to restore CMYK values from scene")
         # Initialize scene-level fields from first major if present; fall back to legacy Scene fields
         scene_majors_peek = list((scene.get("Majors") or []))
         if scene_majors_peek:
@@ -4348,6 +4692,20 @@ class NStickerCanvasScreen(Screen):
 
         front_slots, front_items = _collect_slots_and_items(front)
         back_slots, back_items = _collect_slots_and_items(back)
+
+        # Barcode is stored per side outside of slots; append if present
+        try:
+            fb = data.get("FrontsideBarcode")
+            if isinstance(fb, dict) and str(fb.get("type", "")) == "barcode":
+                front_items.append(dict(fb))
+        except Exception:
+            logger.exception("Failed to restore FrontsideBarcode from JSON")
+        try:
+            bb = data.get("BacksideBarcode")
+            if isinstance(bb, dict) and str(bb.get("type", "")) == "barcode":
+                back_items.append(dict(bb))
+        except Exception:
+            logger.exception("Failed to restore BacksideBarcode from JSON")
 
         def _do_restore():
             # If majors present in new format, replace presets and render rectangles

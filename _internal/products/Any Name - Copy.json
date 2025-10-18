@@ -1,21 +1,23 @@
 {
   "ASINs": [
     [
-      "B0DMQ1BYN7",
+      "B0F1NZ5JDM",
       1
     ]
   ],
-  "SkuName": "Any Name",
+  "SkuName": "Any Name - Copy",
   "Scene": {
     "jig": {
       "width_mm": 296.0,
-      "height_mm": 394.5831
+      "height_mm": 394.5831,
+      "cmyk": "0,0,0,0"
     },
     "slot_count": 32,
     "objects_count": {
       "images": 96,
       "text": 288
     },
+    "object_cmyk": "0,0,0,0",
     "Majors": [
       {
         "rect": {
@@ -54,7 +56,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 260.125,
               "y_mm": 357.175,
               "w_mm": 18.5,
@@ -68,7 +70,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 243.61999999999998,
               "y_mm": 355.73674258474574,
               "w_mm": 23.926514830508467,
@@ -124,7 +126,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 187.575,
               "y_mm": 357.175,
               "w_mm": 18.5,
@@ -138,7 +140,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.06999999999996,
               "y_mm": 355.73674258474574,
               "w_mm": 23.926514830508467,
@@ -170,7 +172,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 191.575,
+              "x_mm": 191.57499999999996,
               "y_mm": 356.425,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -194,7 +196,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 115.02499999999999,
               "y_mm": 357.175,
               "w_mm": 18.5,
@@ -208,7 +210,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 98.51999999999997,
               "y_mm": 355.73674258474574,
               "w_mm": 23.926514830508467,
@@ -264,7 +266,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 42.47500000000001,
               "y_mm": 357.175,
               "w_mm": 18.5,
@@ -278,7 +280,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 25.969999999999985,
               "y_mm": 355.73674258474574,
               "w_mm": 23.926514830508467,
@@ -310,7 +312,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 46.47500000000001,
+              "x_mm": 46.475,
               "y_mm": 356.425,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -334,7 +336,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 260.125,
               "y_mm": 309.325,
               "w_mm": 18.5,
@@ -348,7 +350,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 243.61999999999998,
               "y_mm": 307.8867425847457,
               "w_mm": 23.926514830508467,
@@ -404,7 +406,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 187.575,
               "y_mm": 309.325,
               "w_mm": 18.5,
@@ -418,7 +420,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.06999999999996,
               "y_mm": 307.8867425847457,
               "w_mm": 23.926514830508467,
@@ -450,7 +452,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 191.575,
+              "x_mm": 191.57499999999996,
               "y_mm": 308.575,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -474,7 +476,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 115.02499999999999,
               "y_mm": 309.325,
               "w_mm": 18.5,
@@ -488,7 +490,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 98.51999999999997,
               "y_mm": 307.8867425847457,
               "w_mm": 23.926514830508467,
@@ -544,7 +546,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 42.47500000000001,
               "y_mm": 309.325,
               "w_mm": 18.5,
@@ -558,7 +560,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 25.969999999999985,
               "y_mm": 307.8867425847457,
               "w_mm": 23.926514830508467,
@@ -590,7 +592,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 46.47500000000001,
+              "x_mm": 46.475,
               "y_mm": 308.575,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -614,7 +616,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 260.125,
               "y_mm": 261.475,
               "w_mm": 18.5,
@@ -628,7 +630,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 243.61999999999998,
               "y_mm": 260.03674258474575,
               "w_mm": 23.926514830508467,
@@ -684,7 +686,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 187.575,
               "y_mm": 261.475,
               "w_mm": 18.5,
@@ -698,7 +700,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.06999999999996,
               "y_mm": 260.03674258474575,
               "w_mm": 23.926514830508467,
@@ -730,7 +732,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 191.575,
+              "x_mm": 191.57499999999996,
               "y_mm": 260.725,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -754,7 +756,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 115.02499999999999,
               "y_mm": 261.475,
               "w_mm": 18.5,
@@ -768,7 +770,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 98.51999999999997,
               "y_mm": 260.03674258474575,
               "w_mm": 23.926514830508467,
@@ -824,7 +826,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 42.47500000000001,
               "y_mm": 261.475,
               "w_mm": 18.5,
@@ -838,7 +840,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 25.969999999999985,
               "y_mm": 260.03674258474575,
               "w_mm": 23.926514830508467,
@@ -870,7 +872,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 46.47500000000001,
+              "x_mm": 46.475,
               "y_mm": 260.725,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -894,7 +896,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 260.125,
               "y_mm": 213.625,
               "w_mm": 18.5,
@@ -908,7 +910,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 243.61999999999998,
               "y_mm": 212.18674258474573,
               "w_mm": 23.926514830508467,
@@ -964,7 +966,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 187.575,
               "y_mm": 213.625,
               "w_mm": 18.5,
@@ -978,7 +980,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.06999999999996,
               "y_mm": 212.18674258474573,
               "w_mm": 23.926514830508467,
@@ -1010,7 +1012,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 191.575,
+              "x_mm": 191.57499999999996,
               "y_mm": 212.875,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -1034,7 +1036,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 115.02499999999999,
               "y_mm": 213.625,
               "w_mm": 18.5,
@@ -1048,7 +1050,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 98.51999999999997,
               "y_mm": 212.18674258474573,
               "w_mm": 23.926514830508467,
@@ -1104,7 +1106,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 42.47500000000001,
               "y_mm": 213.625,
               "w_mm": 18.5,
@@ -1118,7 +1120,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 25.969999999999985,
               "y_mm": 212.18674258474573,
               "w_mm": 23.926514830508467,
@@ -1150,7 +1152,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 46.47500000000001,
+              "x_mm": 46.475,
               "y_mm": 212.875,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -1174,7 +1176,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 260.125,
               "y_mm": 165.775,
               "w_mm": 18.5,
@@ -1188,7 +1190,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 243.61999999999998,
               "y_mm": 164.33674258474574,
               "w_mm": 23.926514830508467,
@@ -1244,7 +1246,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 187.575,
               "y_mm": 165.775,
               "w_mm": 18.5,
@@ -1258,7 +1260,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.06999999999996,
               "y_mm": 164.33674258474574,
               "w_mm": 23.926514830508467,
@@ -1290,7 +1292,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 191.575,
+              "x_mm": 191.57499999999996,
               "y_mm": 165.025,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -1314,7 +1316,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 115.02499999999999,
               "y_mm": 165.775,
               "w_mm": 18.5,
@@ -1328,7 +1330,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 98.51999999999997,
               "y_mm": 164.33674258474574,
               "w_mm": 23.926514830508467,
@@ -1384,7 +1386,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 42.47500000000001,
               "y_mm": 165.775,
               "w_mm": 18.5,
@@ -1398,7 +1400,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 25.969999999999985,
               "y_mm": 164.33674258474574,
               "w_mm": 23.926514830508467,
@@ -1430,7 +1432,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 46.47500000000001,
+              "x_mm": 46.475,
               "y_mm": 165.025,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -1454,7 +1456,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 260.125,
               "y_mm": 117.925,
               "w_mm": 18.5,
@@ -1468,7 +1470,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 243.61999999999998,
               "y_mm": 116.48674258474573,
               "w_mm": 23.926514830508467,
@@ -1524,7 +1526,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 187.575,
               "y_mm": 117.925,
               "w_mm": 18.5,
@@ -1538,7 +1540,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.06999999999996,
               "y_mm": 116.48674258474573,
               "w_mm": 23.926514830508467,
@@ -1570,7 +1572,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 191.575,
+              "x_mm": 191.57499999999996,
               "y_mm": 117.175,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -1594,7 +1596,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 115.02499999999999,
               "y_mm": 117.925,
               "w_mm": 18.5,
@@ -1608,7 +1610,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 98.51999999999997,
               "y_mm": 116.48674258474573,
               "w_mm": 23.926514830508467,
@@ -1664,7 +1666,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 42.47500000000001,
               "y_mm": 117.925,
               "w_mm": 18.5,
@@ -1678,7 +1680,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 25.969999999999985,
               "y_mm": 116.48674258474573,
               "w_mm": 23.926514830508467,
@@ -1710,7 +1712,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 46.47500000000001,
+              "x_mm": 46.475,
               "y_mm": 117.175,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -1734,7 +1736,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 260.125,
               "y_mm": 70.07499999999997,
               "w_mm": 18.5,
@@ -1748,7 +1750,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 243.61999999999998,
               "y_mm": 68.6367425847457,
               "w_mm": 23.926514830508467,
@@ -1804,7 +1806,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 187.575,
               "y_mm": 70.07499999999997,
               "w_mm": 18.5,
@@ -1818,7 +1820,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.06999999999996,
               "y_mm": 68.6367425847457,
               "w_mm": 23.926514830508467,
@@ -1850,7 +1852,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 191.575,
+              "x_mm": 191.57499999999996,
               "y_mm": 69.32499999999997,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -1874,7 +1876,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 115.02499999999999,
               "y_mm": 70.07499999999997,
               "w_mm": 18.5,
@@ -1888,7 +1890,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 98.51999999999997,
               "y_mm": 68.6367425847457,
               "w_mm": 23.926514830508467,
@@ -1944,7 +1946,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 42.47500000000001,
               "y_mm": 70.07499999999997,
               "w_mm": 18.5,
@@ -1958,7 +1960,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 25.969999999999985,
               "y_mm": 68.6367425847457,
               "w_mm": 23.926514830508467,
@@ -1990,7 +1992,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 46.47500000000001,
+              "x_mm": 46.475,
               "y_mm": 69.32499999999997,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -2014,7 +2016,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 260.125,
               "y_mm": 22.225000000000012,
               "w_mm": 18.5,
@@ -2028,7 +2030,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 243.61999999999998,
               "y_mm": 20.786742584745742,
               "w_mm": 23.926514830508467,
@@ -2084,7 +2086,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 187.575,
               "y_mm": 22.225000000000012,
               "w_mm": 18.5,
@@ -2098,7 +2100,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.06999999999996,
               "y_mm": 20.786742584745742,
               "w_mm": 23.926514830508467,
@@ -2130,7 +2132,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 191.575,
+              "x_mm": 191.57499999999996,
               "y_mm": 21.475000000000012,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -2154,7 +2156,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 115.02499999999999,
               "y_mm": 22.225000000000012,
               "w_mm": 18.5,
@@ -2168,7 +2170,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 98.51999999999997,
               "y_mm": 20.786742584745742,
               "w_mm": 23.926514830508467,
@@ -2224,7 +2226,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/Layer1.png",
+              "path": "Any Name - Copy/Layer1.png",
               "x_mm": 42.47500000000001,
               "y_mm": 22.225000000000012,
               "w_mm": 18.5,
@@ -2238,7 +2240,7 @@
             },
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 25.969999999999985,
               "y_mm": 20.786742584745742,
               "w_mm": 23.926514830508467,
@@ -2270,7 +2272,7 @@
               "type": "text",
               "label": "Text",
               "amazon_label": "WUNSCHNAME",
-              "x_mm": 46.47500000000001,
+              "x_mm": 46.475,
               "y_mm": 21.475000000000012,
               "w_mm": 20.0,
               "h_mm": 6.0,
@@ -2301,7 +2303,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 244.11999999999998,
               "y_mm": 356.03674258474575,
               "w_mm": 23.92651483050847,
@@ -2437,7 +2439,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.56999999999996,
               "y_mm": 356.03674258474575,
               "w_mm": 23.92651483050847,
@@ -2573,7 +2575,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 99.01999999999997,
               "y_mm": 356.03674258474575,
               "w_mm": 23.92651483050847,
@@ -2709,7 +2711,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 26.469999999999985,
               "y_mm": 356.03674258474575,
               "w_mm": 23.92651483050847,
@@ -2845,7 +2847,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 244.11999999999998,
               "y_mm": 308.18674258474573,
               "w_mm": 23.92651483050847,
@@ -2981,7 +2983,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.56999999999996,
               "y_mm": 308.18674258474573,
               "w_mm": 23.92651483050847,
@@ -3117,7 +3119,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 99.01999999999997,
               "y_mm": 308.18674258474573,
               "w_mm": 23.92651483050847,
@@ -3253,7 +3255,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 26.469999999999985,
               "y_mm": 308.18674258474573,
               "w_mm": 23.92651483050847,
@@ -3389,7 +3391,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 244.11999999999998,
               "y_mm": 260.33674258474576,
               "w_mm": 23.92651483050847,
@@ -3525,7 +3527,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.56999999999996,
               "y_mm": 260.33674258474576,
               "w_mm": 23.92651483050847,
@@ -3661,7 +3663,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 99.01999999999997,
               "y_mm": 260.33674258474576,
               "w_mm": 23.92651483050847,
@@ -3797,7 +3799,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 26.469999999999985,
               "y_mm": 260.33674258474576,
               "w_mm": 23.92651483050847,
@@ -3933,7 +3935,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 244.11999999999998,
               "y_mm": 212.48674258474574,
               "w_mm": 23.92651483050847,
@@ -4069,7 +4071,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.56999999999996,
               "y_mm": 212.48674258474574,
               "w_mm": 23.92651483050847,
@@ -4205,7 +4207,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 99.01999999999997,
               "y_mm": 212.48674258474574,
               "w_mm": 23.92651483050847,
@@ -4341,7 +4343,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 26.469999999999985,
               "y_mm": 212.48674258474574,
               "w_mm": 23.92651483050847,
@@ -4477,7 +4479,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 244.11999999999998,
               "y_mm": 164.63674258474575,
               "w_mm": 23.92651483050847,
@@ -4613,7 +4615,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.56999999999996,
               "y_mm": 164.63674258474575,
               "w_mm": 23.92651483050847,
@@ -4749,7 +4751,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 99.01999999999997,
               "y_mm": 164.63674258474575,
               "w_mm": 23.92651483050847,
@@ -4885,7 +4887,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 26.469999999999985,
               "y_mm": 164.63674258474575,
               "w_mm": 23.92651483050847,
@@ -5021,7 +5023,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 244.11999999999998,
               "y_mm": 116.78674258474574,
               "w_mm": 23.92651483050847,
@@ -5157,7 +5159,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.56999999999996,
               "y_mm": 116.78674258474574,
               "w_mm": 23.92651483050847,
@@ -5293,7 +5295,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 99.01999999999997,
               "y_mm": 116.78674258474574,
               "w_mm": 23.92651483050847,
@@ -5429,7 +5431,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 26.469999999999985,
               "y_mm": 116.78674258474574,
               "w_mm": 23.92651483050847,
@@ -5565,7 +5567,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 244.11999999999998,
               "y_mm": 68.93674258474572,
               "w_mm": 23.92651483050847,
@@ -5701,7 +5703,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.56999999999996,
               "y_mm": 68.93674258474572,
               "w_mm": 23.92651483050847,
@@ -5837,7 +5839,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 99.01999999999997,
               "y_mm": 68.93674258474572,
               "w_mm": 23.92651483050847,
@@ -5973,7 +5975,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 26.469999999999985,
               "y_mm": 68.93674258474572,
               "w_mm": 23.92651483050847,
@@ -6109,7 +6111,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 244.11999999999998,
               "y_mm": 21.086742584745753,
               "w_mm": 23.92651483050847,
@@ -6245,7 +6247,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 171.56999999999996,
               "y_mm": 21.086742584745753,
               "w_mm": 23.92651483050847,
@@ -6381,7 +6383,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 99.01999999999997,
               "y_mm": 21.086742584745753,
               "w_mm": 23.92651483050847,
@@ -6517,7 +6519,7 @@
           "objects": [
             {
               "type": "image",
-              "path": "Any Name/layer 0.png",
+              "path": "Any Name - Copy/layer 0.png",
               "x_mm": 26.469999999999985,
               "y_mm": 21.086742584745753,
               "w_mm": 23.92651483050847,
@@ -6645,5 +6647,23 @@
         }
       ]
     }
-  ]
+  ],
+  "FrontsideBarcode": {
+    "type": "barcode",
+    "amazon_label": "",
+    "is_options": false,
+    "is_static": false,
+    "label": "Barcode",
+    "w_mm": 80.0,
+    "h_mm": 30.0,
+    "x_mm": 53.0,
+    "y_mm": 283.6666666666667,
+    "outline": "black",
+    "angle": 0.0,
+    "z": 252,
+    "label_fill": "black",
+    "label_font_size": 10,
+    "label_font_family": "Myriad Pro",
+    "owner_major": "Major size 1"
+  }
 }

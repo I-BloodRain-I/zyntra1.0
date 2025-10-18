@@ -178,7 +178,11 @@ class FontsManager:
         meta = self.s._items.get(sel, {})
         t = meta.get("type")
         try:
+            # Exclude barcode from text features - barcode should not show text menu
             is_text_block = (t == "text") or (t == "rect")
+            # But barcode type should NOT show text menu
+            if t == "barcode":
+                is_text_block = False
         except Exception:
             is_text_block = False
         if not is_text_block:

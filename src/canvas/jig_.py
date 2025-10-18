@@ -33,11 +33,11 @@ class JigController:
         for cid, meta in list(self.s._items.items()):
             t = meta.get("type")
             if t in ("rect", "barcode"):
-                # Rect and barcode labels are rendered as rotated images; re-render at current zoom
+                # Rect labels are rendered as rotated images; re-render at current zoom
                 try:
                     self.s._update_rect_label_image(cid)
                 except Exception:
-                    logger.exception("Failed to update rotated rect/barcode label image during font update")
+                    logger.exception("Failed to update rotated rect label image during font update")
             elif t == "slot":
                 tid = meta.get("label_id")
                 if tid:
@@ -83,6 +83,7 @@ class JigController:
                         logger.exception("Failed to update major label font")
 
     def update_rect_overlay(self, cid: int, meta: dict, left: float, top: float, bbox_w: float, bbox_h: float) -> None:
+        """Create/update rotated polygon overlay for rect and barcode objects."""
         try:
             ang = float(meta.get("angle", 0.0) or 0.0)
         except Exception:
@@ -110,7 +111,8 @@ class JigController:
             rot.extend([cx + rx, cy + ry])
         # Create or update polygon
         rid = int(meta.get("rot_id", 0) or 0)
-        fill_col = "white" if meta.get("type") == "barcode" else "#2b2b2b"
+        # Fill: white for barcode, dark for rect
+        fill_col = "white" if str(meta.get("type", "")) == "barcode" else "#2b2b2b"
         # If this rect is currently selected, use blue selection color and thicker stroke
         try:
             sel_id = getattr(self.s.selection, "_selected", None)
@@ -252,37 +254,31 @@ class JigController:
                         ang = 0.0
                     if int(abs(ang)) % 180 == 90:
                         wpx, hpx = hpx, wpx
-                # For barcode, calculate rotated bounds for clamping
-                if t == "barcode":
+                min_left = x0 + ox
+                min_top = y0 + oy
+                max_left = x1 - ox - wpx
+                max_top = y1 - oy - hpx
+                left = x0 + x_mm * MM_TO_PX * self.s._zoom + ox
+                top = y0 + y_mm * MM_TO_PX * self.s._zoom + oy
+                new_left = max(min_left, min(left, max_left))
+                new_top = max(min_top, min(top, max_top))
+                # Always keep base rect coords in sync (even if invisible for rects/barcodes)
+                if t in ("rect", "barcode"):
+                    # For rect/barcode, use rotated bounds for the invisible base rect
                     try:
                         ang = float(meta.get("angle", 0.0) or 0.0)
                     except Exception:
                         ang = 0.0
                     bw, bh = self.s._rotated_bounds_px(float(wpx), float(hpx), float(ang))
-                    # Use rotated bounds for clamping calculations
-                    clamp_w, clamp_h = bw, bh
-                else:
-                    clamp_w, clamp_h = wpx, hpx
-                min_left = x0 + ox
-                min_top = y0 + oy
-                max_left = x1 - ox - clamp_w
-                max_top = y1 - oy - clamp_h
-                left = x0 + x_mm * MM_TO_PX * self.s._zoom + ox
-                top = y0 + y_mm * MM_TO_PX * self.s._zoom + oy
-                new_left = max(min_left, min(left, max_left))
-                new_top = max(min_top, min(top, max_top))
-                # Always keep base rect coords in sync (even if invisible for rects)
-                if t == "barcode":
-                    # For barcode, use rotated bounds for the invisible base rect (bw/bh already calculated above)
                     self.s.canvas.coords(cid, new_left, new_top, new_left + bw, new_top + bh)
                     # Update overlay polygon used for visuals/selection
                     self.update_rect_overlay(cid, meta, new_left, new_top, bw, bh)
+                    try:
+                        self.s._update_rect_label_image(cid)
+                    except Exception:
+                        raise
                 else:
                     self.s.canvas.coords(cid, new_left, new_top, new_left + wpx, new_top + hpx)
-                    if t == "rect":
-                        # Update overlay polygon for rect
-                        self.update_rect_overlay(cid, meta, new_left, new_top, wpx, hpx)
-                # Label images for rect/barcode are updated later in update_all_text_fonts() to avoid double-render
                 if meta.get("label_id") and t not in ("rect", "barcode"):
                     self.s.canvas.coords(meta.label_id, new_left + wpx / 2, new_top + hpx / 2)
                     self.s._raise_all_labels()

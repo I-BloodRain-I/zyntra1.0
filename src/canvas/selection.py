@@ -45,6 +45,12 @@ class CanvasSelection:
 
     # --- Event bindings ---
     def on_click(self, e):
+        logger.debug(
+            "on_click: at canvas coords x=%s y=%s (event x=%s y=%s), current selected=%s",
+            getattr(self.s.canvas, "canvasx", lambda v: v)(getattr(e, "x", 0)),
+            getattr(self.s.canvas, "canvasy", lambda v: v)(getattr(e, "y", 0)),
+            getattr(e, "x", None), getattr(e, "y", None), getattr(self, "_selected", None)
+        )
         try:
             self.s.canvas.focus_set()
         except Exception:
@@ -53,47 +59,125 @@ class CanvasSelection:
         target = None
         if hit:
             cid = hit[0]
+            logger.debug("on_click: 'current' hit canvas id=%s", cid)
             if cid in self.s._items:
-                # Ignore slots for selection
-                if self.s._items.get(cid, {}).get("type") not in ("slot", "major"):
-                    target = cid
+                # If we hit a slot or major, try to find underlying selectable items
+                hit_type = self.s._items.get(cid, {}).get("type")
+                logger.debug("on_click: hit belongs to _items with type=%s", hit_type)
+                if hit_type in ("slot", "major"):
+                    try:
+                        # Convert event coords to canvas coordinates
+                        cx = self.s.canvas.canvasx(e.x)
+                        cy = self.s.canvas.canvasy(e.y)
+                        # find_overlapping returns items bottom->top; reverse to check topmost first
+                        ids = list(self.s.canvas.find_overlapping(cx, cy, cx, cy))
+                        ids.reverse()
+                        logger.debug("on_click: overlapping ids (top->bottom)=%s", ids)
+                        for iid in ids:
+                            try:
+                                # Direct base item hit
+                                if iid in self.s._items:
+                                    if self.s._items.get(iid, {}).get("type") not in ("slot", "major"):
+                                        logger.debug("on_click: selecting underlying non-slot item=%s type=%s", iid, self.s._items.get(iid, {}).get("type"))
+                                        target = iid
+                                        break
+                                else:
+                                    # Maybe it's a label_id belonging to an item; map back to owner
+                                    for rid, rmeta in self.s._items.items():
+                                        try:
+                                            if rmeta.get("label_id") == iid and rmeta.get("type") not in ("slot", "major"):
+                                                logger.debug("on_click: selecting item via label hit; owner=%s type=%s", rid, rmeta.get("type"))
+                                                target = rid
+                                                break
+                                        except Exception:
+                                            continue
+                                    if target:
+                                        break
+                            except Exception:
+                                logger.exception("Error while inspecting overlapping items for selection")
+                    except Exception:
+                        logger.exception("Failed to query overlapping items to find underlying selectable item")
+                else:
+                    # Normal item (not slot/major) — select it
+                    if self.s._items.get(cid, {}).get("type") not in ("slot", "major"):
+                        logger.debug("on_click: selecting non-slot/major item=%s", cid)
+                        target = cid
             else:
+                logger.debug("on_click: 'current' id is not a base item; checking labels and overlays")
                 for rid, meta in self.s._items.items():
                     if meta.get("label_id") == cid:
                         # Ignore slots for selection (even via their label)
                         if meta.get("type") not in ("slot", "major"):
+                            logger.debug("on_click: selecting item via its label; owner=%s type=%s", rid, meta.get("type"))
                             target = rid
                             break
-                # Also allow clicking the rotated overlay polygon to select the rect
+                # Also allow clicking the rotated overlay polygon to select the rect/barcode
                 if not target:
                     for rid, meta in self.s._items.items():
                         try:
-                            if int(meta.get("rot_id", 0) or 0) == cid and meta.get("type") == "rect":
+                            if int(meta.get("rot_id", 0) or 0) == cid and meta.get("type") in ("rect", "barcode"):
+                                logger.debug("on_click: selecting rect via its overlay polygon; owner=%s", rid)
                                 target = rid
                                 break
                         except Exception:
                             logger.exception("Error while checking overlay hit for rect selection")
+        # If still nothing selected, attempt a generic pick at the pointer position
+        if not target:
+            try:
+                cx = self.s.canvas.canvasx(e.x)
+                cy = self.s.canvas.canvasy(e.y)
+                ids = list(self.s.canvas.find_overlapping(cx, cy, cx, cy))
+                ids.reverse()  # top-most first
+                logger.debug("on_click: fallback overlapping ids (top->bottom)=%s", ids)
+                for iid in ids:
+                    # direct item
+                    if iid in self.s._items and self.s._items.get(iid, {}).get("type") not in ("slot", "major"):
+                        logger.debug("on_click: fallback selecting item=%s type=%s", iid, self.s._items.get(iid, {}).get("type"))
+                        target = iid
+                        break
+                    # or a label id belonging to an item
+                    for rid, rmeta in self.s._items.items():
+                        try:
+                            if rmeta.get("label_id") == iid and rmeta.get("type") not in ("slot", "major"):
+                                logger.debug("on_click: fallback selecting via label; owner=%s type=%s", rid, rmeta.get("type"))
+                                target = rid
+                                break
+                        except Exception:
+                            continue
+                    if target:
+                        break
+            except Exception:
+                logger.exception("Failed fallback pick for selection")
         # Prevent selecting hidden items (belonging to other majors)
         try:
             if target and (str(self.s.canvas.itemcget(target, "state")).lower() == "hidden"):
+                logger.debug("on_click: target=%s is hidden; clearing selection", target)
                 target = None
         except Exception:
             raise
+        logger.debug("on_click: final target to select=%s", target)
         self.select(target)
         if target:
             meta = self.s._items.get(target, {})
-            if meta.get("type") in ("rect", "image", "major"):
+            # Treat barcode like a rect for selection/dragging purposes because
+            # it is rendered as a rectangle on the canvas (coords() returns
+            # a bbox with 4 values). This prevents unpacking errors when
+            # attempting to read center coords.
+            if meta.get("type") in ("rect", "image", "major", "barcode"):
                 x1, y1, x2, y2 = self.s.canvas.bbox(target)
                 self._drag_off = (e.x - x1, e.y - y1)
                 # Use bbox size for both rects and images
                 self._drag_size = (x2 - x1, y2 - y1)
                 self._drag_kind = "rect"
+                logger.debug("on_click: prepared drag rect; drag_off=%s drag_size=%s", self._drag_off, self._drag_size)
             else:
                 cx, cy = self.s.canvas.coords(target)
                 self._drag_off = (e.x - cx, e.y - cy)
                 self._drag_kind = "text"
+                logger.debug("on_click: prepared drag text; drag_off=%s", self._drag_off)
         else:
             self._drag_kind = None
+            logger.debug("on_click: no target; drag_kind cleared")
 
     def on_drag(self, e):
         if not self._selected:
@@ -118,14 +202,15 @@ class CanvasSelection:
                 ang = 0.0
             if obj.get("type") == "image":
                 bw, bh = self.s._rotated_bounds_px(float(w), float(h), ang)
-            elif obj.get("type") == "rect":
-                # Use rotated bounding box for rects as well
+            elif obj.get("type") in ("rect", "barcode"):
+                # Use rotated bounding box for rects and barcodes
                 bw, bh = self.s._rotated_bounds_px(float(w), float(h), ang)
             else:
                 bw, bh = w, h
             # clamp to owning major bounds if present; otherwise inner jig bounds
-            ox = 0.0
-            oy = 0.0
+            # Use the same inner offset as used during creation so mm<->px stays consistent
+            ox = self.s._item_outline_half_px()
+            oy = self.s._item_outline_half_px()
             clamp_left = jx0 + ox
             clamp_top = jy0 + oy
             clamp_right = jx1 - ox
@@ -252,6 +337,21 @@ class CanvasSelection:
                 if meta.get("label_id"):
                     self.s.canvas.coords(meta["label_id"], new_left + w / 2, new_top + h / 2)
                     self.s._raise_all_labels()
+            elif meta.get("type") == "barcode":
+                # Barcode uses overlay polygon to show rotation, same as rect
+                logger.debug("on_drag: moving barcode cid=%s to left/top=(%s,%s) size=(%s,%s)", self._selected, new_left, new_top, bw, bh)
+                self.s.canvas.coords(self._selected, new_left, new_top, new_left + bw, new_top + bh)
+                try:
+                    self.s._update_rect_label_image(self._selected)
+                except Exception:
+                    logger.exception("Failed to update barcode label image during drag")
+                try:
+                    self.s._update_rect_overlay(self._selected, meta, new_left, new_top, bw, bh)
+                except Exception:
+                    logger.exception("Failed to update barcode overlay during drag")
+                if meta.get("label_id"):
+                    self.s.canvas.coords(meta["label_id"], new_left + bw / 2, new_top + bh / 2)
+                    self.s._raise_all_labels()
             elif meta.get("type") == "image":
                 # place using rotated bounds (visual top-left == new_left/new_top)
                 self.s.canvas.coords(self._selected, new_left, new_top)
@@ -269,6 +369,11 @@ class CanvasSelection:
                 meta["x_mm"], meta["y_mm"] = float(sx_mm), float(sy_mm)
             finally:
                 self._suppress_pos_trace = False
+            # Keep stacking updated so dragged item remains interactable above slots/majors
+            try:
+                self._reorder_by_z()
+            except Exception:
+                logger.exception("Failed to reapply z-order after drag")
             # If dragging a major, shift all owned non-slot items by the same delta
             if str(meta.get("type", "")) == "major":
                 try:
@@ -355,11 +460,11 @@ class CanvasSelection:
                                 break
                     except Exception:
                         logger.exception("Failed to delete selection border on deselect")
-                # Also allow right-clicking the rotated overlay polygon for rects
+                # Also allow right-clicking the rotated overlay polygon for rects/barcodes
                 if not target:
                     for rid, meta in self.s._items.items():
                         try:
-                            if int(meta.get("rot_id", 0) or 0) == cid and meta.get("type") == "rect":
+                            if int(meta.get("rot_id", 0) or 0) == cid and meta.get("type") in ("rect", "barcode"):
                                 target = rid
                                 break
                         except Exception:
@@ -737,11 +842,11 @@ class CanvasSelection:
                     self.s.canvas.tag_raise(cid)
                 except Exception:
                     logger.exception("Failed to raise canvas item while reordering by z")
-            # Ensure rect overlays (rotated polygon) are above their own base rects
+            # Ensure rect/barcode overlays (rotated polygon) are above their own base rects
             try:
                 for cid, meta in other_items:
                     try:
-                        if meta.get("type") == "rect":
+                        if meta.get("type") in ("rect", "barcode"):
                             rid = int(meta.get("rot_id", 0) or 0)
                             if rid:
                                 self.s.canvas.tag_raise(rid, cid)
@@ -751,7 +856,7 @@ class CanvasSelection:
                                     if lbl:
                                         self.s.canvas.tag_raise(lbl, rid)
                                 except Exception:
-                                    logger.exception("Failed to raise rect label above overlay")
+                                    logger.exception("Failed to raise rect/barcode label above overlay")
                     except Exception:
                         logger.exception("Failed while iterating overlays for z-order")
             except Exception:
@@ -764,7 +869,9 @@ class CanvasSelection:
                         self.s.canvas.tag_raise(meta.get("label_id"), cid)
             except Exception:
                 logger.exception("Failed to raise slot label above its slot")
-            # Ensure current selection border (images only) is visible; do not force rect overlays to top
+            # Ensure current selection indicator is visible:
+            # - images: raise temporary selection border
+            # Do not force rect/barcode overlays to top to preserve layout semantics
             if self._selected and self._selected in self.s._items:
                 meta = self.s._items.get(self._selected, {})
                 if meta.get("type") == "image":
@@ -1021,11 +1128,15 @@ class CanvasSelection:
 
     # Core selection API
     def select(self, cid: Optional[int]):
+        logger.debug("select: requested cid=%s (prev selected=%s)", cid, getattr(self, "_selected", None))
         if getattr(self, "_selected", None) and self._selected in self.s._items:
             prev_meta = self.s._items.get(self._selected, {})
-            if prev_meta.get("type") == "rect":
-                # For rects, keep base rect invisible and recolor overlay to normal outline
+            logger.debug("select: deselecting prev item=%s type=%s", self._selected, prev_meta.get("type"))
+            if prev_meta.get("type") in ("rect", "barcode"):
+                # For rects/barcodes, keep base rect invisible and recolor overlay to normal outline
                 outline_col = prev_meta.get("outline", "#d0d0d0")
+                if prev_meta.get("type") == "barcode":
+                    outline_col = "black" # Barcodes always have black outline
                 try:
                     rid = int(prev_meta.get("rot_id", 0) or 0)
                 except Exception:
@@ -1033,17 +1144,20 @@ class CanvasSelection:
                 if rid:
                     try:
                         self.s.canvas.itemconfig(rid, outline=outline_col, width=2)
+                        logger.debug("select: deselected rect/barcode overlay rid=%s outline reset to %s", rid, outline_col)
                     except Exception:
-                        logger.exception("Failed to delete selection border on deselect")
+                        logger.exception("Failed to reset overlay outline on deselect")
             elif prev_meta.get("type") == "text":
                 # restore default text color when deselected
                 self.s.canvas.itemconfig(self._selected, fill=prev_meta.get("default_fill", "white"))
+                logger.debug("select: deselected text; color reset to default")
             elif prev_meta.get("type") == "image":
                 # remove selection border if present
                 bid = prev_meta.get("border_id")
                 if bid:
                     try:
                         self.s.canvas.delete(bid)
+                        logger.debug("select: removed image selection border bid=%s", bid)
                     except Exception:
                         raise
                     prev_meta["border_id"] = None
@@ -1058,6 +1172,7 @@ class CanvasSelection:
                 self.s.sel_x.set("")
                 self.s.sel_y.set("")
                 self.s.sel_angle.set("")
+                logger.debug("select: cleared selection UI fields")
                 if hasattr(self.s, "sel_amazon_label"):
                     self.s.sel_amazon_label.set("")
                 if hasattr(self.s, "sel_is_options"):
@@ -1069,14 +1184,17 @@ class CanvasSelection:
                 self._suppress_size_trace = False
             # After deselection, keep global stacking consistent
             self._reorder_by_z()
+            logger.debug("select: deselect complete; z-order reapplied")
             # Also refresh screen controls so text menu hides on deselect
             if hasattr(self.s, "_refresh_text_controls"):
                 self.s._refresh_text_controls()
             return
         meta = self.s._items.get(cid, {})
+        logger.debug("select: selecting item=%s type=%s", cid, meta.get("type"))
         if meta.get("type") == "slot":
             # slots: use base rectangle selection outline
             self.s.canvas.itemconfig(cid, outline="#6ec8ff", width=3)
+            logger.debug("select: highlighted slot cid=%s", cid)
         elif meta.get("type") == "major":
             # major: highlight base rect like slots; no overlay
             self.s.canvas.itemconfig(cid, outline="#6ec8ff", width=3)
@@ -1085,16 +1203,18 @@ class CanvasSelection:
                 self.s.sel_w.set(str(float(meta.get("w_mm", 0.0))))
                 self.s.sel_h.set(str(float(meta.get("h_mm", 0.0))))
                 self.s.sel_angle.set("0")
+                logger.debug("select: set major size w_mm=%s h_mm=%s", meta.get("w_mm"), meta.get("h_mm"))
             finally:
                 self._suppress_size_trace = False
             try:
                 self._suppress_pos_trace = True
                 self.s.sel_x.set(str(float(meta.get("x_mm", 0.0))))
                 self.s.sel_y.set(str(float(meta.get("y_mm", 0.0))))
+                logger.debug("select: set major position x_mm=%s y_mm=%s", meta.get("x_mm"), meta.get("y_mm"))
             finally:
                 self._suppress_pos_trace = False
-        elif meta.get("type") == "rect":
-            # rects: keep base invisible; use overlay polygon as selection border
+        elif meta.get("type") in ("rect", "barcode"):
+            # Both rect and barcode use overlay polygon for visual rotation
             try:
                 rid = int(meta.get("rot_id", 0) or 0)
             except Exception:
@@ -1112,6 +1232,7 @@ class CanvasSelection:
                         lbl = meta.get("label_id")
                         if lbl:
                             self.s.canvas.tag_raise(lbl, rid)
+                            logger.debug("select: raised label %s above overlay %s", lbl, rid)
                     except Exception:
                         raise
                 except Exception:
@@ -1119,13 +1240,14 @@ class CanvasSelection:
             # set size fields without triggering live resize
             try:
                 self._suppress_size_trace = True
-                self.s.sel_w.set(str(float(meta["w_mm"] or 0)))
-                self.s.sel_h.set(str(float(meta["h_mm"] or 0)))
+                self.s.sel_w.set(str(float(meta.get("w_mm", 0) or 0)))
+                self.s.sel_h.set(str(float(meta.get("h_mm", 0) or 0)))
                 # angle (if available in UI)
                 try:
                     self.s.sel_angle.set(str(abs(int(round(float(meta.get("angle", 0.0) or 0.0))))))
                 except Exception:
                     self.s.sel_angle.set("0")
+                logger.debug("select: set rect/barcode size w_mm=%s h_mm=%s angle=%s", meta.get("w_mm"), meta.get("h_mm"), meta.get("angle"))
             finally:
                 self._suppress_size_trace = False
             # set position from stored mm without triggering move
@@ -1133,6 +1255,7 @@ class CanvasSelection:
                 self._suppress_pos_trace = True
                 self.s.sel_x.set(str(float(meta.get("x_mm", 0.0))))
                 self.s.sel_y.set(str(float(meta.get("y_mm", 0.0))))
+                logger.debug("select: set rect/barcode position x_mm=%s y_mm=%s", meta.get("x_mm"), meta.get("y_mm"))
             finally:
                 self._suppress_pos_trace = False
         elif meta.get("type") == "image":
@@ -1141,6 +1264,7 @@ class CanvasSelection:
                 x1, y1, x2, y2 = self.s.canvas.bbox(cid)
                 bid = self.s.canvas.create_rectangle(x1, y1, x2, y2, outline="#6ec8ff", width=3)
                 meta["border_id"] = bid
+                logger.debug("select: created image selection border bid=%s around bbox=%s", bid, (x1, y1, x2, y2))
             except Exception:
                 logger.exception("Failed to update rect overlay after resize")
             try:
@@ -1151,17 +1275,20 @@ class CanvasSelection:
                     self.s.sel_angle.set(str(abs(int(round(float(meta.get("angle", 0.0) or 0.0))))))
                 except Exception:
                     self.s.sel_angle.set("0")
+                logger.debug("select: set image size w_mm=%s h_mm=%s angle=%s", meta.get("w_mm"), meta.get("h_mm"), meta.get("angle"))
             finally:
                 self._suppress_size_trace = False
             try:
                 self._suppress_pos_trace = True
                 self.s.sel_x.set(str(float(meta.get("x_mm", 0.0))))
                 self.s.sel_y.set(str(float(meta.get("y_mm", 0.0))))
+                logger.debug("select: set image position x_mm=%s y_mm=%s", meta.get("x_mm"), meta.get("y_mm"))
             finally:
                 self._suppress_pos_trace = False
         elif meta.get("type") == "text":
             # highlight selected text in blue
             self.s.canvas.itemconfig(cid, fill="#6ec8ff")
+            logger.debug("select: highlighted text item=%s", cid)
 
         # Sync amazon label/flags for any selectable type (after branch-specific UI updates)
         # Suppress flag traces while populating UI
@@ -1180,6 +1307,7 @@ class CanvasSelection:
 
         # Re-apply stacking so overlays/labels stay above backgrounds and slots
         self._reorder_by_z()
+        logger.debug("select: applied z-order after selection of cid=%s", cid)
         # Notify screen to refresh text controls (if available)
         if hasattr(self.s, "_refresh_text_controls"):
             self.s._refresh_text_controls()
@@ -1188,7 +1316,7 @@ class CanvasSelection:
         if not self._selected:
             return
         meta = self.s._items.get(self._selected, {})
-        if meta.get("type") not in ("rect", "image", "slot", "major"):
+        if meta.get("type") not in ("rect", "image", "slot", "major", "barcode"):
             return
         # Treat empty inputs as 0mm without overwriting the entry text
         raw_w = (self.s.sel_w.get() or "").strip()
@@ -1206,13 +1334,13 @@ class CanvasSelection:
         cy = (y1 + y2) / 2
         w = int(w_mm * MM_TO_PX * self.s._zoom)
         h = int(h_mm * MM_TO_PX * self.s._zoom)
-        if meta.get("type") in ("rect", "slot", "major"):
-            # account for rotation for rects using rotated bounds like images
+        if meta.get("type") in ("rect", "slot", "major", "barcode"):
+            # account for rotation for rects and barcodes using rotated bounds like images
             try:
                 ang = float(meta.get("angle", 0.0) or 0.0)
             except Exception:
                 ang = 0.0
-            if meta.get("type") == "rect":
+            if meta.get("type") in ("rect", "barcode"):
                 rw, rh = self.s._rotated_bounds_px(float(w), float(h), float(ang))
             else:
                 rw, rh = w, h
@@ -1220,10 +1348,15 @@ class CanvasSelection:
             if meta.get("label_id"):
                 self.s.canvas.coords(meta["label_id"], cx, cy)
                 self.s._raise_all_labels()
-            # If overlay polygon exists for rotated rects, keep it in sync
-            if meta.get("type") == "rect":
+            # If overlay polygon exists for rotated rects/barcodes, keep it in sync
+            if meta.get("type") in ("rect", "barcode"):
                 try:
                     self.s._update_rect_overlay(self._selected, meta, cx - rw / 2, cy - rh / 2, rw, rh)
+                    # Also ensure label is raised above new overlay
+                    lbl = meta.get("label_id")
+                    rid = meta.get("rot_id")
+                    if lbl and rid:
+                        self.s.canvas.tag_raise(lbl, rid)
                 except Exception:
                     raise
         elif meta.get("type") == "image":
@@ -1263,7 +1396,7 @@ class CanvasSelection:
         if not self._selected:
             return
         meta = self.s._items.get(self._selected, {})
-        if meta.get("type") not in ("rect", "image", "slot", "major"):
+        if meta.get("type") not in ("rect", "image", "slot", "major", "barcode"):
             return
         raw_w = (self.s.sel_w.get() or "").strip()
         raw_h = (self.s.sel_h.get() or "").strip()
@@ -1277,15 +1410,15 @@ class CanvasSelection:
         x1, y1, x2, y2 = self.s.canvas.bbox(self._selected)
         cx = (x1 + x2) / 2
         cy = (y1 + y2) / 2
-        if meta.get("type") in ("rect", "slot"):
+        if meta.get("type") in ("rect", "slot", "barcode"):
             w = w_mm * MM_TO_PX * self.s._zoom
             h = h_mm * MM_TO_PX * self.s._zoom
-            # Respect 90/270 rotation for rect display bbox
+            # Respect 90/270 rotation for rect and barcode display bbox
             try:
                 ang = float(meta.get("angle", 0.0) or 0.0)
             except Exception:
                 ang = 0.0
-            rw, rh = (h, w) if (meta.get("type") == "rect" and int(abs(ang)) % 180 == 90) else (w, h)
+            rw, rh = (h, w) if (meta.get("type") in ("rect", "barcode") and int(abs(ang)) % 180 == 90) else (w, h)
             self.s.canvas.coords(self._selected, cx - rw / 2, cy - rh / 2, cx + rw / 2, cy + rh / 2)
             if meta.get("type") == "rect":
                 try:
@@ -1295,7 +1428,7 @@ class CanvasSelection:
             elif meta.get("label_id"):
                 self.s.canvas.coords(meta["label_id"], cx, cy)
                 self.s._raise_all_labels()
-            # Keep rotated overlay polygon in sync for rects
+            # Keep rotated overlay polygon in sync for rects only
             if meta.get("type") == "rect":
                 try:
                     self.s._update_rect_overlay(self._selected, meta, cx - rw / 2, cy - rh / 2, rw, rh)
@@ -1341,7 +1474,7 @@ class CanvasSelection:
         if not self._selected:
             return
         meta = self.s._items.get(self._selected, {})
-        if meta.get("type") not in ("rect", "image", "slot"):
+        if meta.get("type") not in ("rect", "image", "slot", "barcode"):
             return
         try:
             x_mm = self.s._snap_mm(self.s.sel_x.get())
@@ -1351,10 +1484,9 @@ class CanvasSelection:
         w_mm = float(meta.get("w_mm", 0) or 0)
         h_mm = float(meta.get("h_mm", 0) or 0)
         jx0, jy0, jx1, jy1 = self.s._jig_inner_rect_px()
-        ox = 0.0
-        oy = 0.0
-        ox = 0.0
-        oy = 0.0
+        # Use the same inner offset as during creation/drag
+        ox = self.s._item_outline_half_px()
+        oy = self.s._item_outline_half_px()
         # desired top-left in px from typed mm
         desired_left = jx0 + ox + float(x_mm) * MM_TO_PX * self.s._zoom
         desired_top = jy0 + oy + float(y_mm) * MM_TO_PX * self.s._zoom
@@ -1420,6 +1552,21 @@ class CanvasSelection:
                 self.s._update_rect_overlay(self._selected, meta, new_left, new_top, rw, rh)
             except Exception:
                 raise
+        elif meta.get("type") == "barcode":
+            # Use rotated bounds and overlay for barcode (same as rect)
+            try:
+                ang = float(meta.get("angle", 0.0) or 0.0)
+            except Exception:
+                ang = 0.0
+            rw, rh = self.s._rotated_bounds_px(float(w), float(h), float(ang))
+            self.s.canvas.coords(self._selected, new_left, new_top, new_left + rw, new_top + rh)
+            try:
+                self.s._update_rect_overlay(self._selected, meta, new_left, new_top, rw, rh)
+            except Exception:
+                pass
+            if meta.get("label_id"):
+                self.s.canvas.coords(meta["label_id"], new_left + rw / 2, new_top + rh / 2)
+                self.s._raise_all_labels()
         elif meta.get("type") in ("slot", "major"):
             self.s.canvas.coords(self._selected, new_left, new_top, new_left + w, new_top + h)
             if meta.get("label_id"):
@@ -1438,13 +1585,12 @@ class CanvasSelection:
         self.s._update_scrollregion()
 
 
-
     def on_angle_change(self, *_):
-        # Apply angle changes to current selection (rect or image)
+        # Apply angle changes to current selection (rect, barcode, or image)
         if not self._selected:
             return
         meta = self.s._items.get(self._selected, {})
-        if meta.get("type") not in ("rect", "image"):
+        if meta.get("type") not in ("rect", "image", "barcode"):
             return
         # Parse angle
         raw_a = (self.s.sel_angle.get() or "").strip()
@@ -1452,8 +1598,8 @@ class CanvasSelection:
             angle = 0.0 if raw_a == "" else float(raw_a)
         except ValueError:
             return
-        # Invert direction for text blocks (rect) when rotating via entry
-        if str(meta.get("type", "")) == "rect":
+        # Invert direction for text blocks (rect) and barcodes when rotating via entry
+        if str(meta.get("type", "")) in ("rect", "barcode"):
             if float(angle) < 0:
                 meta["angle"] = float(angle)
             else:
@@ -1468,20 +1614,29 @@ class CanvasSelection:
         except Exception:
             logger.exception("Failed to get current bbox during angle change")
             return
-        if meta.get("type") == "rect":
+        if meta.get("type") in ("rect", "barcode"):
             w = float(meta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom
             h = float(meta.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom
-            if int(abs(angle)) % 180 == 90:
-                w, h = h, w
-            self.s.canvas.coords(self._selected, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+            
+            # Use rotated bounds for the base rectangle bounding box
+            bw, bh = self.s._rotated_bounds_px(float(w), float(h), float(angle))
+            self.s.canvas.coords(self._selected, cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2)
+            
+            # Update label image for rect/barcode
             try:
                 self.s._update_rect_label_image(self._selected)
             except Exception:
-                raise
+                pass
+            # Update overlay polygon for both rect and barcode
             try:
-                self.s._update_rect_overlay(self._selected, meta, cx - w / 2, cy - h / 2, w, h)
+                self.s._update_rect_overlay(self._selected, meta, cx - bw / 2, cy - bh / 2, bw, bh)
+                # Also ensure label is raised above new overlay
+                lbl = meta.get("label_id")
+                rid = meta.get("rot_id")
+                if lbl and rid:
+                    self.s.canvas.tag_raise(lbl, rid)
             except Exception:
-                raise
+                pass
         else:
             w_px = int(float(meta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom)
             h_px = int(float(meta.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom)
@@ -1504,6 +1659,11 @@ class CanvasSelection:
             jx0, jy0, _jx1, _jy1 = self.s._jig_inner_rect_px()
         except Exception:
             jx0, jy0 = 0.0, 0.0
+        # Use the same inner offset as during creation/drag to keep mm consistent
+        try:
+            ox = self.s._item_outline_half_px(); oy = self.s._item_outline_half_px()
+        except Exception:
+            ox, oy = 0.0, 0.0
         try:
             ang = float(meta.get("angle", 0.0) or 0.0)
         except Exception:
@@ -1531,8 +1691,8 @@ class CanvasSelection:
                 cx_now, cy_now = 0.0, 0.0
         tlx_f = float(cx_now) - float(bw_f) / 2.0
         tly_f = float(cy_now) - float(bh_f) / 2.0
-        x_mm_new = self.s._snap_mm((float(tlx_f) - float(jx0)) / (MM_TO_PX * max(self.s._zoom, 1e-6)))
-        y_mm_new = self.s._snap_mm((float(tly_f) - float(jy0)) / (MM_TO_PX * max(self.s._zoom, 1e-6)))
+        x_mm_new = self.s._snap_mm((float(tlx_f) - (float(jx0) + float(ox))) / (MM_TO_PX * max(self.s._zoom, 1e-6)))
+        y_mm_new = self.s._snap_mm((float(tly_f) - (float(jy0) + float(oy))) / (MM_TO_PX * max(self.s._zoom, 1e-6)))
         try:
             self._suppress_pos_trace = True
             if hasattr(self.s, "sel_x"):

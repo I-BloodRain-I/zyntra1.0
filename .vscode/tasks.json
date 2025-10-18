@@ -1,0 +1,18 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run main.py",
+			"type": "shell",
+			"command": "python main.py",
+			"args": []
+		},
+		{
+			"label": "Run main.py",
+			"type": "shell",
+			"command": "python main.py",
+			"args": [],
+			"isBackground": false
+		}
+	]
+}

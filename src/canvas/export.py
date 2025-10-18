@@ -18,13 +18,14 @@ from PIL import Image, ImageDraw, ImageFont
 from pilmoji import Pilmoji
 
 from src.core import MM_TO_PX
-from src.core.state import FONTS_PATH, PRODUCTS_PATH
+from src.core.state import FONTS_PATH, PRODUCTS_PATH, state
 from src.utils import svg_to_png
 
 TWEMOJI_PNG_DIR: Optional[str] = None
 TWEMOJI_CDN = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72"
 
 logger = logging.getLogger(__name__)
+
 
 class PdfExporter:
     """Export a scene into a single-page PDF at requested DPI."""
@@ -39,7 +40,10 @@ class PdfExporter:
         jig_w_mm: float, 
         jig_h_mm: float, 
         only_jig: bool = False, 
-        dpi: int = 300
+        dpi: int = 300,
+        barcode_text = "text1",
+        reference_text = "text2"
+
     ) -> None:
         """Render a scene (slots + items) into a single-page PDF (jig == page)."""
         try:
@@ -398,6 +402,7 @@ class PdfExporter:
 
         def _fit_font_to_block(text: str, family: str, initial_size_px: int, max_w_px: int, max_h_px: int, angle_deg: float):
             """Return a truetype font scaled down so rotated text fits within max_w_px x max_h_px."""
+            import math
             size_px = max(1, int(initial_size_px))
             font = _truetype_for_family(family, size_px)
             rw, rh = _measure_rotated_text_size_px(text, font, angle_deg)
@@ -469,6 +474,85 @@ class PdfExporter:
         items = [it for _, it in items_sorted]
 
         if not only_jig:
+            # Determine if we should draw borders around images based on pattern JSON
+            def _parse_cmyk_to_rgba(cmyk_str: str, default=(0, 0, 0, 255)) -> tuple[int, int, int, int]:
+                try:
+                    parts = [p.strip() for p in str(cmyk_str or "").split(",")]
+                    # pad/truncate to 4
+                    if len(parts) < 4:
+                        parts += ["0"] * (4 - len(parts))
+                    elif len(parts) > 4:
+                        parts = parts[:4]
+                    c, m, y, k = [float(p or 0) for p in parts]
+                    if c == 0 and m == 100 and y == 0 and k == 0:
+                        return (236, 0, 140, 255) 
+                    elif c == 75 and m == 0 and y == 75 and k == 0:
+                        return (90, 178, 121, 255) 
+                    # auto-detect scale: 0..1, 0..100, or 0..255
+                    vals = [c, m, y, k]
+                    maxv = max(vals)
+                    if maxv <= 1.0:
+                        scale = 1.0
+                    elif maxv <= 100.0:
+                        scale = 100.0
+                    else:
+                        scale = 255.0
+                    c = max(0.0, min(1.0, c / scale))
+                    m = max(0.0, min(1.0, m / scale))
+                    y = max(0.0, min(1.0, y / scale))
+                    k = max(0.0, min(1.0, k / scale))
+                    r = int(round(255 * (1 - c) * (1 - k)))
+                    g = int(round(255 * (1 - m) * (1 - k)))
+                    b = int(round(255 * (1 - y) * (1 - k)))
+                    return (max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b)), 255)
+                except Exception:
+                    return default
+
+            def _should_border_and_color(current_items: list[dict]) -> tuple[bool, tuple[int, int, int, int]]:
+                # Try to locate current pattern file by sku_name or saved_product
+                import json as _json
+                name = ""
+                try:
+                    if getattr(state, "sku_name", ""):
+                        name = str(state.sku_name)
+                    elif getattr(state, "saved_product", ""):
+                        name = str(state.saved_product)
+                except Exception:
+                    name = ""
+                border = False
+                rgba = (0, 0, 0, 255)
+                if name:
+                    p = PRODUCTS_PATH / f"{name}.json"
+                    if p.exists():
+                        data = _json.loads(p.read_text(encoding="utf-8"))
+                        if isinstance(data, dict):
+                            border = ("FrontsideBarcode" in data) or ("BacksideBarcode" in data)
+                            try:
+                                cmyk = (((data.get("Scene") or {}).get("object_cmyk")) or "0,0,0,0")
+                            except Exception:
+                                cmyk = "0,0,0,0"
+                            rgba = _parse_cmyk_to_rgba(cmyk, default=(0, 0, 0, 255))
+                # If file not found or parsing failed, check current scene store
+                if not border:
+                    st = getattr(self.s, "_scene_store", {}) or {}
+                    fr = st.get("front") or []
+                    bk = st.get("back") or []
+                    if any((isinstance(it, dict) and str(it.get("type", "")) == "barcode") for it in list(fr) + list(bk)):
+                        border = True
+                    # Color fallback from UI widget if present
+                    if hasattr(self.s, "obj_cmyk") and callable(getattr(self.s.obj_cmyk, "get", None)):
+                        rgba = _parse_cmyk_to_rgba(str(self.s.obj_cmyk.get() or "0,0,0,0"))
+                # Lastly, directly inspect current items being rendered
+                if not border:
+                    if any((isinstance(it, dict) and str(it.get("type", "")) == "barcode") for it in list(current_items or [])):
+                        border = True
+                
+                logger.debug(f"Border detection: draw_borders={border}, rgba={rgba}")
+                return border, rgba
+
+            draw_borders, border_rgba = _should_border_and_color(items)
+            logger.info(f"Will draw kiss-cut borders: {draw_borders}")
+
             for it in items:
                 typ = str(it.get("type", ""))
 
@@ -606,6 +690,78 @@ class PdfExporter:
                             # Фолбэк для старых версий: paste по альфа-каналу
                             img.paste(im_resized, (int(left_px), int(top_px)), im_resized.split()[-1])
 
+                        # Optional rounded border around image if pattern has barcode keys (internal inset using slot bounds)
+                        # Store border information for spot color border drawing in PDF
+                        if draw_borders:
+                            try:
+                                # Desired inset from slot edge towards center
+                                desired_inset_px = max(1, mm_to_px(1.0))  # 1mm inside the slot
+                                stroke_px = max(1, int(round(px_per_mm * 0.25)))  # ~0.25mm stroke width
+                                radius_px = max(1, int(round(px_per_mm * 1.5)))   # ~1.5mm corner radius
+
+                                # Use slot_* coordinates if provided; fallback to image coords
+                                try:
+                                    slot_x_mm = float(it["slot_x_mm"])
+                                except Exception:
+                                    print(it)
+                                    continue
+                                try:
+                                    slot_y_mm = float(it["slot_y_mm"])
+                                except Exception:
+                                    continue
+                                try:
+                                    slot_w_mm = float(it["slot_w_mm"])
+                                except Exception:
+                                    continue
+                                try:
+                                    slot_h_mm = float(it["slot_h_mm"])
+                                except Exception:
+                                    continue
+                                
+                                slot_left_px = mm_to_px(slot_x_mm)
+                                slot_top_px  = mm_to_px(slot_y_mm)
+                                sw_px = max(1, int(round(slot_w_mm * px_per_mm)))
+                                sh_px = max(1, int(round(slot_h_mm * px_per_mm)))
+
+                                # Ensure inset leaves room for stroke on all sides
+                                max_inset_allowed = max(1, min((sw_px - 2) // 2, (sh_px - 2) // 2))
+                                inset = min(desired_inset_px, max_inset_allowed)
+
+                                # Clamp radius to fit available interior
+                                avail_w = max(1, sw_px - 2 * inset)
+                                avail_h = max(1, sh_px - 2 * inset)
+                                rr = min(radius_px, avail_w // 2, avail_h // 2)
+
+                                border_layer = _PIL_Image.new("RGBA", (sw_px, sh_px), (0, 0, 0, 0))
+                                _bd = _PIL_Draw.Draw(border_layer, "RGBA")
+                                half = stroke_px / 2.0
+                                # Internal rect path: inset + half-stroke to keep stroke fully inside
+                                x0 = inset + half
+                                y0 = inset + half
+                                x1 = sw_px - 1 - inset - half
+                                y1 = sh_px - 1 - inset - half
+                                if x1 <= x0 or y1 <= y0:
+                                    # Fallback: no inset
+                                    x0 = half; y0 = half; x1 = sw_px - 1 - half; y1 = sh_px - 1 - half
+                                _bd.rounded_rectangle(
+                                    [(x0, y0), (x1, y1)],
+                                    radius=max(1, int(rr)),
+                                    outline=border_rgba,
+                                    width=stroke_px,
+                                )
+                                # Paste border on top positioned by slot coords
+                                img.paste(border_layer, (int(slot_left_px), int(slot_top_px)), border_layer.split()[-1])
+                                
+                                # Also store border information for spot color version in combined PDF
+                                it["_border_needed"] = True
+                                it["_border_slot_x_mm"] = slot_x_mm
+                                it["_border_slot_y_mm"] = slot_y_mm
+                                it["_border_slot_w_mm"] = slot_w_mm
+                                it["_border_slot_h_mm"] = slot_h_mm
+                                it["_border_color_rgba"] = border_rgba
+                            except Exception:
+                                logger.exception("Failed to draw rounded border for image")
+
                     except Exception as e:
                         logger.exception(f"Failed to render image in PDF: {e}")
 
@@ -671,6 +827,145 @@ class PdfExporter:
                         cy = jy0 + mm_to_px(it.get("y_mm", 0.0))
                         _draw_rotated_text_center(txt, int(cx), int(cy), fnt, col, ang)
 
+                elif typ == "barcode":
+                    # Render Code128 barcode to PDF with rotation support
+                    try:
+                        import barcode
+                        from barcode.writer import ImageWriter
+                        
+                        # Use barcode_text parameter instead of label field
+                        bc_text = str(barcode_text).strip()
+                        if not bc_text:
+                            bc_text = "TEST"
+                        
+                        # Generate Code128 barcode WITHOUT built-in text
+                        code128 = barcode.get_barcode_class('code128')
+                        writer = ImageWriter()
+                        barcode_instance = code128(bc_text, writer=writer)
+                        
+                        buffer = BytesIO()
+                        # Disable text rendering in barcode library by passing write_text=False
+                        barcode_instance.write(buffer, options={'write_text': False})
+                        buffer.seek(0)
+                        
+                        barcode_img = _PIL_Image.open(buffer).convert("RGBA")
+                        
+                        # Make white background transparent
+                        data__ = np.array(barcode_img)
+                        r, g, b, a = data__[:,:,0], data__[:,:,1], data__[:,:,2], data__[:,:,3]
+                        # Set alpha to 0 where pixels are white (or near-white)
+                        white_mask = (r > 250) & (g > 250) & (b > 250)
+                        data__[:,:,3] = np.where(white_mask, 0, 255)
+                        barcode_img = _PIL_Image.fromarray(data__, mode="RGBA")
+                        
+                        # Get barcode dimensions, position, and rotation
+                        w_mm = float(it.get("w_mm", 80.0))
+                        h_mm = float(it.get("h_mm", 30.0))
+                        x_mm = float(it.get("x_mm", 0.0))
+                        y_mm = float(it.get("y_mm", 0.0))
+                        try:
+                            angle = float(it.get("angle", 0.0) or 0.0)
+                        except Exception:
+                            angle = 0.0
+                        
+                        # Convert to pixels
+                        w_px = max(1, int(round(w_mm * px_per_mm)))
+                        h_px = max(1, int(round(h_mm * px_per_mm)))
+                        
+                        # Calculate space allocation: 70% for barcode, 15% for barcode text, 15% for reference text
+                        barcode_h_px = int(h_px * 0.7)
+                        barcode_text_h_px = int(h_px * 0.15)
+                        reference_text_h_px = h_px - barcode_h_px - barcode_text_h_px
+                        
+                        # Small padding between items (in pixels)
+                        padding = max(2, int(h_px * 0.01))
+                        
+                        # Resize barcode to allocated space (barcode only, no text)
+                        barcode_resized = barcode_img.resize((w_px, barcode_h_px), _PIL_Image.LANCZOS)
+                        
+                        # Create combined image with barcode, barcode text, and reference text
+                        combined_img = _PIL_Image.new("RGBA", (w_px, h_px), (0, 0, 0, 0))
+                        
+                        # Paste barcode at the top
+                        combined_img.paste(barcode_resized, (0, 0), barcode_resized.split()[-1])
+                        
+                        text_draw = _PIL_Draw.Draw(combined_img, "RGBA")
+                        
+                        # Add barcode text below barcode with minimal padding
+                        if bc_text and barcode_text_h_px > 0:
+                            # Calculate font size to fit the barcode text space
+                            bc_text_font_size_px = max(8, int(barcode_text_h_px * 0.8))
+                            try:
+                                bc_text_font = _truetype_for_family("Myriad Pro", bc_text_font_size_px)
+                            except Exception:
+                                bc_text_font = _PIL_Font.load_default()
+                            
+                            # Draw barcode text centered below barcode with minimal top padding
+                            try:
+                                bbox = text_draw.textbbox((0, 0), bc_text, font=bc_text_font)
+                                text_w = bbox[2] - bbox[0]
+                                text_h = bbox[3] - bbox[1]
+                            except Exception:
+                                text_w, text_h = 0, 0
+                            
+                            text_x = (w_px - text_w) // 2
+                            text_y = barcode_h_px + padding
+                            text_draw.text((text_x, text_y), bc_text, font=bc_text_font, fill=(0, 0, 0, 255))
+                        
+                        # Add reference text below barcode text with minimal padding
+                        ref_text = str(reference_text).strip()
+                        if ref_text and reference_text_h_px > 0:
+                            # Calculate font size to fit the reference text space
+                            ref_text_font_size_px = max(8, int(reference_text_h_px * 0.8))
+                            try:
+                                ref_text_font = _truetype_for_family("Myriad Pro", ref_text_font_size_px)
+                            except Exception:
+                                ref_text_font = _PIL_Font.load_default()
+                            
+                            # Draw reference text centered at bottom with minimal top padding
+                            try:
+                                bbox = text_draw.textbbox((0, 0), ref_text, font=ref_text_font)
+                                text_w = bbox[2] - bbox[0]
+                                text_h = bbox[3] - bbox[1]
+                            except Exception:
+                                text_w, text_h = 0, 0
+                            
+                            text_x = (w_px - text_w) // 2
+                            text_y = barcode_h_px + barcode_text_h_px + padding
+                            text_draw.text((text_x, text_y), ref_text, font=ref_text_font, fill=(0, 0, 0, 255))
+                        
+                        # Now use combined image for rotation
+                        barcode_resized = combined_img
+                        
+                        # Apply rotation if any (same direction as rect labels)
+                        # For rect/barcode, stored angle is already signed to match desired clockwise rotation
+                        if abs(angle) > 1e-6:
+                            try:
+                                barcode_resized = barcode_resized.rotate(angle, expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0, 0, 0, 0))
+                            except Exception:
+                                barcode_resized = barcode_resized.rotate(angle, expand=True)
+                        
+                        # Compute rotated bounds for placement
+                        import math
+                        a = math.radians(abs(angle) % 360.0)
+                        ca = abs(math.cos(a))
+                        sa = abs(math.sin(a))
+                        bw = int((w_px * ca) + (h_px * sa))
+                        bh = int((w_px * sa) + (h_px * ca))
+                        
+                        # Position at top-left of rotated bounds (consistent with rect behavior)
+                        left_px = mm_to_px(x_mm)
+                        top_px = mm_to_px(y_mm)
+                        
+                        # Composite barcode onto output image
+                        try:
+                            img.alpha_composite(barcode_resized, (int(left_px), int(top_px)))
+                        except Exception:
+                            img.paste(barcode_resized, (int(left_px), int(top_px)), barcode_resized.split()[-1])
+                        
+                    except Exception as e:
+                        logger.exception(f"Failed to render barcode in PDF: {e}")
+
         # out_rgb = _PIL_Image.new("RGB", (page_w_px, page_h_px), "white")
         out_rgb = _PIL_Image.new("RGBA", (page_w_px, page_h_px), (255, 255, 255, 0))
         alpha = img.split()[-1]
@@ -704,6 +999,12 @@ class PdfExporter:
         # Завершаем PDF
         surface.finish()
 
+        # Add kiss-cut spot color borders for images if needed
+        try:
+            self._add_kiss_cut_borders_to_pdf(path, items, jig_w_mm, jig_h_mm, dpi)
+        except Exception as e:
+            logger.exception(f"Failed to add kiss-cut borders: {e}")
+
         # Expose last rendered raster (for PNG/JPG export)
         try:
             # Keep a copy so later modifications do not affect stored reference
@@ -713,6 +1014,217 @@ class PdfExporter:
             # Non-fatal: auxiliary export may be unavailable
             self._last_render_image = None
             self._last_render_dpi = None
+
+    def _add_kiss_cut_borders_to_pdf(
+        self,
+        pdf_path: str,
+        items: list[dict],
+        jig_w_mm: float,
+        jig_h_mm: float,
+        dpi: int
+    ) -> None:
+        """Add kiss-cut spot color borders around images that need them."""
+        try:
+            import pikepdf
+        except ImportError:
+            logger.warning("pikepdf not available, skipping kiss-cut borders")
+            return
+
+        # Collect items that need borders
+        border_items = [it for it in items if it.get("_border_needed", False)]
+        if not border_items:
+            logger.debug("No items need kiss-cut borders")
+            return
+
+        logger.info(f"Adding kiss-cut borders to {len(border_items)} images in {pdf_path}")
+
+        # Open the PDF
+        pdf = pikepdf.Pdf.open(pdf_path, allow_overwriting_input=True)
+
+        if len(pdf.pages) == 0:
+            logger.warning("PDF has no pages")
+            pdf.close()
+            return
+
+        page = pdf.pages[0]
+
+        # Get CMYK from first border item (all should have same color)
+        first_item = border_items[0]
+        border_rgba = first_item.get("_border_color_rgba", (0, 0, 0, 255))
+
+        # Convert RGBA to CMYK (reverse of the CMYK->RGBA conversion)
+        def rgba_to_cmyk_normalized(rgba: tuple) -> tuple:
+            """Convert RGBA (0-255) to normalized CMYK (0-1)."""
+            r, g, b, a = [x / 255.0 for x in rgba]
+            # Simple RGB to CMYK conversion
+            k = 1 - max(r, g, b)
+            if k < 1.0:
+                c = (1 - r - k) / (1 - k)
+                m = (1 - g - k) / (1 - k)
+                y = (1 - b - k) / (1 - k)
+            else:
+                c = m = y = 0.0
+            return (c, m, y, k)
+
+        c, m, y, k = rgba_to_cmyk_normalized(border_rgba)
+        logger.info(f"Using CMYK for kiss-cut: C={c:.2f}, M={m:.2f}, Y={y:.2f}, K={k:.2f}")
+
+        # Create spot color "cutcontourkiss"
+        spot_color_name = "cutcontourkiss"
+
+        # Tint transform function (PostScript Type 4)
+        tint_function_code = (
+            f"{{ "
+            f"dup dup dup "
+            f"{c} mul 4 1 roll "
+            f"{m} mul 3 1 roll "
+            f"{y} mul exch "
+            f"{k} mul "
+            f"}}"
+        ).encode('latin-1')
+
+        tint_transform = pikepdf.Stream(pdf, tint_function_code)
+        tint_transform.FunctionType = 4
+        tint_transform.Domain = [0, 1]
+        tint_transform.Range = [0, 1, 0, 1, 0, 1, 0, 1]
+
+        separation_colorspace = pikepdf.Array([
+            pikepdf.Name.Separation,
+            pikepdf.Name(spot_color_name),
+            pikepdf.Name.DeviceCMYK,
+            tint_transform
+        ])
+
+        # Add ColorSpace to page resources
+        if pikepdf.Name.Resources not in page:
+            page.Resources = pikepdf.Dictionary()
+
+        if pikepdf.Name.ColorSpace not in page.Resources:
+            page.Resources.ColorSpace = pikepdf.Dictionary()
+
+        page.Resources.ColorSpace.KissColor = separation_colorspace
+
+        # Build content stream for rounded rectangles
+        mm_to_pt = 72.0 / 25.4
+        content_lines = []
+
+        # Border parameters (1mm inset, 0.25mm stroke, 1.5mm radius)
+        inset_mm = 1.0
+        stroke_mm = 0.25
+        radius_mm = 1.5
+
+        inset_pt = inset_mm * mm_to_pt
+        stroke_pt = stroke_mm * mm_to_pt
+        radius_pt = radius_mm * mm_to_pt
+
+        for item in border_items:
+            try:
+                slot_x_mm = item["_border_slot_x_mm"]
+                slot_y_mm = item["_border_slot_y_mm"]
+                slot_w_mm = item["_border_slot_w_mm"]
+                slot_h_mm = item["_border_slot_h_mm"]
+
+                # Convert to points
+                x_pt = slot_x_mm * mm_to_pt
+                y_pt = slot_y_mm * mm_to_pt
+                w_pt = slot_w_mm * mm_to_pt
+                h_pt = slot_h_mm * mm_to_pt
+
+                # Calculate inset rectangle
+                x0 = x_pt + inset_pt
+                y0 = y_pt + inset_pt
+                x1 = x_pt + w_pt - inset_pt
+                y1 = y_pt + h_pt - inset_pt
+
+                # Ensure valid dimensions
+                if x1 <= x0 or y1 <= y0:
+                    continue
+
+                # Draw rounded rectangle path using Bézier curves for corners
+                # PDF coordinate system: origin at bottom-left
+                r = min(radius_pt, (x1 - x0) / 2, (y1 - y0) / 2)
+                
+                # Magic number for circular arc approximation with cubic Bézier
+                kappa = 0.5522847498  # (4/3) * tan(π/8)
+
+                content_lines.append(b"q")  # Save state
+                content_lines.append(b"/KissColor CS")  # Set stroke color space
+                content_lines.append(b"1 SCN")  # Set stroke color (100% tint)
+                content_lines.append(f"{stroke_pt:.4f} w".encode())  # Set line width
+
+                # Start at top-left (after the arc)
+                content_lines.append(f"{x0 + r:.4f} {y1:.4f} m".encode())
+
+                # Top edge to top-right corner
+                content_lines.append(f"{x1 - r:.4f} {y1:.4f} l".encode())
+
+                # Top-right corner (90° arc using Bézier curve)
+                cp1_x = x1 - r + r * kappa
+                cp1_y = y1
+                cp2_x = x1
+                cp2_y = y1 - r + r * kappa
+                end_x = x1
+                end_y = y1 - r
+                content_lines.append(f"{cp1_x:.4f} {cp1_y:.4f} {cp2_x:.4f} {cp2_y:.4f} {end_x:.4f} {end_y:.4f} c".encode())
+
+                # Right edge to bottom-right corner
+                content_lines.append(f"{x1:.4f} {y0 + r:.4f} l".encode())
+
+                # Bottom-right corner
+                cp1_x = x1
+                cp1_y = y0 + r - r * kappa
+                cp2_x = x1 - r + r * kappa
+                cp2_y = y0
+                end_x = x1 - r
+                end_y = y0
+                content_lines.append(f"{cp1_x:.4f} {cp1_y:.4f} {cp2_x:.4f} {cp2_y:.4f} {end_x:.4f} {end_y:.4f} c".encode())
+
+                # Bottom edge to bottom-left corner
+                content_lines.append(f"{x0 + r:.4f} {y0:.4f} l".encode())
+
+                # Bottom-left corner
+                cp1_x = x0 + r - r * kappa
+                cp1_y = y0
+                cp2_x = x0
+                cp2_y = y0 + r - r * kappa
+                end_x = x0
+                end_y = y0 + r
+                content_lines.append(f"{cp1_x:.4f} {cp1_y:.4f} {cp2_x:.4f} {cp2_y:.4f} {end_x:.4f} {end_y:.4f} c".encode())
+
+                # Left edge to top-left corner
+                content_lines.append(f"{x0:.4f} {y1 - r:.4f} l".encode())
+
+                # Top-left corner
+                cp1_x = x0
+                cp1_y = y1 - r + r * kappa
+                cp2_x = x0 + r - r * kappa
+                cp2_y = y1
+                end_x = x0 + r
+                end_y = y1
+                content_lines.append(f"{cp1_x:.4f} {cp1_y:.4f} {cp2_x:.4f} {cp2_y:.4f} {end_x:.4f} {end_y:.4f} c".encode())
+
+                content_lines.append(b"S")  # Stroke path (capital S)
+                content_lines.append(b"Q")  # Restore state
+
+                logger.debug(f"Added kiss-cut border at ({x_pt:.2f}, {y_pt:.2f}) {w_pt:.2f}x{h_pt:.2f}pt")
+
+            except Exception as e:
+                logger.exception(f"Failed to add kiss-cut border for item: {e}")
+                continue
+
+        # Append to existing page content
+        if pikepdf.Name.Contents in page:
+            existing_content = page.Contents.read_bytes()
+            new_content = existing_content + b"\n" + b"\n".join(content_lines) + b"\n"
+            page.Contents = pikepdf.Stream(pdf, new_content)
+        else:
+            page.Contents = pikepdf.Stream(pdf, b"\n".join(content_lines))
+
+        # Save and close
+        pdf.save(pdf_path)
+        pdf.close()
+
+        logger.info(f"Added {len(border_items)} kiss-cut borders with spot color '{spot_color_name}'")
 
     def save_last_render_as_png(self, path: str) -> None:
         try:

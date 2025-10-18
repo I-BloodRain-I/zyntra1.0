@@ -33,8 +33,8 @@ from src.core import (
     PRODUCTS_PATH,
 )
 from src.utils import *
-from src.canvas import PdfExporter, ImageManager
-from src.screens.common.dropbox_handler import DEFAULT_COLOR, SUCCESS_COLOR, WARNING_COLOR, ERROR_COLOR, BASE_FOLDER, FILES_FOLDER, get_orders_info, Dropbox
+from src.canvas import PdfExporter, ImageManager, PDFCombiner, PDFInfo
+from src.screens.common.dropbox_handler import DEFAULT_COLOR, SUCCESS_COLOR, WARNING_COLOR, ERROR_COLOR, BASE_FOLDER, IMAGES_FOLDER, FILES_FOLDER, get_orders_info, Dropbox
 
 logger = logging.getLogger(__name__)
 
@@ -434,7 +434,7 @@ class OrderRangeScreen(Screen):
     def _download_image_from_dropbox(self, parent_folder: str, child_folder: str, image_path: str) -> Dict[str, Union[str, Image.Image]]:
         try:
             self.log(f"Downloading image {image_path} from Dropbox")
-            info = DROPBOX_CLIENT.download_big_file(f"{BASE_FOLDER}/{parent_folder}/{FILES_FOLDER}/{child_folder}/{image_path}", str(INTERNAL_PATH) + "/", raw_data=True)
+            info = DROPBOX_CLIENT.download_big_file(f"{BASE_FOLDER}/{parent_folder}/{FILES_FOLDER}/{child_folder}/{IMAGES_FOLDER}/{image_path}", str(INTERNAL_PATH) + "/", raw_data=True)
             if info is None:
                 return {"status": "error", "message": f"Image {child_folder}/{image_path} not found in Dropbox"}
             img_ = Image.open(info[1])
@@ -752,9 +752,47 @@ class OrderRangeScreen(Screen):
         pdf_end_oder_i: int,
         pdf_order: int = 1,
         dpi: int = 1200,
-        formats: List[str] = None
+        formats: List[str] = None,
+        front_barcode = None,
+        back_barcode = None,
+        barcode_text: str = None,
+        reference_text: str = None,
+        jig_cmyk: str = None
     ) -> Dict[str, str]:
-        try:       
+        try:
+            # Parse CMYK to RGBA for border color
+            def _parse_cmyk_to_rgba(cmyk_str: str, default=(0, 0, 0, 255)) -> tuple[int, int, int, int]:
+                try:
+                    parts = [p.strip() for p in str(cmyk_str or "").split(",")]
+                    # pad/truncate to 4
+                    if len(parts) < 4:
+                        parts += ["0"] * (4 - len(parts))
+                    elif len(parts) > 4:
+                        parts = parts[:4]
+                    c, m, y, k = [float(p or 0) for p in parts]
+                    # auto-detect scale: 0..1, 0..100, or 0..255
+                    vals = [c, m, y, k]
+                    maxv = max(vals)
+                    if maxv <= 1.0:
+                        scale = 1.0
+                    elif maxv <= 100.0:
+                        scale = 100.0
+                    else:
+                        scale = 255.0
+                    c = max(0.0, min(1.0, c / scale))
+                    m = max(0.0, min(1.0, m / scale))
+                    y = max(0.0, min(1.0, y / scale))
+                    k = max(0.0, min(1.0, k / scale))
+                    r = int(round(255 * (1 - c) * (1 - k)))
+                    g = int(round(255 * (1 - m) * (1 - k)))
+                    b = int(round(255 * (1 - y) * (1 - k)))
+                    return (max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b)), 255)
+                except Exception:
+                    return default
+            
+            # Convert jig CMYK to RGBA for border
+            border_color_rgba = _parse_cmyk_to_rgba(jig_cmyk or "0,0,0,0", default=(0, 0, 0, 255))
+            
             def _remove_unprocessed_objs(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 return [item for item in items if item.get("processed", False)]
 
@@ -784,6 +822,13 @@ class OrderRangeScreen(Screen):
                 front_items.extend(front["objects"] if front else [])
                 if back:
                     back_items.extend(back["objects"] if back else [])
+            
+            if front_barcode:
+                front_barcode["processed"] = True
+                front_items.append(front_barcode)
+            if back_barcode:
+                back_barcode["processed"] = True
+                back_items.append(back_barcode)
 
             def _render_and_save(side_items: List[Dict[str, Any]], base: _Path) -> None:
                 if not side_items:
@@ -795,20 +840,25 @@ class OrderRangeScreen(Screen):
                 if "pdf" in fmts_norm:
                     p_pdf = str(base.with_suffix(".pdf"))
                     logger.debug("Rendering PDF: %s", p_pdf)
-                    exporter.render_scene_to_pdf(p_pdf, items, jig_size[0], jig_size[1], dpi=dpi)
+                    exporter.render_scene_to_pdf(p_pdf, items, jig_size[0], jig_size[1], dpi=dpi, barcode_text=barcode_text, reference_text=reference_text)
                     did_pdf = True
+                    # Always create PNG for PDF combiner (even if not in formats)
+                    p_png = str(base.with_suffix(".png"))
+                    exporter.save_last_render_as_png(p_png)
+                    logger.debug(f"Saved PNG for combiner: {p_png}")
                 # Ensure last render image exists even if PDF not requested
                 if not did_pdf and ("png" in fmts_norm or "jpg" in fmts_norm):
                     import time as _time
                     tmp_pdf = str((OUTPUT_PATH / f"__tmp_{int(_time.time()*1000)}.pdf").resolve())
                     try:
-                        exporter.render_scene_to_pdf(tmp_pdf, items, jig_size[0], jig_size[1], dpi=dpi)
+                        exporter.render_scene_to_pdf(tmp_pdf, items, jig_size[0], jig_size[1], dpi=dpi, barcode_text=barcode_text, reference_text=reference_text)
                     finally:
                         try:
                             os.remove(tmp_pdf)
                         except Exception:
                             pass
-                if "png" in fmts_norm:
+                if "png" in fmts_norm and not did_pdf:
+                    # Only save PNG if not already saved above
                     p_png = str(base.with_suffix(".png"))
                     exporter.save_last_render_as_png(p_png)
                 if "jpg" in fmts_norm:
@@ -819,7 +869,37 @@ class OrderRangeScreen(Screen):
             if back_items and any(item is not None for item in back_items):
                 _render_and_save(back_items, _Path(base_back))
 
-            return {"status": "success"}
+            # Return PDF info for combining
+            pdf_infos = []
+            if "pdf" in fmts_norm and front_items:
+                pdf_path = str(base_front.with_suffix(".pdf"))
+                if os.path.exists(pdf_path):
+                    # for _ in range(6):
+                    pdf_infos.append(PDFInfo(
+                        path=pdf_path,
+                        width_mm=jig_size[0],
+                        height_mm=jig_size[1],
+                        order_range=f"{pdf_start_oder_i}-{pdf_end_oder_i}",
+                        side="front",
+                        pdf_order=pdf_order,
+                        dpi=dpi,
+                        cmyk=jig_cmyk or "0,0,0,100"
+                    ))
+            if "pdf" in fmts_norm and back_items and any(item is not None for item in back_items):
+                pdf_path = str(base_back.with_suffix(".pdf"))
+                if os.path.exists(pdf_path):
+                    pdf_infos.append(PDFInfo(
+                        path=pdf_path,
+                        width_mm=jig_size[0],
+                        height_mm=jig_size[1],
+                        order_range=f"{pdf_start_oder_i}-{pdf_end_oder_i}",
+                        side="back",
+                        pdf_order=pdf_order,
+                        dpi=dpi,
+                        cmyk=jig_cmyk or "0,0,0,100"
+                    ))
+
+            return {"status": "success", "pdf_infos": pdf_infos}
 
         except MemoryError:
             logger.exception("Not enough memory to render PDF")
@@ -838,7 +918,10 @@ class OrderRangeScreen(Screen):
         pattern_info: Dict[str, Any], 
         pdf_start_oder_id: int,
         order_id: int, 
-        last_order_id: int
+        last_order_id: int,
+        pdf_combiner: PDFCombiner = None,
+        front_barcode: Optional[dict] = None,
+        back_barcode: Optional[dict] = None
     ) -> Dict[str, Any]:
 
         def _is_pattern_filled(pattern_info: Dict[str, Any], original_pattern_info: Dict[str, Any]) -> bool:
@@ -907,6 +990,10 @@ class OrderRangeScreen(Screen):
                     object["label_fill"] = order_object["color"]
                     object["label_font_family"] = order_object["font_family"]
                     object["processed"] = True
+                object["slot_x_mm"] = slot_info["x_mm"]
+                object["slot_y_mm"] = slot_info["y_mm"]
+                object["slot_w_mm"] = slot_info["w_mm"]
+                object["slot_h_mm"] = slot_info["h_mm"]
                    
         result = self._prepare_order_data(parent_folder, child_folder, order_info, order_id, last_order_id)
         if result["status"] == "error":
@@ -920,6 +1007,7 @@ class OrderRangeScreen(Screen):
 
         selected_slots = []
         asins_info = pattern_info.get("ASINs", None)
+        DEBUG_MULTIPLIER = 1
         try:
             if asins_info is None:
                 total_count = result["quantity"]
@@ -929,6 +1017,7 @@ class OrderRangeScreen(Screen):
         except Exception:
             logger.exception("Failed to get order count")
             return {"status": "error", "message": "Failed to get order count"}
+        total_count *= DEBUG_MULTIPLIER
             
         pdf_count = 1
         self.log(f"[{order_id}/{last_order_id}] To process: {total_count} {'pcs' if total_count > 1 else 'pc'}")
@@ -954,6 +1043,7 @@ class OrderRangeScreen(Screen):
                 self.log(f"[{order_id}] [{i+1}/{total_count}] The export data is filled, making files...")
                 pattern_info = deepcopy(original_pattern_info)
                 jig_info = pattern_info["Scene"]["jig"]
+                jig_cmyk = jig_info.get("cmyk", "75,0,75,0")
                 result = self._make_pdf(
                     saved_slots + selected_slots,
                     (jig_info["width_mm"], jig_info["height_mm"]),
@@ -961,13 +1051,24 @@ class OrderRangeScreen(Screen):
                     order_id,
                     pdf_order=pdf_count,
                     dpi=getattr(self, "_export_dpi", 1200),
-                    formats=getattr(self, "_export_formats", ["pdf"]) ,
+                    formats=getattr(self, "_export_formats", ["pdf"]),
+                    barcode_text=str(order_id),
+                    reference_text=order_info["orderId"],
+                    jig_cmyk=jig_cmyk,
+                    front_barcode=front_barcode,
+                    back_barcode=back_barcode
                 )
                 if result["status"] == "error":
                     link_to_pattern_info.clear()
                     link_to_pattern_info.update(started_pattern_info)
                     return {"status": "error", "message": "Failed to make pdf: " + result["message"]}
                 self.log(f"[{order_id}] [{i+1}/{total_count}] Files made successfully", SUCCESS_COLOR)
+                
+                # Add PDFs to combiner
+                if pdf_combiner and "pdf_infos" in result and (front_barcode or back_barcode):
+                    for pdf_info in result["pdf_infos"]:
+                        pdf_combiner.add_pdf(pdf_info)
+                        
                 selected_slots.clear()
                 saved_slots.clear()
                 is_saved_slots_processed = True
@@ -1037,6 +1138,10 @@ class OrderRangeScreen(Screen):
                 return
             self.log(f"{state.saved_product} pattern file opened successfully", SUCCESS_COLOR)
 
+            # Initialize PDF combiner
+            pdf_combiner = PDFCombiner(OUTPUT_PATH)
+            self.log("PDF combiner initialized for combining rendered PDFs")
+
             total_orders_items: Dict[str, Tuple[Dict[str, Any], str, str]] = {}
             if state.order_from.find("-") != -1 and state.order_from.count("-") == 1:
                 self.log(f"Starting processing for range [{state.order_from}]")
@@ -1071,6 +1176,13 @@ class OrderRangeScreen(Screen):
             orders_to_process = dict(sorted(orders_to_process.items(), key=lambda x: int(x[0].split("_")[0])))
             last_order_i = max(int(order_path.split("_")[0]) for order_path in orders_to_process)
 
+            front_barcode = None
+            back_barcode = None
+            if "FrontsideBarcode" in pattern_info:
+                front_barcode = pattern_info["FrontsideBarcode"]
+            if "BacksideBarcode" in pattern_info:
+                back_barcode = pattern_info["BacksideBarcode"]
+
             failed_orders = []
             current_processing_orders = []
             pattern_data = deepcopy(pattern_info)
@@ -1099,7 +1211,10 @@ class OrderRangeScreen(Screen):
                     pattern_data,
                     pdf_start_oder_i,
                     order_id,
-                    last_order_i
+                    last_order_i,
+                    pdf_combiner,
+                    front_barcode=front_barcode,
+                    back_barcode=back_barcode
                 )
                 if order_result["status"] == "error":
                     if order_result.get("message") == "Cancelled":
@@ -1127,13 +1242,19 @@ class OrderRangeScreen(Screen):
                     self.log(f"[{pdf_start_oder_i}-{order_id}] The export data is filled, making files...")
                     pattern_data = deepcopy(pattern_info)
                     jig_info = pattern_info["Scene"]["jig"]
+                    jig_cmyk = jig_info.get("cmyk", "75,0,75,0")
                     result = self._make_pdf(
                         pdf_data,
                         (jig_info["width_mm"], jig_info["height_mm"]),
                         pdf_start_oder_i,
                         order_id,
                         dpi=getattr(self, "_export_dpi", 1200),
-                        formats=getattr(self, "_export_formats", ["pdf"]) ,
+                        formats=getattr(self, "_export_formats", ["pdf"]),
+                        barcode_text=str(order_id),
+                        reference_text=order_info["orderId"],
+                        jig_cmyk=jig_cmyk,
+                        front_barcode=front_barcode,
+                        back_barcode=back_barcode
                     )
                     if result["status"] == "error":
                         self.log(f"[{pdf_start_oder_i}-{order_id}] Failed to export files: " + result["message"], ERROR_COLOR)
@@ -1141,12 +1262,33 @@ class OrderRangeScreen(Screen):
                     else:
                         self.log(f"[{pdf_start_oder_i}-{order_id}] Files made successfully", SUCCESS_COLOR)
                         is_sucess = True
+                        
+                        # Add PDFs to combiner
+                        if "pdf_infos" in result and (front_barcode or back_barcode):
+                            for pdf_info in result["pdf_infos"]:
+                                pdf_combiner.add_pdf(pdf_info)
+                                
                     pdf_data.clear()
                     pdf_start_oder_i = None
 
                 self.progress["value"] += progress_step
 
+            # Finalize and combine all pending PDFs
             if is_sucess:
+                if (front_barcode or back_barcode) and pdf_combiner.pending_pdfs:
+                    self.log("Combining rendered PDFs into larger sheets...")
+                    try:
+                        combined_paths = pdf_combiner.finalize()
+                        if combined_paths:
+                            self.log(f"Created {len(combined_paths)} combined PDF(s):", SUCCESS_COLOR)
+                            for path in combined_paths:
+                                self.log(f"  - {os.path.basename(path)}", SUCCESS_COLOR)
+                        else:
+                            self.log("No PDFs were combined (possibly all fit in single sheets already)")
+                    except Exception as e:
+                        self.log(f"Failed to combine PDFs: {e}", ERROR_COLOR)
+                        logger.exception("PDF combining failed")
+                    
                 self.log(f"Processing completed! You can find files in outputs/ folder", SUCCESS_COLOR)
             # if failed_orders:
             #     self.log(f"Failed orders: {failed_orders}", ERROR_COLOR)

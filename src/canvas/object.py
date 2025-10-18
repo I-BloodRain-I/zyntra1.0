@@ -13,7 +13,7 @@ class CanvasObject:
     are handled by the screen.
     """
 
-    type: str  # "rect", "image", "text", "slot", or "major"
+    type: str  # "rect", "image", "text", "slot", "major", or "barcode"
 
     # Geometry in millimeters (top-left for rect/image, center for text)
     x_mm: float = 0.0
@@ -50,6 +50,7 @@ class CanvasObject:
     is_static: bool = False
 
     def is_text_rect(self) -> bool:
+        # Text rects have green outline; barcode has black outline but should not be treated as text rect
         return self.type == "rect" and str(self.outline or "") == "#17a24b"
 
     # Minimal dict-like API for compatibility during refactor
