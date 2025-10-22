@@ -1215,6 +1215,8 @@ class CanvasSelection:
                     self.s.sel_is_options.set(False)
                 if hasattr(self.s, "sel_is_static"):
                     self.s.sel_is_static.set(False)
+                if hasattr(self.s, "sel_export_file"):
+                    self.s.sel_export_file.set("")
             finally:
                 self._suppress_pos_trace = False
                 self._suppress_size_trace = False
@@ -1337,6 +1339,13 @@ class CanvasSelection:
                 self.s.sel_is_options.set(bool(meta.get("is_options", False)))
             if hasattr(self.s, "sel_is_static"):
                 self.s.sel_is_static.set(bool(meta.get("is_static", False)))
+            # Update export file selector (ignore for slots and majors)
+            if hasattr(self.s, "sel_export_file"):
+                obj_type = meta.get("type", "")
+                if obj_type not in ("slot", "major"):
+                    self.s.sel_export_file.set(str(meta.get("export_file", "File 1")))
+                else:
+                    self.s.sel_export_file.set("")
         finally:
             if hasattr(self.s, "_suppress_flag_traces"):
                 self.s._suppress_flag_traces = False

@@ -48,6 +48,9 @@ class CanvasObject:
     # Optional flags controlled by UI
     is_options: bool = False
     is_static: bool = False
+    
+    # Export file assignment (default "File 1", ignored for slots and majors)
+    export_file: str = "File 1"
 
     def is_text_rect(self) -> bool:
         # Text rects have green outline; barcode has black outline but should not be treated as text rect

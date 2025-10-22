@@ -586,6 +586,81 @@ class PdfExporter:
             draw_borders, border_rgba = _should_border_and_color(items)
             logger.info(f"Will draw kiss-cut borders: {draw_borders}")
 
+            def _draw_borders_around_slots(it: dict) -> None:
+                """Draw kiss-cut borders around all slots if enabled."""
+                if draw_borders:
+                    try:
+                        # Desired inset from slot edge towards center
+                        desired_inset_px = max(1, mm_to_px(1.0))  # 1mm inside the slot
+                        stroke_px = max(1, int(round(px_per_mm * 0.25)))  # ~0.25mm stroke width
+                        radius_px = max(1, int(round(px_per_mm * 1.5)))   # ~1.5mm corner radius
+
+                        # Use slot_* coordinates if provided; fallback to image coords
+                        try:
+                            slot_x_mm = float(it["slot_x_mm"])
+                        except Exception:
+                            logger.error("No slot_x_mm for border drawing %s", it)
+                            return
+                        try:
+                            slot_y_mm = float(it["slot_y_mm"])
+                        except Exception:
+                            logger.error("No slot_y_mm for border drawing %s", it)
+                            return
+                        try:
+                            slot_w_mm = float(it["slot_w_mm"])
+                        except Exception:
+                            logger.error("No slot_w_mm for border drawing %s", it)
+                            return
+                        try:
+                            slot_h_mm = float(it["slot_h_mm"])
+                        except Exception:
+                            logger.error("No slot_h_mm for border drawing %s", it)
+                            return
+                        
+                        slot_left_px = mm_to_px(slot_x_mm)
+                        slot_top_px  = mm_to_px(slot_y_mm)
+                        sw_px = max(1, int(round(slot_w_mm * px_per_mm)))
+                        sh_px = max(1, int(round(slot_h_mm * px_per_mm)))
+
+                        # Ensure inset leaves room for stroke on all sides
+                        max_inset_allowed = max(1, min((sw_px - 2) // 2, (sh_px - 2) // 2))
+                        inset = min(desired_inset_px, max_inset_allowed)
+
+                        # Clamp radius to fit available interior
+                        avail_w = max(1, sw_px - 2 * inset)
+                        avail_h = max(1, sh_px - 2 * inset)
+                        rr = min(radius_px, avail_w // 2, avail_h // 2)
+
+                        border_layer = _PIL_Image.new("RGBA", (sw_px, sh_px), (0, 0, 0, 0))
+                        _bd = _PIL_Draw.Draw(border_layer, "RGBA")
+                        half = stroke_px / 2.0
+                        # Internal rect path: inset + half-stroke to keep stroke fully inside
+                        x0 = inset + half
+                        y0 = inset + half
+                        x1 = sw_px - 1 - inset - half
+                        y1 = sh_px - 1 - inset - half
+                        if x1 <= x0 or y1 <= y0:
+                            # Fallback: no inset
+                            x0 = half; y0 = half; x1 = sw_px - 1 - half; y1 = sh_px - 1 - half
+                        _bd.rounded_rectangle(
+                            [(x0, y0), (x1, y1)],
+                            radius=max(1, int(rr)),
+                            outline=border_rgba,
+                            width=stroke_px,
+                        )
+                        # Paste border on top positioned by slot coords
+                        img.paste(border_layer, (int(slot_left_px), int(slot_top_px)), border_layer.split()[-1])
+                        
+                        # Also store border information for spot color version in combined PDF
+                        it["_border_needed"] = True
+                        it["_border_slot_x_mm"] = slot_x_mm
+                        it["_border_slot_y_mm"] = slot_y_mm
+                        it["_border_slot_w_mm"] = slot_w_mm
+                        it["_border_slot_h_mm"] = slot_h_mm
+                        it["_border_color_rgba"] = border_rgba
+                    except Exception:
+                        logger.exception("Failed to draw rounded border for image")
+
             for it in items:
                 typ = str(it.get("type", ""))
 
@@ -652,6 +727,8 @@ class PdfExporter:
                         cx = jx0 + mm_to_px(x_mm + bw_mm / 2.0)
                         cy = jy0 + mm_to_px(y_mm + bh_mm / 2.0)
                         _draw_rotated_text_center(label, int(cx), int(cy), fnt, col, ang)
+
+                    _draw_borders_around_slots(it)
 
                 elif typ == "image":
                     path_img = str(it.get("path", "")) or ""
@@ -725,75 +802,7 @@ class PdfExporter:
 
                         # Optional rounded border around image if pattern has barcode keys (internal inset using slot bounds)
                         # Store border information for spot color border drawing in PDF
-                        if draw_borders:
-                            try:
-                                # Desired inset from slot edge towards center
-                                desired_inset_px = max(1, mm_to_px(1.0))  # 1mm inside the slot
-                                stroke_px = max(1, int(round(px_per_mm * 0.25)))  # ~0.25mm stroke width
-                                radius_px = max(1, int(round(px_per_mm * 1.5)))   # ~1.5mm corner radius
-
-                                # Use slot_* coordinates if provided; fallback to image coords
-                                try:
-                                    slot_x_mm = float(it["slot_x_mm"])
-                                except Exception:
-                                    continue
-                                try:
-                                    slot_y_mm = float(it["slot_y_mm"])
-                                except Exception:
-                                    continue
-                                try:
-                                    slot_w_mm = float(it["slot_w_mm"])
-                                except Exception:
-                                    continue
-                                try:
-                                    slot_h_mm = float(it["slot_h_mm"])
-                                except Exception:
-                                    continue
-                                
-                                slot_left_px = mm_to_px(slot_x_mm)
-                                slot_top_px  = mm_to_px(slot_y_mm)
-                                sw_px = max(1, int(round(slot_w_mm * px_per_mm)))
-                                sh_px = max(1, int(round(slot_h_mm * px_per_mm)))
-
-                                # Ensure inset leaves room for stroke on all sides
-                                max_inset_allowed = max(1, min((sw_px - 2) // 2, (sh_px - 2) // 2))
-                                inset = min(desired_inset_px, max_inset_allowed)
-
-                                # Clamp radius to fit available interior
-                                avail_w = max(1, sw_px - 2 * inset)
-                                avail_h = max(1, sh_px - 2 * inset)
-                                rr = min(radius_px, avail_w // 2, avail_h // 2)
-
-                                border_layer = _PIL_Image.new("RGBA", (sw_px, sh_px), (0, 0, 0, 0))
-                                _bd = _PIL_Draw.Draw(border_layer, "RGBA")
-                                half = stroke_px / 2.0
-                                # Internal rect path: inset + half-stroke to keep stroke fully inside
-                                x0 = inset + half
-                                y0 = inset + half
-                                x1 = sw_px - 1 - inset - half
-                                y1 = sh_px - 1 - inset - half
-                                if x1 <= x0 or y1 <= y0:
-                                    # Fallback: no inset
-                                    x0 = half; y0 = half; x1 = sw_px - 1 - half; y1 = sh_px - 1 - half
-                                _bd.rounded_rectangle(
-                                    [(x0, y0), (x1, y1)],
-                                    radius=max(1, int(rr)),
-                                    outline=border_rgba,
-                                    width=stroke_px,
-                                )
-                                # Paste border on top positioned by slot coords
-                                img.paste(border_layer, (int(slot_left_px), int(slot_top_px)), border_layer.split()[-1])
-                                
-                                # Also store border information for spot color version in combined PDF
-                                it["_border_needed"] = True
-                                it["_border_slot_x_mm"] = slot_x_mm
-                                it["_border_slot_y_mm"] = slot_y_mm
-                                it["_border_slot_w_mm"] = slot_w_mm
-                                it["_border_slot_h_mm"] = slot_h_mm
-                                it["_border_color_rgba"] = border_rgba
-                            except Exception:
-                                logger.exception("Failed to draw rounded border for image")
-
+                        _draw_borders_around_slots(it)
                     except Exception as e:
                         logger.exception(f"Failed to render image in PDF: {e}")
 
@@ -858,6 +867,8 @@ class PdfExporter:
                         cx = jx0 + mm_to_px(it.get("x_mm", 0.0))
                         cy = jy0 + mm_to_px(it.get("y_mm", 0.0))
                         _draw_rotated_text_center(txt, int(cx), int(cy), fnt, col, ang)
+
+                    _draw_borders_around_slots(it)
 
                 elif typ == "barcode":
                     # Render Code128 barcode to PDF with rotation support

@@ -860,6 +860,31 @@ class OrderRangeScreen(Screen):
                 back_barcode["processed"] = True
                 back_items.append(back_barcode)
 
+            # Group items by export_file field
+            def _group_by_export_file(items_list):
+                """Group items by their export_file assignment, excluding slots"""
+                grouped = {}
+                for item in items_list:
+                    if item.get("type") == "slot":
+                        # Skip slots - they should not be exported
+                        continue
+                    else:
+                        # Regular objects go to their assigned file
+                        ef = item.get("export_file", "File 1")
+                        if ef not in grouped:
+                            grouped[ef] = []
+                        grouped[ef].append(item)
+                return grouped
+            
+            front_grouped = _group_by_export_file(front_items)
+            back_grouped = _group_by_export_file(back_items)
+            
+            # Collect all export file names from both sides
+            export_files_to_render = set(front_grouped.keys()) | set(back_grouped.keys())
+            if not export_files_to_render:
+                export_files_to_render = {"File 1"}  # Default fallback
+            export_files_to_render = sorted(export_files_to_render)  # Sort for consistent ordering
+
             def _render_and_save(side_items: List[Dict[str, Any]], base: _Path) -> None:
                 if not side_items:
                     return
@@ -901,39 +926,84 @@ class OrderRangeScreen(Screen):
                     # Track this file as processed
                     self._processed_files.add(str(base))
 
-            _render_and_save(front_items, _Path(base_front))
-            if back_items and any(item is not None for item in back_items):
-                _render_and_save(back_items, _Path(base_back))
+            # Render each export file separately
+            for export_file_name in export_files_to_render:
+                # Get items for this export file
+                front_items_for_file = front_grouped.get(export_file_name, [])
+                back_items_for_file = back_grouped.get(export_file_name, [])
+                
+                # Count non-slot items to determine if file has content
+                front_objects = [it for it in front_items_for_file if it.get("type") != "slot"]
+                back_objects = [it for it in back_items_for_file if it.get("type") != "slot"]
+                
+                # Skip if no objects in this file
+                if not front_objects and not back_objects:
+                    logger.debug(f"Skipping {export_file_name} - no objects assigned")
+                    continue
+                
+                # Generate file names for this export file
+                # Replace spaces and special chars in export file name for filename
+                file_suffix = export_file_name.replace(' ', '_')
+                
+                # Create base paths with export file name
+                base_front_file = _get_unique_base_path(
+                    f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_front_{file_suffix}{f'_{pdf_order}' if pdf_order > 1 else ''}"
+                )
+                base_back_file = _get_unique_base_path(
+                    f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_back_{file_suffix}"
+                )
+                
+                # Render frontside for this export file
+                if front_objects:
+                    logger.debug(f"Rendering frontside for {export_file_name}...")
+                    _render_and_save(front_items_for_file, base_front_file)
+                
+                # Render backside for this export file
+                if back_objects:
+                    logger.debug(f"Rendering backside for {export_file_name}...")
+                    _render_and_save(back_items_for_file, base_back_file)
 
-            # Return PDF info for combining
+            # Return PDF info for combining (collect from all export files)
             pdf_infos = []
-            if "pdf" in fmts_norm and front_items:
-                pdf_path = str(base_front.with_suffix(".pdf"))
-                if os.path.exists(pdf_path):
-                    # for _ in range(6):
-                    pdf_infos.append(PDFInfo(
-                        path=pdf_path,
-                        width_mm=jig_size[0],
-                        height_mm=jig_size[1],
-                        order_range=f"{pdf_start_oder_i}-{pdf_end_oder_i}",
-                        side="front",
-                        pdf_order=pdf_order,
-                        dpi=dpi,
-                        cmyk=jig_cmyk or "0,0,0,100"
-                    ))
-            if "pdf" in fmts_norm and back_items and any(item is not None for item in back_items):
-                pdf_path = str(base_back.with_suffix(".pdf"))
-                if os.path.exists(pdf_path):
-                    pdf_infos.append(PDFInfo(
-                        path=pdf_path,
-                        width_mm=jig_size[0],
-                        height_mm=jig_size[1],
-                        order_range=f"{pdf_start_oder_i}-{pdf_end_oder_i}",
-                        side="back",
-                        pdf_order=pdf_order,
-                        dpi=dpi,
-                        cmyk=jig_cmyk or "0,0,0,100"
-                    ))
+            if "pdf" in fmts_norm:
+                for export_file_name in export_files_to_render:
+                    front_objects = [it for it in front_grouped.get(export_file_name, []) if it.get("type") != "slot"]
+                    back_objects = [it for it in back_grouped.get(export_file_name, []) if it.get("type") != "slot"]
+                    
+                    if not front_objects and not back_objects:
+                        continue
+                    
+                    file_suffix = export_file_name.replace(' ', '_')
+                    
+                    if front_objects:
+                        base_front_file = OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_front_{file_suffix}{f'_{pdf_order}' if pdf_order > 1 else ''}"
+                        pdf_path = str(base_front_file.with_suffix(".pdf"))
+                        if os.path.exists(pdf_path):
+                            pdf_infos.append(PDFInfo(
+                                path=pdf_path,
+                                width_mm=jig_size[0],
+                                height_mm=jig_size[1],
+                                order_range=f"{pdf_start_oder_i}-{pdf_end_oder_i}",
+                                side="front",
+                                pdf_order=pdf_order,
+                                dpi=dpi,
+                                cmyk=jig_cmyk or "0,0,0,100"
+                            ))
+                    
+                    if back_objects:
+                        base_back_file = OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_back_{file_suffix}"
+                        pdf_path = str(base_back_file.with_suffix(".pdf"))
+                        if os.path.exists(pdf_path):
+                            pdf_infos.append(PDFInfo(
+                                path=pdf_path,
+                                width_mm=jig_size[0],
+                                height_mm=jig_size[1],
+                                order_range=f"{pdf_start_oder_i}-{pdf_end_oder_i}",
+                                side="back",
+                                pdf_order=pdf_order,
+                                dpi=dpi,
+                                cmyk=jig_cmyk or "0,0,0,100"
+                            ))
 
             return {"status": "success", "pdf_infos": pdf_infos}
 
@@ -1160,6 +1230,10 @@ class OrderRangeScreen(Screen):
                 self.log("Processing cancelled by user.", WARNING_COLOR)
                 return
 
+            # Clear processed files set at the start of each processing run
+            # This allows files to be recreated if they were deleted from disk
+            self._processed_files.clear()
+
             self.log(f"Trying to open the {state.saved_product} pattern file...")
             try:
                 with open(PRODUCTS_PATH / f"{state.saved_product}.json", "r", encoding="utf-8") as f:
@@ -1323,6 +1397,7 @@ class OrderRangeScreen(Screen):
                 self.progress["value"] += progress_step
 
             # Finalize and combine all pending PDFs
+            # True True False 2
             if is_sucess:
                 if (front_barcode or back_barcode) and pdf_combiner.pending_pdfs:
                     self.log("Combining rendered PDFs into larger sheets...")

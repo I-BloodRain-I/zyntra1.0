@@ -705,6 +705,105 @@ class NStickerCanvasScreen(Screen):
         tk.Label(_sybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
         tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
 
+        # Export Files section
+        tk.Label(left_bar, text="Export Files:", fg="white", bg="black", font=("Myriad Pro", 10, "bold")).pack(side="top", anchor="w", padx=(35, 6))
+        self._export_files_list = ["File 1"]  # Default: one export file
+        self.export_file_var = tk.StringVar(value="File 1")
+        
+        export_files_col = tk.Frame(left_bar, bg="black")
+        export_files_col.pack(side="top", padx=8, pady=8, anchor="w")
+        
+        # Selector
+        export_file_combo_wrap = tk.Frame(export_files_col, bg="#6f6f6f")
+        export_file_combo_wrap.pack(side="top", pady=2)
+        tk.Label(export_file_combo_wrap, text="Select:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        self._export_file_combo = ttk.Combobox(
+            export_file_combo_wrap,
+            textvariable=self.export_file_var,
+            state="readonly",
+            values=self._export_files_list,
+            justify="center",
+            width=13
+        )
+        self._export_file_combo.pack(side="left")
+        
+        # Add/Remove buttons
+        def _export_file_refresh_values():
+            values = list(self._export_files_list)
+            self._export_file_combo.configure(values=values)
+            # Update left menu selector too
+            try:
+                if hasattr(self, "_export_file_selector_left"):
+                    self._export_file_selector_left.configure(values=values)
+            except Exception:
+                pass
+            # Enable/disable Remove based on count
+            if len(self._export_files_list) <= 1:
+                self._export_file_btn_remove.configure(state="disabled")
+            else:
+                self._export_file_btn_remove.configure(state="normal")
+        
+        def _export_file_add():
+            try:
+                # Find next available file number
+                idx = 1
+                while True:
+                    name = f"File {idx}"
+                    if name not in self._export_files_list:
+                        self._export_files_list.append(name)
+                        self.export_file_var.set(name)
+                        _export_file_refresh_values()
+                        break
+                    idx += 1
+            except Exception as e:
+                logger.exception(f"Failed to add export file: {e}")
+        
+        def _export_file_remove():
+            try:
+                if len(self._export_files_list) <= 1:
+                    return
+                current = self.export_file_var.get()
+                if current in self._export_files_list:
+                    self._export_files_list.remove(current)
+                    # Reassign objects from removed file to File 1
+                    for cid, meta in self._items.items():
+                        if meta.get("type") not in ("slot", "major"):
+                            if meta.get("export_file", "File 1") == current:
+                                meta["export_file"] = "File 1"
+                    # Select first file
+                    if self._export_files_list:
+                        self.export_file_var.set(self._export_files_list[0])
+                    _export_file_refresh_values()
+            except Exception as e:
+                logger.exception(f"Failed to remove export file: {e}")
+        
+        export_file_btns = tk.Frame(export_files_col, bg="black")
+        export_file_btns.pack(side="top", pady=0, anchor="w")
+        _export_file_btn_style = ttk.Style()
+        _export_file_btn_style.configure("ExportFile.TButton", font=("Myriad Pro", 9), padding=(0, 1))
+        self._export_file_btn_add = ttk.Button(
+            export_file_btns, 
+            text="Add", 
+            command=_export_file_add, 
+            style="ExportFile.TButton", 
+            width=6, 
+            padding=(10, 0, 10, 0)
+        )
+        self._export_file_btn_add.pack(side="left")
+        self._export_file_btn_remove = ttk.Button(
+            export_file_btns, 
+            text="Remove", 
+            command=_export_file_remove, 
+            style="ExportFile.TButton", 
+            width=8, 
+            padding=(8, 0, 8, 0)
+        )
+        self._export_file_btn_remove.pack(side="left", padx=(5, 0))
+        # Initialize button state
+        _export_file_refresh_values()
+        
+        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
+
         # ASIN section (moved from top header): entry + combobox + Add/Remove
         asin_col = tk.Frame(left_bar, bg="black")
         asin_col.pack(side="top", padx=8, pady=8, anchor="w", fill="x")
@@ -1208,6 +1307,74 @@ class NStickerCanvasScreen(Screen):
         tk.Entry(_sy, textvariable=self.step_y, width=8, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
 
+        # Export Files row (selector)
+        _s_row4 = tk.Frame(panel_scene, bg="black"); _s_row4.grid(row=5, column=0, sticky="ew", pady=(6, 0))
+        tk.Label(_s_row4, text="Export File", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
+        _ef_wrap = tk.Frame(_s_row4, bg="#6f6f6f"); _ef_wrap.pack(side="left", fill="x", expand=True)
+        self._export_file_combo = ttk.Combobox(
+            _ef_wrap,
+            textvariable=self.export_file_var,
+            state="readonly",
+            values=self._export_files_list,
+            justify="center",
+            width=16,
+        )
+        self._export_file_combo.pack(side="left", fill="x", expand=True)
+        
+        # Export Files buttons row (Add/Remove buttons below selector)
+        _s_row4b = tk.Frame(panel_scene, bg="black"); _s_row4b.grid(row=6, column=0, sticky="w", pady=(4, 0))
+        _ef_btns = tk.Frame(_s_row4b, bg="black"); _ef_btns.pack(side="left")
+        
+        def _add_export_file():
+            try:
+                # Find the next available file number
+                existing_nums = []
+                for fname in self._export_files_list:
+                    try:
+                        # Extract number from "File N" format
+                        if fname.startswith("File "):
+                            num = int(fname.split()[1])
+                            existing_nums.append(num)
+                    except (IndexError, ValueError):
+                        pass
+                
+                # Find the next available number
+                next_num = 1
+                while next_num in existing_nums:
+                    next_num += 1
+                
+                new_file = f"File {next_num}"
+                self._export_files_list.append(new_file)
+                self._export_file_combo.configure(values=self._export_files_list)
+                if hasattr(self, "_export_file_selector_left"):
+                    self._export_file_selector_left.configure(values=self._export_files_list)
+                self.export_file_var.set(new_file)
+            except Exception as e:
+                logger.exception(f"Failed to add export file: {e}")
+        
+        def _remove_export_file():
+            try:
+                if len(self._export_files_list) <= 1:
+                    messagebox.showwarning("Cannot Remove", "You must have at least one export file.")
+                    return
+                current = self.export_file_var.get()
+                if current in self._export_files_list:
+                    self._export_files_list.remove(current)
+                    # Reassign all objects from removed file to "File 1"
+                    for cid, meta in self._items.items():
+                        if meta.get("type") not in ("slot", "major") and meta.get("export_file") == current:
+                            meta["export_file"] = self._export_files_list[0]
+                    self._export_file_combo.configure(values=self._export_files_list)
+                    if hasattr(self, "_export_file_selector_left"):
+                        self._export_file_selector_left.configure(values=self._export_files_list)
+                    self.export_file_var.set(self._export_files_list[0])
+            except Exception as e:
+                logger.exception(f"Failed to remove export file: {e}")
+        
+        ttk.Button(_ef_btns, text="Add", width=8, command=_add_export_file).pack(side="left")
+        self._export_file_remove_btn = ttk.Button(_ef_btns, text="Remove", width=10, command=_remove_export_file)
+        self._export_file_remove_btn.pack(side="left", padx=(10, 0))
+
         # ---- AMAZON PANEL ----
         # Ensure label var exists before binding to Entry
         if not hasattr(self, "sel_amazon_label"):
@@ -1431,6 +1598,34 @@ class NStickerCanvasScreen(Screen):
         _amazon_box.pack(side="left", padx=6, pady=(8, 0))
         tk.Label(_amazon_box, text="Label:", bg="#6f6f6f", fg="white").pack(side="left", padx=10)
         tk.Entry(_amazon_box, textvariable=self.sel_amazon_label, width=15, bg="#d9d9d9", justify="center").pack(side="left")
+
+        # Export file selector for selected object (below label)
+        _export_file_line = tk.Frame(row2, bg="black"); _export_file_line.pack(side="top", anchor="w")
+        _export_file_box = tk.Frame(_export_file_line, bg="#6f6f6f")
+        _export_file_box.pack(side="left", padx=6, pady=(8, 0))
+        tk.Label(_export_file_box, text="File:", bg="#6f6f6f", fg="white").pack(side="left", padx=10)
+        self.sel_export_file = tk.StringVar(value="File 1")
+        self._export_file_selector_left = ttk.Combobox(
+            _export_file_box,
+            textvariable=self.sel_export_file,
+            state="readonly",
+            values=self._export_files_list,
+            justify="center",
+            width=13
+        )
+        self._export_file_selector_left.pack(side="left")
+        
+        # Update selected object's export file when changed
+        def _on_export_file_change(*_):
+            sel = getattr(self.selection, "_selected", None)
+            if not sel or sel not in self._items:
+                return
+            obj = self._items[sel]
+            # Ignore slots and majors
+            if obj.get("type") in ("slot", "major"):
+                return
+            obj["export_file"] = str(self.sel_export_file.get() or "File 1").strip()
+        self.sel_export_file.trace_add("write", _on_export_file_change)
 
         # Separator and Amazon label
         # Options checkboxes placed after Amazon label
@@ -2097,6 +2292,7 @@ class NStickerCanvasScreen(Screen):
             outline=outline,
             canvas_id=rect,
             z=int(max_z + 1),
+            export_file=self._export_files_list[0],
         )
         # Tag ownership: prioritize the selected major; fallback to major under initial placement
         try:
@@ -2462,6 +2658,7 @@ class NStickerCanvasScreen(Screen):
                                         try:
                                             new_meta["is_options"] = bool(om.get("is_options", False))
                                             new_meta["is_static"] = bool(om.get("is_static", False))
+                                            new_meta["export_file"] = str(om.get("export_file", "File 1"))
                                         except Exception as e:
                                             logger.exception("Failed to copy image flags for clone")
                                             raise
@@ -2504,6 +2701,7 @@ class NStickerCanvasScreen(Screen):
                                                 self._items[tid]["amazon_label"] = str(om.get("amazon_label", "") or "")
                                                 self._items[tid]["is_options"] = bool(om.get("is_options", False))
                                                 self._items[tid]["is_static"] = bool(om.get("is_static", False))
+                                                self._items[tid]["export_file"] = str(om.get("export_file", "File 1"))
                                             except Exception as e:
                                                 logger.exception("Failed to copy text flags for clone")
                                                 raise
@@ -3470,6 +3668,8 @@ class NStickerCanvasScreen(Screen):
                             "is_static": bool(it.get("is_static", False)),
                             # Optional mask path for image
                             "mask_path": _to_rel(str(Path(*mask_path_parts))) if mask_path_parts else "",
+                            # Export file assignment
+                            "export_file": str(it.get("export_file", "File 1")),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process image for slot: {e}")
@@ -3499,6 +3699,8 @@ class NStickerCanvasScreen(Screen):
                             "amazon_label": it.get("amazon_label", ""),
                             "is_options": bool(it.get("is_options", False)),
                             "is_static": bool(it.get("is_static", False)),
+                            # Export file assignment
+                            "export_file": str(it.get("export_file", "File 1")),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process text for slot: {e}")
@@ -3545,6 +3747,8 @@ class NStickerCanvasScreen(Screen):
                             "label_font_family": str(it.get("label_font_family", "Myriad Pro")),
                             "is_options": bool(it.get("is_options", False)),
                             "is_static": bool(it.get("is_static", False)),
+                            # Export file assignment
+                            "export_file": str(it.get("export_file", "File 1")),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process sized text for slot: {e}")
@@ -3587,6 +3791,8 @@ class NStickerCanvasScreen(Screen):
                             "label_font_family": str(it.get("label_font_family", "Myriad Pro")),
                             "is_options": bool(it.get("is_options", False)),
                             "is_static": bool(it.get("is_static", False)),
+                            # Export file assignment
+                            "export_file": str(it.get("export_file", "File 1")),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process rect for slot: {e}")
@@ -3623,6 +3829,8 @@ class NStickerCanvasScreen(Screen):
                     "images": int(images_cnt_front + images_cnt_back),
                     "text": int(text_cnt_front + text_cnt_back),
                 },
+                # Save export files list
+                "export_files": list(self._export_files_list) if hasattr(self, "_export_files_list") else ["File 1"],
             }
             # Persist object CMYK at scene level
             try:
@@ -3822,70 +4030,121 @@ class NStickerCanvasScreen(Screen):
                 #     state.error_message = str(e)
                 #     logger.exception(f"Failed to render single pattern: {e}")
 
-                logger.debug(f"Rendering frontside...")
-                state.processing_message = "Rendering frontside..."
-                if state.is_cancelled:
-                    logger.debug(f"Processing cancelled")
-                    return
-
+                # Get export files list
+                export_files_to_render = list(getattr(self, "_export_files_list", ["File 1"]))
                 fmts = list(getattr(self, "_export_formats", ["pdf"]))
                 dpi_v = int(getattr(self, "_export_dpi", 1200))
-                front_items_without_slots = [item for item in front_items if item.get("type") != "slot"]
-                did_pdf = False
-                if "pdf" in fmts:
-                    self._render_scene_to_pdf(p_front, front_items_without_slots, jx, jy, dpi=dpi_v)
-                    did_pdf = True
-                elif ("png" in fmts) or ("jpg" in fmts):
-                    # Render to a temporary pdf to initialize last render for raster outputs
-                    tmp_pdf = os.path.join(TEMP_FOLDER, "__tmp_front.pdf")
-                    try:
-                        self._render_scene_to_pdf(tmp_pdf, front_items_without_slots, jx, jy, dpi=dpi_v)
-                    finally:
-                        try:
-                            os.remove(tmp_pdf)
-                        except Exception:
-                            pass
-                # Save raster outputs as requested
-                if "png" in fmts:
-                    try:
-                        self.exporter.save_last_render_as_png(p_front_png)
-                    except Exception:
-                        logger.exception("Failed to save front PNG; continuing")
-                if "jpg" in fmts:
-                    try:
-                        self.exporter.save_last_render_as_jpg(p_front_jpg)
-                    except Exception:
-                        logger.exception("Failed to save front JPG; continuing")
-
-                logger.debug(f"Rendering backside...")
-                state.processing_message = "Rendering backside..."
-                if state.is_cancelled:
-                    logger.debug(f"Processing cancelled")
-                    return
-                back_items_without_slots = [item for item in back_items if item.get("type") != "slot"]
-                did_pdf = False
-                if "pdf" in fmts:
-                    self._render_scene_to_pdf(p_back, back_items_without_slots, jx, jy, dpi=dpi_v)
-                    did_pdf = True
-                elif ("png" in fmts) or ("jpg" in fmts):
-                    tmp_pdf_b = os.path.join(TEMP_FOLDER, "__tmp_back.pdf")
-                    try:
-                        self._render_scene_to_pdf(tmp_pdf_b, back_items_without_slots, jx, jy, dpi=dpi_v)
-                    finally:
-                        try:
-                            os.remove(tmp_pdf_b)
-                        except Exception:
-                            pass
-                if "png" in fmts:
-                    try:
-                        self.exporter.save_last_render_as_png(p_back_png)
-                    except Exception:
-                        logger.exception("Failed to save back PNG; continuing")
-                if "jpg" in fmts:
-                    try:
-                        self.exporter.save_last_render_as_jpg(p_back_jpg)
-                    except Exception:
-                        logger.exception("Failed to save back JPG; continuing")
+                
+                # Group items by export file for both front and back
+                def _group_by_export_file(items_list):
+                    """Group items by their export_file assignment, excluding slots"""
+                    grouped = {}
+                    for item in items_list:
+                        if item.get("type") == "slot":
+                            # Skip slots - they should not be exported
+                            continue
+                        else:
+                            # Regular objects go to their assigned file
+                            ef = item.get("export_file", "File 1")
+                            if ef not in grouped:
+                                grouped[ef] = []
+                            grouped[ef].append(item)
+                    return grouped
+                
+                front_grouped = _group_by_export_file(front_items)
+                back_grouped = _group_by_export_file(back_items)
+                
+                # Render each export file separately
+                for export_file_name in export_files_to_render:
+                    # Get items for this export file
+                    front_items_for_file = front_grouped.get(export_file_name, [])
+                    back_items_for_file = back_grouped.get(export_file_name, [])
+                    
+                    # Count non-slot items to determine if file has content
+                    front_objects = [it for it in front_items_for_file if it.get("type") != "slot"]
+                    back_objects = [it for it in back_items_for_file if it.get("type") != "slot"]
+                    
+                    # Skip if no objects in this file
+                    if not front_objects and not back_objects:
+                        logger.debug(f"Skipping {export_file_name} - no objects assigned")
+                        continue
+                    
+                    # Generate file names for this export file
+                    file_suffix = export_file_name.split(' ')[-1]  # e.g., "File 1" -> "1"
+                    
+                    # Render frontside for this export file
+                    if front_objects:
+                        logger.debug(f"Rendering frontside for {export_file_name}...")
+                        state.processing_message = f"Rendering frontside for {export_file_name}..."
+                        if state.is_cancelled:
+                            logger.debug(f"Processing cancelled")
+                            return
+                        
+                        p_front_file = os.path.join(OUTPUT_PATH, f"Test_file_frontside_{file_suffix}.pdf")
+                        p_front_png_file = os.path.join(OUTPUT_PATH, f"Test_file_frontside_{file_suffix}.png")
+                        p_front_jpg_file = os.path.join(OUTPUT_PATH, f"Test_file_frontside_{file_suffix}.jpg")
+                        
+                        did_pdf = False
+                        if "pdf" in fmts:
+                            self._render_scene_to_pdf(p_front_file, front_items_for_file, jx, jy, dpi=dpi_v)
+                            did_pdf = True
+                        elif ("png" in fmts) or ("jpg" in fmts):
+                            tmp_pdf = os.path.join(TEMP_FOLDER, f"__tmp_front_{file_suffix}.pdf")
+                            try:
+                                self._render_scene_to_pdf(tmp_pdf, front_items_for_file, jx, jy, dpi=dpi_v)
+                            finally:
+                                try:
+                                    os.remove(tmp_pdf)
+                                except Exception:
+                                    pass
+                        
+                        if "png" in fmts:
+                            try:
+                                self.exporter.save_last_render_as_png(p_front_png_file)
+                            except Exception:
+                                logger.exception(f"Failed to save front PNG for {export_file_name}; continuing")
+                        if "jpg" in fmts:
+                            try:
+                                self.exporter.save_last_render_as_jpg(p_front_jpg_file)
+                            except Exception:
+                                logger.exception(f"Failed to save front JPG for {export_file_name}; continuing")
+                    
+                    # Render backside for this export file
+                    if back_objects:
+                        logger.debug(f"Rendering backside for {export_file_name}...")
+                        state.processing_message = f"Rendering backside for {export_file_name}..."
+                        if state.is_cancelled:
+                            logger.debug(f"Processing cancelled")
+                            return
+                        
+                        p_back_file = os.path.join(OUTPUT_PATH, f"Test_file_backside_{file_suffix}.pdf")
+                        p_back_png_file = os.path.join(OUTPUT_PATH, f"Test_file_backside_{file_suffix}.png")
+                        p_back_jpg_file = os.path.join(OUTPUT_PATH, f"Test_file_backside_{file_suffix}.jpg")
+                        
+                        did_pdf = False
+                        if "pdf" in fmts:
+                            self._render_scene_to_pdf(p_back_file, back_items_for_file, jx, jy, dpi=dpi_v)
+                            did_pdf = True
+                        elif ("png" in fmts) or ("jpg" in fmts):
+                            tmp_pdf_b = os.path.join(TEMP_FOLDER, f"__tmp_back_{file_suffix}.pdf")
+                            try:
+                                self._render_scene_to_pdf(tmp_pdf_b, back_items_for_file, jx, jy, dpi=dpi_v)
+                            finally:
+                                try:
+                                    os.remove(tmp_pdf_b)
+                                except Exception:
+                                    pass
+                        
+                        if "png" in fmts:
+                            try:
+                                self.exporter.save_last_render_as_png(p_back_png_file)
+                            except Exception:
+                                logger.exception(f"Failed to save back PNG for {export_file_name}; continuing")
+                        if "jpg" in fmts:
+                            try:
+                                self.exporter.save_last_render_as_jpg(p_back_jpg_file)
+                            except Exception:
+                                logger.exception(f"Failed to save back JPG for {export_file_name}; continuing")
                 # Write JSON
                 try:
                     logger.debug(f"Writing JSON file...")
@@ -4032,6 +4291,7 @@ class NStickerCanvasScreen(Screen):
             canvas_id=rect,
             z=int(max_z + 1),
             angle=float(ang),
+            export_file=self._export_files_list[0],
         )
         try:
             self._items[rect]["label"] = str(label)
@@ -4062,6 +4322,7 @@ class NStickerCanvasScreen(Screen):
             y_mm=float((cy - y0) / (MM_TO_PX * max(self._zoom, 1e-6))),
             label_id=tid,
             canvas_id=tid,
+            export_file=self._export_files_list[0],
         )
         return tid
 
@@ -4091,6 +4352,8 @@ class NStickerCanvasScreen(Screen):
                         "label_font_family": str(meta.get("label_font_family", "Myriad Pro")),
                         # Persist ownership
                         "owner_major": str(meta.get("owner_major", "")),
+                        # Export file assignment
+                        "export_file": str(meta.get("export_file", "File 1")),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize rect item {cid}: {e}")
@@ -4129,6 +4392,8 @@ class NStickerCanvasScreen(Screen):
                         "angle": float(meta.get("angle", 0.0) or 0.0),
                         "z": int(meta.get("z", 0)),
                         "owner_major": str(meta.get("owner_major", "")),
+                        # Export file assignment
+                        "export_file": str(meta.get("export_file", "File 1")),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize image item {cid}: {e}")
@@ -4153,6 +4418,8 @@ class NStickerCanvasScreen(Screen):
                         "font_size_pt": int(round(float(meta.get("font_size_pt", 12)))),
                         "font_family": str(meta.get("font_family", "Myriad Pro")),
                         "owner_major": str(meta.get("owner_major", "")),
+                        # Export file assignment
+                        "export_file": str(meta.get("export_file", "File 1")),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize text item {cid}: {e}")
@@ -4178,6 +4445,8 @@ class NStickerCanvasScreen(Screen):
                         "label_font_size": int(round(float(meta.get("label_font_size", 10)))),
                         "label_font_family": str(meta.get("label_font_family", "Myriad Pro")),
                         "owner_major": str(meta.get("owner_major", "")),
+                        # Export file assignment
+                        "export_file": str(meta.get("export_file", "File 1")),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize barcode item {cid}: {e}")
@@ -4243,6 +4512,8 @@ class NStickerCanvasScreen(Screen):
                         # Restore flags if present
                         self._items[rid]["is_options"] = self._as_bool(it.get("is_options", False))
                         self._items[rid]["is_static"] = self._as_bool(it.get("is_static", False))
+                        # Restore export file assignment
+                        self._items[rid]["export_file"] = str(it.get("export_file", "File 1"))
                         z_val = it.get("z")
                         if z_val is not None:
                             self._items[rid]["z"] = int(z_val)
@@ -4332,6 +4603,8 @@ class NStickerCanvasScreen(Screen):
                     try:
                         meta["is_options"] = self._as_bool(it.get("is_options", False))
                         meta["is_static"] = self._as_bool(it.get("is_static", False))
+                        # Restore export file assignment
+                        meta["export_file"] = str(it.get("export_file", "File 1"))
                     except Exception:
                         logger.exception("Failed to restore flags for image item")
                     photo = self._render_photo(meta, max(1, int(w_px)), max(1, int(h_px)))
@@ -4373,6 +4646,8 @@ class NStickerCanvasScreen(Screen):
                             try:
                                 self._items[tid]["is_options"] = self._as_bool(it.get("is_options", False))
                                 self._items[tid]["is_static"] = self._as_bool(it.get("is_static", False))
+                                # Restore export file assignment
+                                self._items[tid]["export_file"] = str(it.get("export_file", "File 1"))
                             except Exception:
                                 logger.exception("Failed to restore flags for text item")
                             # Restore ownership
@@ -4417,6 +4692,8 @@ class NStickerCanvasScreen(Screen):
                             try:
                                 self._items[rid]["is_options"] = self._as_bool(it.get("is_options", False))
                                 self._items[rid]["is_static"] = self._as_bool(it.get("is_static", False))
+                                # Restore export file assignment
+                                self._items[rid]["export_file"] = str(it.get("export_file", "File 1"))
                             except Exception:
                                 logger.exception("Failed to restore flags for text-rect item")
                             # Restore ownership
@@ -4465,6 +4742,8 @@ class NStickerCanvasScreen(Screen):
                         # Restore flags if present
                         self._items[rid]["is_options"] = self._as_bool(it.get("is_options", False))
                         self._items[rid]["is_static"] = self._as_bool(it.get("is_static", False))
+                        # Restore export file assignment
+                        self._items[rid]["export_file"] = str(it.get("export_file", "File 1"))
                         z_val = it.get("z")
                         if z_val is not None:
                             self._items[rid]["z"] = int(z_val)
@@ -4526,6 +4805,21 @@ class NStickerCanvasScreen(Screen):
         step = scene.get("step") or {}
         origin = scene.get("origin") or {}
         slot_size = scene.get("slot_size") or {}
+        
+        # Load export files list if present
+        try:
+            export_files_saved = scene.get("export_files") or ["File 1"]
+            if export_files_saved and isinstance(export_files_saved, list):
+                self._export_files_list = list(export_files_saved)
+                if self._export_files_list:
+                    self.export_file_var.set(self._export_files_list[0])
+                # Refresh UI
+                if hasattr(self, "_export_file_combo"):
+                    self._export_file_combo.configure(values=self._export_files_list)
+                if hasattr(self, "_export_file_selector_left"):
+                    self._export_file_selector_left.configure(values=self._export_files_list)
+        except Exception:
+            logger.exception("Failed to restore export files list")
 
         def _set_str(var, val):
             # Preserve decimals exactly as provided; avoid rounding/coercion
