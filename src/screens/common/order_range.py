@@ -1000,6 +1000,19 @@ class OrderRangeScreen(Screen):
 
         def _process_object(order_side_data: Dict[str, Any], slot_info: Dict[str, Any]) -> Dict[str, Any]:
             for object in slot_info["objects"]:
+                # Check if object is static - static objects don't need Amazon data match
+                is_static = bool(object.get("is_static", False))
+                
+                if is_static:
+                    # Static objects are processed as-is without Amazon data
+                    object["processed"] = True
+                    object["slot_x_mm"] = slot_info["x_mm"]
+                    object["slot_y_mm"] = slot_info["y_mm"]
+                    object["slot_w_mm"] = slot_info["w_mm"]
+                    object["slot_h_mm"] = slot_info["h_mm"]
+                    continue
+                
+                # Non-static objects require matching with Amazon data
                 order_object = [obj for obj in order_side_data if obj["label"] == object["amazon_label"]]
                 if len(order_object) == 0:
                     continue

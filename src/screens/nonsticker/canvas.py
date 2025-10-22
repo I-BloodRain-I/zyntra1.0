@@ -1442,7 +1442,7 @@ class NStickerCanvasScreen(Screen):
         self.sel_is_options = tk.BooleanVar(value=False)
         self.sel_is_static = tk.BooleanVar(value=False)
         # ttk.Checkbutton(_flags, variable=self.sel_is_options, text="Is Options").pack(side="left", pady=6, padx=(0,6))
-        # ttk.Checkbutton(_flags, variable=self.sel_is_static, text="Is Static").pack(side="left", pady=6)
+        ttk.Checkbutton(_flags, variable=self.sel_is_static, text="Static").pack(side="left", pady=6)
         # Persist flags into selected object
         def _on_flags_change(*_):
             # Ignore programmatic updates
@@ -3281,13 +3281,16 @@ class NStickerCanvasScreen(Screen):
         except Exception:
             logger.exception("Failed to prepare internal product images and update paths")
 
-        # Validate that all non-slot, non-barcode objects have a non-empty amazon_label
+        # Validate that all non-slot, non-barcode, non-static objects have a non-empty amazon_label
         try:
             def _missing_label(obj: dict) -> bool:
                 try:
                     obj_type = str(obj.get("type", ""))
                     # Skip validation for slots and barcodes
                     if obj_type in ("slot", "barcode"):
+                        return False
+                    # Skip validation for static objects
+                    if bool(obj.get("is_static", False)):
                         return False
                     return str(obj.get("amazon_label", "") or "").strip() == ""
                 except Exception:
