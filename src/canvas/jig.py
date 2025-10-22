@@ -22,6 +22,16 @@ class JigController:
 
     # ---- Common helpers ----
     def scaled_pt(self, base: int) -> int:
+        """Return a point size scaled by the current zoom.
+
+        Args:
+            base: Base point size (int) in the unzoomed coordinate system.
+
+        Returns:
+            Integer scaled point size appropriate for UI font metrics at the
+            screen's current zoom level. The implementation guards against
+            extreme zoom values and returns a sensible clamped integer.
+        """
         try:
             # Scale text strictly by zoom so perceived size stays real except when zooming
             return max(1, int(base * self.s._zoom))
@@ -29,6 +39,12 @@ class JigController:
             return max(1, int(base))
 
     def update_all_text_fonts(self) -> None:
+        """Scale fonts for all canvas text labels after a zoom change.
+
+        This iterates over all stored canvas items and updates their font size
+        using the screen's scaling helpers so that on-canvas labels remain
+        visually consistent when the user zooms in or out.
+        """
         # Scale fonts of all canvas item labels according to current zoom
         for cid, meta in list(self.s._items.items()):
             t = meta.get("type")
@@ -83,11 +99,24 @@ class JigController:
                         logger.exception("Failed to update major label font")
 
     def update_rect_overlay(self, cid: int, meta: dict, left: float, top: float, bbox_w: float, bbox_h: float) -> None:
+        """Update or create the rotated overlay polygon for a rectangular item.
+
+        The overlay is a drawn polygon representing the rotated bounds of a
+        rectangle/image item. It is used as the selectable outline and to show
+        rotation/selection state. The method computes the rotated corner
+        positions based on the stored angle and creates/updates a polygon
+        canvas item while preserving selection highlighting.
+
+        Args:
+            cid: Canvas id of the base rectangle item.
+            meta: Metadata (dict-like) describing the object (w_mm/h_mm/angle).
+            left, top: Top-left pixel coordinates for the unrotated bounding box.
+            bbox_w, bbox_h: Width/height in pixels of the unrotated bounding box.
+        """
         try:
             ang = float(meta.get("angle", 0.0) or 0.0)
         except Exception:
             ang = 0.0
-        # Source (unrotated) size in px from stored mm
         try:
             w_src = float(meta.get("w_mm", 0.0)) * MM_TO_PX * self.s._zoom
             h_src = float(meta.get("h_mm", 0.0)) * MM_TO_PX * self.s._zoom
@@ -154,6 +183,13 @@ class JigController:
         return 1.0
 
     def update_scrollregion(self) -> None:
+        """Update canvas scrollregion based on all drawn items.
+
+        This recomputes the canvas scrollregion using the bounding box of
+        everything drawn ("all") and includes a small padding. It ensures the
+        internal scrollregion is at least as large as the viewport so centering
+        math continues to work correctly.
+        """
         # still maintain scrollregion internally for centering math
         bbox = self.s.canvas.bbox("all")
         cw = self.s.canvas.winfo_width()
@@ -170,6 +206,12 @@ class JigController:
         self.s.canvas.configure(scrollregion=(left, top, right, bottom))
 
     def center_view(self) -> None:
+        """Center the canvas viewport on the jig when appropriate.
+
+        If the total drawn content exceeds the viewport size the method will
+        adjust the canvas view so the jig is centered. This is used after a
+        redraw to make the workspace feel centered and predictable.
+        """
         # Center viewport on the jig if content is larger than the viewport
         jig_bbox = self.s.canvas.bbox("jig")
         all_bbox = self.s.canvas.bbox("all")
@@ -201,13 +243,20 @@ class JigController:
 
     # ---- Drawing / zoom ----
     def redraw_jig(self, _evt=None, center: bool = True) -> None:
+        """Redraw the jig rectangle and reposition all canvas items.
+
+        This method recreates the jig rectangle (frame) using the current jig
+        dimensions and zoom level, recalculates positions for every stored
+        canvas item (using mm -> px conversions) and reapplies stacking order
+        and fonts. It is the central method to call when zoom, jig, or item
+        metadata changes require a full visual refresh.
+        """
         self.s.canvas.delete("jig")
         try:
             jx = float(self.s.jig_x.get())
             jy = float(self.s.jig_y.get())
         except ValueError:
             jx, jy = 296, 394.5831
-        # Draw jig scaled by current zoom
         w = int(jx * MM_TO_PX * self.s._zoom)
         h = int(jy * MM_TO_PX * self.s._zoom)
         pad = 20
@@ -335,6 +384,16 @@ class JigController:
             logger.exception(f"Failed to update text fonts after redraw: {e}")
 
     def zoom_step(self, direction: int) -> None:
+        """Adjust zoom level by a single step and re-center viewport.
+
+        Args:
+            direction: +1 to zoom in, -1 to zoom out.
+
+        The method updates the screen's _zoom value, clamps it to a sensible
+        range, and repositions items so that the viewport pivot remains anchored
+        to the previously visible center. After changing zoom the jig and
+        items are redrawn.
+        """
         # direction: +1 zoom in, -1 zoom out
         old_zoom = self.s._zoom
         if direction > 0:

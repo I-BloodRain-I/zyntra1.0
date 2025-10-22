@@ -24,7 +24,27 @@ class MajorManager:
         self.s = screen
 
     def update_major_rect(self, name: Optional[str] = None) -> None:
-        """Update a single major rectangle by preset name. If not exists, create it."""
+        """Create or update one or more major rectangles on the canvas.
+
+        If `name` is provided, updates only that preset. Otherwise iterates
+        over all configured major size presets found in
+        `self.s._major_sizes` in a stable numeric order.
+
+        Behavior and side-effects:
+        - Clamps preset width/height to the available jig inner area.
+        - Persists clamped dimensions back into the preset dict.
+        - Creates or updates the canvas rectangle and its label.
+        - Stores metadata in `self.s._items` and registers the canvas id in
+            `self.s._majors` for future lookups.
+        - When a major is moved, shifts child items that report the same
+            `owner_major` by the delta to keep relative placement.
+        - After completing updates it refreshes canvas labels, scrollregion
+            and selection z-order.
+
+        Args:
+                name: Optional preset name to update. If omitted, all presets are
+                            processed.
+        """
         try:
             def _order_key(k: str) -> tuple:
                 import re as __re
@@ -170,10 +190,31 @@ class MajorManager:
         self.s.selection._reorder_by_z()
 
     def update_all_majors(self) -> None:
+        """Convenience: re-create or refresh all major rectangles.
+
+        Delegates to `update_major_rect(name=None)` which performs the full
+        clamp/create/update cycle for every preset in `self.s._major_sizes`.
+        """
         self.update_major_rect(name=None)
 
     def place_slots_all_majors(self, silent: bool = False) -> None:
-        """Place slots grids inside each major rectangle using per-major params."""
+        """Populate every major with a grid of slots according to presets.
+
+        This removes any existing slot items and regenerates slot rectangles
+        for each major in a deterministic order. Per-major parameters are
+        read from `self.s._major_sizes[nm]` with fallbacks to the global
+        controls on the screen (e.g. `self.s.slot_w`, `self.s.step_x`).
+
+        The grid fills from the major's origin values (origin_x/origin_y)
+        and steps by `step_x`/`step_y` (or defaults to slot size). Generated
+        slot names follow the pattern "Slot N" and the method will trigger
+        UI refreshes (scrollregion, labels, z-order) and a final
+        `self.s._renumber_slots()` call.
+
+        Args:
+            silent: If True suppresses user-facing error dialogs when a
+                    major's numeric parameters are invalid.
+        """
         try:
             for cid, meta in list(self.s._items.items()):
                 if meta.get("type") == "slot":
@@ -254,7 +295,16 @@ class MajorManager:
             logger.exception("Failed to place slots inside majors")
 
     def remove_slots_for_major(self, major_name: Optional[str]) -> None:
-        """Remove slots for a specific major by name, or all if None."""
+        """Remove slot items owned by a specific major or all majors.
+
+        This deletes both the slot rectangle items and their optional label
+        canvas objects and removes them from `self.s._items`.
+
+        Args:
+            major_name: If None, removes every item with type == 'slot'. If a
+                        string is given, removes only slots with matching
+                        `owner_major` metadata.
+        """
         try:
             if major_name is None:
                 to_remove = [cid for cid, meta in self.s._items.items() if meta.get("type") == "slot"]
@@ -279,7 +329,16 @@ class MajorManager:
             logger.exception("Failed to remove slots for major")
 
     def place_slots_for_major(self, major_name: str, silent: bool = False) -> None:
-        """Recreate slots grid only for the specified major using current parameters."""
+        """Recreate the slot grid for a single major using current parameters.
+
+        Reads slot size, origin and step parameters from the major preset and
+        generates slot items restricted to the major rectangle. Existing slots
+        for that major are removed first.
+
+        Args:
+            major_name: Name of the major preset to populate.
+            silent: If True, suppresses dialogs on invalid numeric input.
+        """
         if not major_name:
             return
         vals = self.s._major_sizes.get(major_name)

@@ -21,6 +21,17 @@ class ImageManager:
         self.s = screen
 
     def rotated_bounds_px(self, w_px: float, h_px: float, angle_deg: float) -> tuple[float, float]:
+        """Compute axis-aligned bounding box of a rotated rectangle in pixels.
+
+        Args:
+            w_px: Width of the source rectangle in pixels.
+            h_px: Height of the source rectangle in pixels.
+            angle_deg: Rotation angle in degrees (clockwise).
+
+        Returns:
+            Tuple of (width_px, height_px) for the smallest axis-aligned box
+            that fully contains the rotated rectangle. Values are at least 1.0.
+        """
         try:
             a = math.radians(float(angle_deg) % 360.0)
             ca = abs(math.cos(a))
@@ -32,6 +43,11 @@ class ImageManager:
             return max(1.0, float(w_px)), max(1.0, float(h_px))
 
     def rotated_bounds_mm(self, w_mm: float, h_mm: float, angle_deg: float) -> tuple[float, float]:
+        """Compute axis-aligned bounding box of a rotated rectangle in mm.
+
+        Same computation as rotated_bounds_px but works with millimeter units.
+        Returns a tuple (width_mm, height_mm).
+        """
         try:
             a = math.radians(float(angle_deg) % 360.0)
             ca = abs(math.cos(a))
@@ -43,7 +59,13 @@ class ImageManager:
             return float(max(0.0, w_mm)), float(max(0.0, h_mm))
 
     def render_photo(self, meta: dict, w_px: int, h_px: int) -> Optional[tk.PhotoImage]:
-        # Returns a tk.PhotoImage of requested size; stores reference on meta to avoid GC
+        """Return a tk.PhotoImage for the given meta.path scaled to (w_px,h_px).
+
+        The function prefers Pillow (high-quality resizing and rotation) and
+        supports SVG source rendering via svg_to_png. The returned PhotoImage
+        is stored on the meta dict under 'photo' to prevent garbage-collection
+        by Tkinter.
+        """
         if w_px < 1 or h_px < 1:
             return None
         path = meta.get("path")
@@ -129,6 +151,18 @@ class ImageManager:
             return None
 
     def create_image_item(self, path: str, w_mm: float, h_mm: float, x_mm: Optional[float] = None, y_mm: Optional[float] = None) -> None:
+        """Create an image item on the canvas and add its metadata.
+
+        Args:
+            path: Path to source image file (raster or SVG).
+            w_mm, h_mm: Desired size in millimeters.
+            x_mm, y_mm: Optional position in millimeters. If omitted the image
+                is placed at the viewport center or in the currently selected
+                major.
+
+        The method renders the image at current zoom, creates the canvas item,
+        and registers a CanvasObject in screen._items.
+        """
         # place at the center of selected major if available; otherwise viewport center
         cw = max(1, self.s.canvas.winfo_width())
         ch = max(1, self.s.canvas.winfo_height())
@@ -250,8 +284,6 @@ class ImageManager:
                 self.s._refresh_major_visibility()
             except Exception:
                 raise
-
-
 
     def _apply_mask_window_compose(self, content_rgba, mask_path: str, target_w: int, target_h: int):
         """Apply mask like order_range._apply_mask: use largest transparent window in mask

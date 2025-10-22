@@ -11,6 +11,23 @@ logger = logging.getLogger(__name__)
 class CanvasContextPopup:
     """Rounded floating popup that supports any number of buttons.
 
+    This lightweight UI helper creates a transient rounded-corner popup window
+    containing zero or more action buttons. It is designed to be used as a
+    context menu for canvas objects and provides a simple API to construct the
+    menu and show it at a given screen position. The popup uses a color-keyed
+    transparent background to render rounded corners and supports scrolling when
+    the button list exceeds a maximum height.
+
+    Key behaviors:
+    - Buttons are ordinary Tk widgets created via the project's create_button
+      helper so they match application styling and support hover/active colors.
+    - The popup auto-closes on focus loss or when the bound close widget loses
+      focus; each button wrapper will destroy the popup before invoking the
+      caller-provided callback.
+    - The class intentionally keeps a very small surface area: it manages
+      creation/destruction and layout only; the visual button implementation
+      and accessibility are delegated to create_button.
+
     Usage examples:
         # New API (arbitrary buttons)
         popup = CanvasContextPopup(parent, buttons=[

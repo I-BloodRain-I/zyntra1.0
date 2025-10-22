@@ -149,6 +149,11 @@ class FontsManager:
 
     # ---- Public delegates ----
     def find_font_path(self, family: str) -> Optional[str]:
+        """Return a filesystem path to a font file for the given family.
+
+        Looks up the internal fonts mapping and checks for .ttf/.otf files in
+        the configured FONTS_PATH. Returns None if no matching file is found.
+        """
         try:
             file_stem = str(self._fonts_map.get(family, "MyriadPro-Regular"))
         except Exception:
@@ -165,6 +170,12 @@ class FontsManager:
         return None
 
     def refresh_text_controls(self):
+        """Refresh the text UI controls based on the current selection.
+
+        When a text-like object is selected this shows the text controls and
+        populates size/family/color fields from the item's metadata. Otherwise
+        it hides the controls.
+        """
         sel = getattr(self.s.selection, "_selected", None)
         if not sel or sel not in self.s._items:
             try:
@@ -243,6 +254,11 @@ class FontsManager:
 
     # ---- Internals ----
     def _load_fonts_map(self) -> dict:
+        """Load fonts mapping from disk (fonts.json).
+
+        Returns a dict mapping display family names to file stems. If the file
+        is missing or unreadable a default mapping is returned.
+        """
         try:
             if self._fonts_map_path.exists():
                 with open(self._fonts_map_path, "r", encoding="utf-8") as f:
@@ -254,6 +270,10 @@ class FontsManager:
         return {"Myriad Pro": "MyriadPro-Regular"}
 
     def _save_fonts_map(self, mp: dict) -> None:
+        """Persist the fonts mapping to disk as JSON.
+
+        This is a best-effort save; failures are logged but do not raise.
+        """
         try:
             with open(self._fonts_map_path, "w", encoding="utf-8") as f:
                 json.dump(mp, f, ensure_ascii=False, indent=2)
@@ -261,12 +281,17 @@ class FontsManager:
             logger.exception("Failed to save fonts map")
 
     def _list_font_families(self, mp: dict) -> list[str]:
+        """Return a sorted list of available font family display names.
+
+        The argument is the mapping returned by _load_fonts_map.
+        """
         try:
             return sorted(list(mp.keys()))
         except Exception:
             return ["Myriad Pro"]
 
     def _valid_hex(self, s: str) -> bool:
+        """Return True if the given string is a valid 7-char hex color (#RRGGBB)."""
         s = (s or "").strip()
         if len(s) != 7 or not s.startswith("#"):
             return False
@@ -278,6 +303,11 @@ class FontsManager:
             return False
 
     def _apply_text_changes(self, *_):
+        """Apply current text control values to the selected item.
+
+        This updates color, font size, and family on the selected text/rect
+        item metadata and re-renders any dependent label images.
+        """
         if getattr(self.s, "_suppress_text_traces", False):
             return
         sel = getattr(self.s.selection, "_selected", None)
@@ -348,6 +378,12 @@ class FontsManager:
             logger.exception("Failed to raise labels after text changes")
 
     def _on_import_font(self):
+        """Import a TTF/OTF file into the app's fonts directory and add it to
+        the font mapping.
+
+        Prompts the user for a display name to associate with the imported
+        file and updates internal state so the font becomes selectable.
+        """
         path = filedialog.askopenfilename(title="Import Font", filetypes=[("Font Files", "*.ttf *.otf")])
         if not path:
             return
@@ -453,6 +489,10 @@ class FontsManager:
             logger.exception("Failed to open font name mini-window")
 
     def _on_remove_font(self):
+        """Remove the currently selected custom font from disk and mapping.
+
+        The default font 'Myriad Pro' is protected and cannot be removed.
+        """
         mp = self._fonts_map
         fam = (self.s.text_family.get() or "").strip()
         if not fam:

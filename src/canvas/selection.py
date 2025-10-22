@@ -45,6 +45,12 @@ class CanvasSelection:
 
     # --- Event bindings ---
     def on_click(self, e):
+        """Handle left-click on the canvas.
+
+        Determine which canvas item (if any) was clicked, resolve label/overlay
+        hits to their owning item, ignore hidden items, and update the current
+        selection by calling self.select(target).
+        """
         logger.debug(
             "on_click: at canvas coords x=%s y=%s (event x=%s y=%s), current selected=%s",
             getattr(self.s.canvas, "canvasx", lambda v: v)(getattr(e, "x", 0)),
@@ -180,6 +186,12 @@ class CanvasSelection:
             logger.debug("on_click: no target; drag_kind cleared")
 
     def on_drag(self, e):
+        """Handle pointer motion while dragging the currently selected item.
+
+        Supports both rectangle/image dragging (self._drag_kind == 'rect') and
+        text dragging (self._drag_kind == 'text'). Updates canvas coords live
+        and persists new mm coordinates into the item's metadata.
+        """
         if not self._selected:
             return
         meta = self.s._items.get(self._selected, {})
@@ -410,6 +422,11 @@ class CanvasSelection:
                 logger.exception("Failed to persist text position during drag")
 
     def on_release(self, _):
+        """Handle pointer release after a drag operation.
+
+        If a major rectangle was moved, triggers a re-layout of its slots.
+        Clears drag state at the end of the operation.
+        """
         # If releasing a major move, refresh its slots layout
         try:
             t_selected = self._selected if hasattr(self, "_selected") else None
@@ -430,6 +447,11 @@ class CanvasSelection:
         self._drag_kind = None
 
     def destroy_context_popup(self):
+        """Safely destroy any currently shown context popup.
+
+        This wrapper ensures callers can request destruction without checking
+        for existence and logs any exceptions.
+        """
         try:
             if self._ctx_popup_obj:
                 self._ctx_popup_obj.destroy()
@@ -439,6 +461,12 @@ class CanvasSelection:
             self._ctx_popup_obj = None
 
     def maybe_show_context_menu(self, e):
+        """Show a context menu on right-click when an object is targeted.
+
+        Determines the target under the mouse and builds a CanvasContextPopup
+        with actions appropriate to the selected type. Returns "break" when a
+        popup was shown to stop further event propagation.
+        """
         # Only show when right-click targets an existing object
         try:
             hit = self.s.canvas.find_withtag("current")
@@ -1128,6 +1156,14 @@ class CanvasSelection:
 
     # Core selection API
     def select(self, cid: Optional[int]):
+        """Select or clear selection for a canvas item.
+
+        Args:
+            cid: Canvas id to select, or None to clear selection.
+
+        Updates UI controls on the owning screen (size/pos/angle fields), sets
+        visual selection rectangles/borders, and prepares drag handles.
+        """
         logger.debug("select: requested cid=%s (prev selected=%s)", cid, getattr(self, "_selected", None))
         if getattr(self, "_selected", None) and self._selected in self.s._items:
             prev_meta = self.s._items.get(self._selected, {})
@@ -1313,6 +1349,12 @@ class CanvasSelection:
             self.s._refresh_text_controls()
 
     def apply_size_to_selection(self):
+        """Apply the size values from the UI controls to the selected object.
+
+        Converts user-entered size values into millimeters, updates the
+        object's metadata, and refreshes visual representation on the canvas.
+        No-op when nothing is selected.
+        """
         if not self._selected:
             return
         meta = self.s._items.get(self._selected, {})
@@ -1390,6 +1432,11 @@ class CanvasSelection:
             self._suppress_pos_trace = False
 
     def on_size_change(self, *_):
+        """Callback invoked when size control values change in the UI.
+
+        Performs a live preview of size changes and uses _suppress_size_trace
+        to avoid recursive updates while programmatically changing fields.
+        """
         # live update selection size while typing, best-effort
         if self._suppress_size_trace:
             return
@@ -1420,7 +1467,7 @@ class CanvasSelection:
                 ang = 0.0
             rw, rh = (h, w) if (meta.get("type") in ("rect", "barcode") and int(abs(ang)) % 180 == 90) else (w, h)
             self.s.canvas.coords(self._selected, cx - rw / 2, cy - rh / 2, cx + rw / 2, cy + rh / 2)
-            if meta.get("type") == "rect":
+            if meta.get("type") in ("rect", "barcode"):
                 try:
                     self.s._update_rect_label_image(self._selected)
                 except Exception:
@@ -1428,8 +1475,8 @@ class CanvasSelection:
             elif meta.get("label_id"):
                 self.s.canvas.coords(meta["label_id"], cx, cy)
                 self.s._raise_all_labels()
-            # Keep rotated overlay polygon in sync for rects only
-            if meta.get("type") == "rect":
+            # Keep rotated overlay polygon in sync for rects and barcodes
+            if meta.get("type") in ("rect", "barcode"):
                 try:
                     self.s._update_rect_overlay(self._selected, meta, cx - rw / 2, cy - rh / 2, rw, rh)
                 except Exception:
@@ -1469,6 +1516,12 @@ class CanvasSelection:
             self._suppress_pos_trace = False
 
     def on_pos_change(self, *_, **kwargs):
+        """Callback when position controls change; persist new x/y to the
+        selected item's metadata and update canvas coords.
+
+        Reads current values from sel_x/sel_y and clamps/moves the selected
+        object accordingly.
+        """
         if self._suppress_pos_trace:
             return
         if not self._selected:
@@ -1586,6 +1639,9 @@ class CanvasSelection:
 
 
     def on_angle_change(self, *_):
+        """Callback for angle control changes; applies rotation to the
+        selected rect/image and updates overlays/rotated bounds accordingly.
+        """
         # Apply angle changes to current selection (rect, barcode, or image)
         if not self._selected:
             return

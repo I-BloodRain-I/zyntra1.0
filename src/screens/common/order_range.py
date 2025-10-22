@@ -52,6 +52,9 @@ class OrderRangeScreen(Screen):
         self.images = ImageManager(self)
         self._rotated_bounds_px = self.images.rotated_bounds_px
         self._rotated_bounds_mm = self.images.rotated_bounds_mm
+        
+        # Track processed files in current session to avoid overwriting
+        self._processed_files = set()
 
         # Product tag (dark pill) below the top line
         tk.Label(self,
@@ -813,8 +816,35 @@ class OrderRangeScreen(Screen):
             if not fmts_norm:
                 fmts_norm = ["pdf"]
 
-            base_front = (OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_front{f'_{pdf_order}' if pdf_order > 1 else ''}").resolve()
-            base_back  = (OUTPUT_PATH / f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_back").resolve()
+            # Helper function to generate unique filename with index if file was already processed in this session
+            def _get_unique_base_path(base_name: str) -> _Path:
+                """Generate a unique base path by checking if file already exists in current session."""
+                base = OUTPUT_PATH / base_name
+                base_path = base.resolve()
+                
+                # Check if any file with this base name was processed in current session
+                base_str = str(base_path)
+                matching_files = [f for f in self._processed_files if f.startswith(base_str)]
+                
+                if not matching_files:
+                    # No files processed yet with this base name
+                    return base_path
+                
+                # Find the next available index
+                index = 2
+                while True:
+                    # Try base_name_2, base_name_3, etc.
+                    new_base = OUTPUT_PATH / f"{base_name}_{index}"
+                    new_base_path = new_base.resolve()
+                    new_base_str = str(new_base_path)
+                    
+                    # Check if this indexed version was already processed
+                    if not any(f.startswith(new_base_str) for f in self._processed_files):
+                        return new_base_path
+                    index += 1
+
+            base_front = _get_unique_base_path(f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_front{f'_{pdf_order}' if pdf_order > 1 else ''}")
+            base_back  = _get_unique_base_path(f"{state.saved_product}_{pdf_start_oder_i}-{pdf_end_oder_i}_back")
 
             front_items = []
             back_items = []
@@ -842,6 +872,8 @@ class OrderRangeScreen(Screen):
                     logger.debug("Rendering PDF: %s", p_pdf)
                     exporter.render_scene_to_pdf(p_pdf, items, jig_size[0], jig_size[1], dpi=dpi, barcode_text=barcode_text, reference_text=reference_text)
                     did_pdf = True
+                    # Track this file as processed
+                    self._processed_files.add(str(base))
                     # Always create PNG for PDF combiner (even if not in formats)
                     p_png = str(base.with_suffix(".png"))
                     exporter.save_last_render_as_png(p_png)
@@ -861,9 +893,13 @@ class OrderRangeScreen(Screen):
                     # Only save PNG if not already saved above
                     p_png = str(base.with_suffix(".png"))
                     exporter.save_last_render_as_png(p_png)
+                    # Track this file as processed
+                    self._processed_files.add(str(base))
                 if "jpg" in fmts_norm:
                     p_jpg = str(base.with_suffix(".jpg"))
                     exporter.save_last_render_as_jpg(p_jpg)
+                    # Track this file as processed
+                    self._processed_files.add(str(base))
 
             _render_and_save(front_items, _Path(base_front))
             if back_items and any(item is not None for item in back_items):

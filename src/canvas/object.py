@@ -51,16 +51,39 @@ class CanvasObject:
 
     def is_text_rect(self) -> bool:
         # Text rects have green outline; barcode has black outline but should not be treated as text rect
+        """Return True when this object represents a 'text rectangle'.
+
+        Text rectangles are represented as rectangle objects with a specific
+        outline color ("#17a24b" in the application's convention). Barcodes or
+        other rect types should not be treated as text rects; callers use this
+        predicate to enable text-specific UI controls and sizing behavior.
+        """
         return self.type == "rect" and str(self.outline or "") == "#17a24b"
 
     # Minimal dict-like API for compatibility during refactor
     def get(self, key: str, default=None):
+        """Dictionary-like get(key, default) accessor for compatibility.
+
+        This mirrors behavior of a mapping to ease transition from older
+        code that used dict meta objects. It returns the attribute value if
+        present or the provided default otherwise.
+        """
         return getattr(self, key, default)
 
     def __getitem__(self, key: str):
+        """Allow bracket access (obj[key]) to read attributes.
+
+        Raises AttributeError if the attribute does not exist (matching
+        previous dict-like expectations where KeyError would be analogous).
+        """
         return getattr(self, key)
 
     def __setitem__(self, key: str, value):
+        """Allow bracket assignment (obj[key] = value) to set attributes.
+
+        This provides a minimal dict-like interface used in various legacy
+        call sites while keeping the benefits of a typed dataclass.
+        """
         setattr(self, key, value)
 
 

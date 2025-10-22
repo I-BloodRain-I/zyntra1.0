@@ -74,6 +74,11 @@ class PdfExporter:
 
         # --- Font helpers: map family -> file and build font at pixel size ---
         def _load_fonts_map() -> dict:
+            """Load the fonts mapping from FONTS_PATH/fonts.json.
+
+            Returns a dict mapping display family names to file stems. If the
+            mapping file is missing or invalid, a default mapping is returned.
+            """
             try:
                 mp_path = FONTS_PATH / "fonts.json"
                 if mp_path.exists():
@@ -89,6 +94,12 @@ class PdfExporter:
         _fonts_map = _load_fonts_map()
 
         def _font_path_for_family(family: str) -> str | None:
+            """Resolve a filesystem path for a font family.
+
+            Checks the loaded fonts map for a file stem and attempts to find
+            a .ttf or .otf file under FONTS_PATH. Returns the path or None if
+            not found.
+            """
             try:
                 file_stem = str(_fonts_map.get(family, "MyriadPro-Regular"))
             except Exception:
@@ -112,6 +123,11 @@ class PdfExporter:
             return None
 
         def _truetype_for_family(family: str, size_px: int):
+            """Return a Pillow FreeType font instance for the family at size_px.
+
+            If the requested family cannot be resolved or loaded, attempts a
+            series of fallbacks and finally returns PIL's default font.
+            """
             try:
                 path = _font_path_for_family(family)
                 if path:
@@ -128,6 +144,10 @@ class PdfExporter:
             return _PIL_Font.load_default()
 
         def _parse_hex_rgba(hex_str: str, default=(255, 255, 255, 255)):
+            """Parse a CSS-style hex color (#RRGGBB) into an RGBA tuple.
+
+            Returns `default` if parsing fails.
+            """
             try:
                 s = str(hex_str or "").strip()
                 if s.startswith("#") and len(s) == 7:
@@ -138,6 +158,11 @@ class PdfExporter:
             return default
 
         def _darken_white_color(image: Image.Image, reduce_pct: int = 2, cap_white: bool = True, cap_value: int = 250) -> Image.Image:
+            """Reduce brightness of pure-white pixels on opaque areas.
+
+            This helps avoid fully blown-out whites when compositing artwork on
+            printable substrates. Returns a new Image in RGBA mode.
+            """
             if image.mode != "RGBA":
                 image = image.convert("RGBA")
 
@@ -169,6 +194,14 @@ class PdfExporter:
             fill: tuple[int, int, int, int],
             angle_deg: float,
         ) -> None:
+            """Render (with Pilmoji) centered text at (center_x, center_y).
+
+            The function applies Arabic shaping and BiDi display rules, renders
+            text (including emojis) to a temporary RGBA image, rotates that
+            image by angle_deg, then composites it centered onto the main
+            export canvas (`img`). This preserves high-quality rotated text
+            with transparent background.
+            """
             # bidi/arabic shaping — как и было
             reshaped_text = arabic_reshaper.reshape(text)
             text = get_display(reshaped_text)
@@ -703,7 +736,6 @@ class PdfExporter:
                                 try:
                                     slot_x_mm = float(it["slot_x_mm"])
                                 except Exception:
-                                    print(it)
                                     continue
                                 try:
                                     slot_y_mm = float(it["slot_y_mm"])
@@ -1090,7 +1122,7 @@ class PdfExporter:
 
         separation_colorspace = pikepdf.Array([
             pikepdf.Name.Separation,
-            pikepdf.Name(spot_color_name),
+            pikepdf.Name("/" + spot_color_name),
             pikepdf.Name.DeviceCMYK,
             tint_transform
         ])
