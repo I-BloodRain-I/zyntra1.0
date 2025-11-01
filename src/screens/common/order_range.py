@@ -852,7 +852,7 @@ class OrderRangeScreen(Screen):
                 front_items.extend(front["objects"] if front else [])
                 if back:
                     back_items.extend(back["objects"] if back else [])
-            
+
             if front_barcode:
                 front_barcode["processed"] = True
                 front_items.append(front_barcode)
@@ -1055,10 +1055,12 @@ class OrderRangeScreen(Screen):
 
                 return is_filled_front or is_filled_back
 
-        def _select_slot(order_side_data: Dict[str, Any], pattern_info: Dict[str, Any], side: str) -> Dict[str, Any]:
+        def _select_slot(order_side_data: Dict[str, Any], pattern_info: Dict[str, Any], side: str, slot_label: Optional[str] = None) -> Dict[str, Any]:
             for major_index, major in enumerate(pattern_info[side]):
                 for slot_index, slot in enumerate(major["slots"]):
                     if not slot["objects"]:
+                        continue
+                    if slot_label and slot["label"] != slot_label:
                         continue
 
                     slot_labels_and_types = {(object["amazon_label"], object["type"]) for object in slot["objects"]}
@@ -1089,19 +1091,56 @@ class OrderRangeScreen(Screen):
                 order_object = order_object[0]
 
                 if object["type"] == "image":
-                    if object["mask_path"] and object["mask_path"] != "None":
-                        mask_path = PRODUCTS_PATH / object["mask_path"]
-                        template_path = PRODUCTS_PATH / object["path"]
-                        result = self._apply_mask(order_object["loaded_image"], template_path, mask_path)
-                        if result["status"] == "error":
-                            return {"status": "error", "message": f"Failed to apply mask for order: {result['message']}"}
-                        object["loaded_image"] = result["image"]
-                    else:
-                        object["loaded_image"] = order_object["loaded_image"]
+                    # Check if object has custom_images and use custom image instead of Amazon/Dropbox
+                    custom_images_dict = object.get("custom_images", {})
+                    has_custom_images = bool(custom_images_dict and len(custom_images_dict) > 0)
+                    
+                    if has_custom_images:
+                        # Use custom image: the order value should match a key in custom_images dict
+                        order_value = order_object.get("value", "")
+                        custom_image_path = custom_images_dict.get(order_value, None)
 
-                    filename = order_object["image_path"].split(".")[0] + ".png" if "image_path" in order_object else order_object["image_url"].split("/")[-1].split(".")[0] + ".png"
-                    object["path"] = str(filename)
-                    object["processed"] = True
+                        if custom_image_path:
+                            # Load custom image from the product folder
+                            try:
+                                full_custom_path = PRODUCTS_PATH / custom_image_path
+                                if full_custom_path.exists():
+                                    if full_custom_path.suffix.lower() in [".png", ".jpg", ".jpeg"]:
+                                        custom_image = _PILImage.open(full_custom_path)
+                                    elif full_custom_path.suffix.lower() == ".svg":
+                                        custom_image = svg_to_png(str(full_custom_path))
+                                    else:
+                                        logger.error(f"Unsupported custom image format: {full_custom_path.suffix} for file {full_custom_path}")
+                                        return {"status": "error", "message": f"Unsupported custom image format: {full_custom_path.suffix} for file {full_custom_path}"}
+                                    object["loaded_image"] = custom_image.convert("RGBA")
+                                    object["path"] = full_custom_path.stem + ".png"
+                                    object["processed"] = True
+                                    self.log(f"Use custom image for order {order_id}, amazon_label='{object['amazon_label']}'")
+                                    logger.info(f"Using custom image '{order_value}' -> '{custom_image_path}' for amazon_label='{object['amazon_label']}'")
+                                else:
+                                    logger.error(f"Custom image path not found: {full_custom_path}")
+                                    return {"status": "error", "message": f"Custom image path {full_custom_path} not found"}
+                            except Exception as e:
+                                logger.exception(f"Failed to load custom image {custom_image_path}: {e}")
+                                return {"status": "error", "message": f"Failed to load custom image {custom_image_path}: {e}"}
+                        else:
+                            logger.info(f"No custom image found for value '{order_value}' in custom_images dict")
+                            return {"status": "error", "message": f"Custom image with name {order_value} not found for label '{object['amazon_label']}'"}
+                    else:
+                        if not has_custom_images:
+                            if object["mask_path"] and object["mask_path"] != "None":
+                                mask_path = PRODUCTS_PATH / object["mask_path"]
+                                template_path = PRODUCTS_PATH / object["path"]
+                                result = self._apply_mask(order_object["loaded_image"], template_path, mask_path)
+                                if result["status"] == "error":
+                                    return {"status": "error", "message": f"Failed to apply mask for order: {result['message']}"}
+                                object["loaded_image"] = result["image"]
+                            else:
+                                object["loaded_image"] = order_object["loaded_image"]
+
+                            filename = order_object["image_path"].split(".")[0] + ".png" if "image_path" in order_object else order_object["image_url"].split("/")[-1].split(".")[0] + ".png"
+                            object["path"] = str(filename)
+                            object["processed"] = True
 
                 elif object["type"] == "text":
                     object["type"] = "rect"
@@ -1109,6 +1148,7 @@ class OrderRangeScreen(Screen):
                     object["label_fill"] = order_object["color"]
                     object["label_font_family"] = order_object["font_family"]
                     object["processed"] = True
+
                 object["slot_x_mm"] = slot_info["x_mm"]
                 object["slot_y_mm"] = slot_info["y_mm"]
                 object["slot_w_mm"] = slot_info["w_mm"]
@@ -1148,14 +1188,18 @@ class OrderRangeScreen(Screen):
                 if not selected_slot_front:
                     return {"status": "error", "message": f"Not found front pattern slot for order {order_id}"}
             if order_data.get("back", {}):
-                selected_slot_back = _select_slot(order_data["back"], pattern_info, "Backside")
+                selected_slot_back = _select_slot(order_data["back"], pattern_info, "Backside", slot_label=selected_slot_front["label"] if selected_slot_front else None)
                 if not selected_slot_back:
                     return {"status": "error", "message": f"Not found back pattern slot for order {order_id}"}
             
             if selected_slot_front:
-                _process_object(order_data["front"], selected_slot_front)
+                res = _process_object(order_data["front"], selected_slot_front)
+                if res and res.get("status") == "error":
+                    return {"status": "error", "message": res["message"]}
             if selected_slot_back:
-                _process_object(order_data["back"], selected_slot_back)
+                res = _process_object(order_data["back"], selected_slot_back)
+                if res and res.get("status") == "error":
+                    return {"status": "error", "message": res["message"]}
             selected_slots.append((selected_slot_front, selected_slot_back))
 
             if _is_pattern_filled(pattern_info, original_pattern_info):

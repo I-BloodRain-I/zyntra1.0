@@ -51,6 +51,10 @@ class CanvasObject:
     
     # Export file assignment (default "File 1", ignored for slots and majors)
     export_file: str = "File 1"
+    
+    # Custom images for image objects (name -> path dict and selected name)
+    custom_images: dict = field(default_factory=dict)
+    custom_image: str = ""
 
     def is_text_rect(self) -> bool:
         # Text rects have green outline; barcode has black outline but should not be treated as text rect

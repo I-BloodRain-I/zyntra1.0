@@ -219,6 +219,9 @@ class ImageManager:
             x_mm=float(sx_mm),
             y_mm=float(sy_mm),
         )
+        # Initialize empty custom image assignment and empty custom images dict
+        meta["custom_image"] = ""
+        meta["custom_images"] = {}
         # Tag ownership: prefer the major under initial placement; fallback to selected major
         try:
             owner_hit = ""

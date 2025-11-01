@@ -1,6 +1,8 @@
 from typing import Optional, Tuple
 from dataclasses import asdict
+from copy import deepcopy
 
+import os
 import logging
 import tkinter as tk
 from tkinter import messagebox, filedialog
@@ -712,6 +714,12 @@ class CanvasSelection:
                     nmeta["mask_path"] = str(obj.get("mask_path"))
                 if obj.get("owner_major"):
                     nmeta["owner_major"] = str(obj.get("owner_major"))
+                if obj.get("custom_images"):
+                    nmeta["custom_images"] = deepcopy(obj.get("custom_images"))
+                if obj.get("custom_image"):
+                    nmeta["custom_image"] = str(obj.get("custom_image"))
+                if obj.get("export_file"):
+                    nmeta["export_file"] = str(obj.get("export_file"))
                 # Angle and re-render
                 try:
                     ang = float(obj.get("angle", 0.0) or 0.0)
@@ -1217,6 +1225,14 @@ class CanvasSelection:
                     self.s.sel_is_static.set(False)
                 if hasattr(self.s, "sel_export_file"):
                     self.s.sel_export_file.set("")
+                # Hide custom images block when nothing selected
+                if hasattr(self.s, "sel_custom_image_line"):
+                    try:
+                        self.s.sel_custom_image_line.pack_forget()
+                        if hasattr(self.s, "sel_custom_image"):
+                            self.s.sel_custom_image.set("")
+                    except Exception:
+                        logger.exception("Failed to hide custom image selector on deselect")
             finally:
                 self._suppress_pos_trace = False
                 self._suppress_size_trace = False
@@ -1346,6 +1362,44 @@ class CanvasSelection:
                     self.s.sel_export_file.set(str(meta.get("export_file", "File 1")))
                 else:
                     self.s.sel_export_file.set("")
+            # Show/hide and populate custom image combobox for image type
+            if hasattr(self.s, "sel_custom_image_line") and hasattr(self.s, "custom_images"):
+                obj_type = meta.get("type", "")
+                if obj_type == "image":
+                    # Show custom image selector
+                    try:
+                        self.s.sel_custom_image_line.pack(side="top", anchor="w")
+                        # Get custom images from THIS object's metadata
+                        custom_imgs = self.s.custom_images.get_custom_images_for_object(meta)
+                        logger.info(f"Selection: object cid={cid} has custom_images dict: {custom_imgs}")
+                        image_names = sorted(list(custom_imgs.keys())) if custom_imgs else []
+                        logger.info(f"Updating combobox for cid={cid} with {len(image_names)} images: {image_names}")
+                        self.s._sel_custom_image_combo.configure(values=image_names)
+                        # Set current value with trace suppression
+                        if hasattr(self.s, "_suppress_custom_image_trace"):
+                            self.s._suppress_custom_image_trace = True
+                        try:
+                            current_custom = str(meta.get("custom_image", "")).strip()
+                            self.s.sel_custom_image.set(current_custom)
+                            logger.debug("select: set custom_image to '%s' for image cid=%s", current_custom, cid)
+                        finally:
+                            if hasattr(self.s, "_suppress_custom_image_trace"):
+                                self.s._suppress_custom_image_trace = False
+                    except Exception:
+                        logger.exception("Failed to show/populate custom image selector")
+                else:
+                    # Hide for non-image types
+                    try:
+                        self.s.sel_custom_image_line.pack_forget()
+                        if hasattr(self.s, "_suppress_custom_image_trace"):
+                            self.s._suppress_custom_image_trace = True
+                        try:
+                            self.s.sel_custom_image.set("")
+                        finally:
+                            if hasattr(self.s, "_suppress_custom_image_trace"):
+                                self.s._suppress_custom_image_trace = False
+                    except Exception:
+                        logger.exception("Failed to hide custom image selector")
         finally:
             if hasattr(self.s, "_suppress_flag_traces"):
                 self.s._suppress_flag_traces = False

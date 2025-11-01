@@ -1,0 +1,1702 @@
+{
+  "ASINs": [
+    [
+      "B0FC32ZSYJ",
+      1
+    ],
+    [
+      "B0FD44ZW8Y",
+      1
+    ],
+    [
+      "B0FC316Q9G",
+      1
+    ],
+    [
+      "B0FC344RV3",
+      1
+    ],
+    [
+      "B0FC32Q5C5",
+      1
+    ],
+    [
+      "B0FC32V91G",
+      1
+    ],
+    [
+      "B0FC3357RQ",
+      1
+    ],
+    [
+      "B0FC327VSS",
+      1
+    ],
+    [
+      "B0FC33C3DD",
+      1
+    ],
+    [
+      "B0FC3JCB8S",
+      1
+    ],
+    [
+      "B0FD43PWH3",
+      1
+    ],
+    [
+      "B0FD441GTN",
+      1
+    ],
+    [
+      "B0FD44V5HF",
+      1
+    ],
+    [
+      "B0D86CKW5S",
+      1
+    ],
+    [
+      "B0F74HZW1T",
+      1
+    ]
+  ],
+  "SkuName": "CarMirror",
+  "Scene": {
+    "jig": {
+      "width_mm": 296.0,
+      "height_mm": 416.0,
+      "cmyk": "75,0,75,0"
+    },
+    "slot_count": 16,
+    "objects_count": {
+      "images": 48,
+      "text": 32
+    },
+    "export_files": [
+      "File 1"
+    ],
+    "object_cmyk": "0,100,0,0",
+    "Majors": [
+      {
+        "rect": {
+          "x_mm": 0.0,
+          "y_mm": 0.0,
+          "width_mm": 296.0,
+          "height_mm": 416.0
+        },
+        "origin": {
+          "x_mm": 13.0,
+          "y_mm": 13.0
+        },
+        "slot_size": {
+          "width_mm": 59.2,
+          "height_mm": 80.3
+        },
+        "step_size": {
+          "x_mm": 70.0,
+          "y_mm": 100.0
+        },
+        "slot_count": 16
+      }
+    ]
+  },
+  "Frontside": [
+    {
+      "label": "Major 1",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 223.8,
+          "y_mm": 322.70000000000005,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -3,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 223.55,
+              "y_mm": 322.05,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 3,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 153.8,
+          "y_mm": 322.70000000000005,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -4,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 153.79166666666666,
+              "y_mm": 322.7916666666667,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 17,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 83.80000000000001,
+          "y_mm": 322.70000000000005,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -5,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 83.79166666666666,
+              "y_mm": 322.7916666666667,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 18,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 13.800000000000004,
+          "y_mm": 322.70000000000005,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -6,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 13.79166666666665,
+              "y_mm": 322.7916666666667,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 19,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 223.8,
+          "y_mm": 222.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -7,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 223.79166666666666,
+              "y_mm": 222.79166666666666,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 20,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 153.8,
+          "y_mm": 222.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -8,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 153.79166666666666,
+              "y_mm": 222.79166666666666,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 21,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 83.80000000000001,
+          "y_mm": 222.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -9,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 83.79166666666666,
+              "y_mm": 222.79166666666666,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 22,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 13.800000000000004,
+          "y_mm": 222.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -10,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 13.79166666666665,
+              "y_mm": 222.79166666666666,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 23,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 9",
+          "x_mm": 223.8,
+          "y_mm": 122.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -11,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 223.79166666666666,
+              "y_mm": 122.79166666666666,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 24,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 10",
+          "x_mm": 153.8,
+          "y_mm": 122.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -12,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 153.79166666666666,
+              "y_mm": 122.79166666666666,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 25,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 11",
+          "x_mm": 83.80000000000001,
+          "y_mm": 122.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -13,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 83.79166666666666,
+              "y_mm": 122.79166666666666,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 26,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 12",
+          "x_mm": 13.800000000000004,
+          "y_mm": 122.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -14,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 13.79166666666665,
+              "y_mm": 122.79166666666666,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 27,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 13",
+          "x_mm": 223.8,
+          "y_mm": 22.700000000000024,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -15,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 223.79166666666666,
+              "y_mm": 22.791666666666664,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 28,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 14",
+          "x_mm": 153.8,
+          "y_mm": 22.700000000000024,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -16,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 153.79166666666666,
+              "y_mm": 22.791666666666664,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 29,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 15",
+          "x_mm": 83.80000000000001,
+          "y_mm": 22.700000000000024,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -17,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 83.79166666666666,
+              "y_mm": 22.791666666666664,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 30,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 16",
+          "x_mm": 13.800000000000004,
+          "y_mm": 22.700000000000024,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -18,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 13.79166666666665,
+              "y_mm": 22.791666666666664,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 31,
+              "amazon_label": "LADE DEIN BILD ODER LOGO HOCH !",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "Backside": [
+    {
+      "label": "Major 1",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 223.8,
+          "y_mm": 322.70000000000005,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -3,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 223.75,
+              "y_mm": 322.65,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 0,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 227.55,
+              "y_mm": 331.05,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 4400,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 229.35,
+              "y_mm": 374.45,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 272,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 229.35,
+              "y_mm": 387.15,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 273,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 153.8,
+          "y_mm": 322.70000000000005,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -4,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 153.75,
+              "y_mm": 322.65,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 74509,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 157.55,
+              "y_mm": 331.05,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 78909,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 159.35,
+              "y_mm": 374.45,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 74781,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 159.35,
+              "y_mm": 387.15,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 74782,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 83.80000000000001,
+          "y_mm": 322.70000000000005,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -5,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 83.75,
+              "y_mm": 322.65,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 78910,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 87.55000000000001,
+              "y_mm": 331.05,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 83310,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 89.35,
+              "y_mm": 374.45,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 79182,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 89.35,
+              "y_mm": 387.15,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 79183,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 13.800000000000004,
+          "y_mm": 322.70000000000005,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -6,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 13.749999999999993,
+              "y_mm": 322.65,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 83311,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 17.550000000000004,
+              "y_mm": 331.05,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 87711,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 19.349999999999987,
+              "y_mm": 374.45,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 83583,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 19.349999999999987,
+              "y_mm": 387.15,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 83584,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 223.8,
+          "y_mm": 222.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -7,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 223.75,
+              "y_mm": 222.64999999999995,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 87712,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 227.55,
+              "y_mm": 231.04999999999998,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 92112,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 229.35,
+              "y_mm": 274.44999999999993,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 87984,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 229.35,
+              "y_mm": 287.15,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 87985,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 153.8,
+          "y_mm": 222.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -8,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 153.75,
+              "y_mm": 222.64999999999995,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 92113,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 157.55,
+              "y_mm": 231.04999999999998,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 96513,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 159.35,
+              "y_mm": 274.44999999999993,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 92385,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 159.35,
+              "y_mm": 287.15,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 92386,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 83.80000000000001,
+          "y_mm": 222.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -9,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 83.75,
+              "y_mm": 222.64999999999995,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 96514,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 87.55000000000001,
+              "y_mm": 231.04999999999998,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 100914,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 89.35,
+              "y_mm": 274.44999999999993,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 96786,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 89.35,
+              "y_mm": 287.15,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 96787,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 13.800000000000004,
+          "y_mm": 222.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -10,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 13.749999999999993,
+              "y_mm": 222.64999999999995,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 100915,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 17.550000000000004,
+              "y_mm": 231.04999999999998,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 105315,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 19.349999999999987,
+              "y_mm": 274.44999999999993,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 101187,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 19.349999999999987,
+              "y_mm": 287.15,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 101188,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 9",
+          "x_mm": 223.8,
+          "y_mm": 122.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -11,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 223.75,
+              "y_mm": 122.64999999999995,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 105316,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 227.55,
+              "y_mm": 131.04999999999998,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 109716,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 229.35,
+              "y_mm": 174.44999999999996,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 105588,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 229.35,
+              "y_mm": 187.14999999999995,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 105589,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 10",
+          "x_mm": 153.8,
+          "y_mm": 122.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -12,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 153.75,
+              "y_mm": 122.64999999999995,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 109717,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 157.55,
+              "y_mm": 131.04999999999998,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 114117,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 159.35,
+              "y_mm": 174.44999999999996,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 109989,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 159.35,
+              "y_mm": 187.14999999999995,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 109990,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 11",
+          "x_mm": 83.80000000000001,
+          "y_mm": 122.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -13,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 83.75,
+              "y_mm": 122.64999999999995,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 114118,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 87.55000000000001,
+              "y_mm": 131.04999999999998,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 118518,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 89.35,
+              "y_mm": 174.44999999999996,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 114390,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 89.35,
+              "y_mm": 187.14999999999995,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 114391,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 12",
+          "x_mm": 13.800000000000004,
+          "y_mm": 122.70000000000002,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -14,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 13.749999999999993,
+              "y_mm": 122.64999999999995,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 118519,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 17.550000000000004,
+              "y_mm": 131.04999999999998,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 122919,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 19.349999999999987,
+              "y_mm": 174.44999999999996,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 118791,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 19.349999999999987,
+              "y_mm": 187.14999999999995,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 118792,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 13",
+          "x_mm": 223.8,
+          "y_mm": 22.700000000000024,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -15,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 223.75,
+              "y_mm": 22.649999999999956,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 122920,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 227.55,
+              "y_mm": 31.04999999999999,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 127320,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 229.35,
+              "y_mm": 74.44999999999996,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 123192,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 229.35,
+              "y_mm": 87.14999999999995,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 123193,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 14",
+          "x_mm": 153.8,
+          "y_mm": 22.700000000000024,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -16,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 153.75,
+              "y_mm": 22.649999999999956,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 127321,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 157.55,
+              "y_mm": 31.04999999999999,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 131721,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 159.35,
+              "y_mm": 74.44999999999996,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 127593,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 159.35,
+              "y_mm": 87.14999999999995,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 127594,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 15",
+          "x_mm": 83.80000000000001,
+          "y_mm": 22.700000000000024,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -17,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 83.75,
+              "y_mm": 22.649999999999956,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 131722,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 87.55000000000001,
+              "y_mm": 31.04999999999999,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 136122,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 89.35,
+              "y_mm": 74.44999999999996,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 131994,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 89.35,
+              "y_mm": 87.14999999999995,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 131995,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 16",
+          "x_mm": 13.800000000000004,
+          "y_mm": 22.700000000000024,
+          "w_mm": 59.2,
+          "h_mm": 80.3,
+          "z": -18,
+          "objects": [
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 13.749999999999993,
+              "y_mm": 22.649999999999956,
+              "w_mm": 59.2,
+              "h_mm": 80.3,
+              "angle": 0.0,
+              "z": 136123,
+              "amazon_label": "Bild auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "image",
+              "path": "CarMirror/carmirror single.png",
+              "x_mm": 17.550000000000004,
+              "y_mm": 31.04999999999999,
+              "w_mm": 52.0,
+              "h_mm": 40.0,
+              "angle": 0.0,
+              "z": 140523,
+              "amazon_label": "Text auf der Rückseite",
+              "is_options": false,
+              "is_static": false,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 1",
+              "x_mm": 19.349999999999987,
+              "y_mm": 74.44999999999996,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 136395,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Summer Rose",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "Gewünschter Text 2",
+              "x_mm": 19.349999999999987,
+              "y_mm": 87.14999999999995,
+              "w_mm": 48.0,
+              "h_mm": 10.0,
+              "angle": 0.0,
+              "z": 136396,
+              "label_fill": "#ffffff",
+              "label_font_size": 10,
+              "label_font_family": "Poppins Medium",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

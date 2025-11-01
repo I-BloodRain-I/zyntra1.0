@@ -15,7 +15,7 @@ from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL, 
 from src.core.app import COLOR_BG_SCREEN, validate_min1, vcmd_int
 from src.utils import *
 from src.core.state import ALL_PRODUCTS, FONTS_PATH, OUTPUT_PATH, PRODUCTS_PATH, state
-from src.canvas import CanvasObject, CanvasSelection, MajorManager, JigController, SlotManager, ImageManager, PdfExporter, FontsManager
+from src.canvas import CanvasObject, CanvasSelection, MajorManager, JigController, SlotManager, ImageManager, PdfExporter, FontsManager, CustomImagesManager
 from .results_download import NStickerResultsDownloadScreen
 
 logger = logging.getLogger(__name__)
@@ -1626,6 +1626,99 @@ class NStickerCanvasScreen(Screen):
                 return
             obj["export_file"] = str(self.sel_export_file.get() or "File 1").strip()
         self.sel_export_file.trace_add("write", _on_export_file_change)
+        
+        # Initialize custom images manager BEFORE creating UI that uses it
+        self.custom_images = CustomImagesManager(self)
+        
+        # Custom image selector for selected image object (only shown for image type)
+        self.sel_custom_image_line = tk.Frame(row2, bg="black")
+        _custom_img_line = tk.Frame(self.sel_custom_image_line, bg="black")
+        _custom_img_line.pack(side="top", anchor="w")
+        _custom_img_wrap = tk.Frame(_custom_img_line, bg="#6f6f6f")
+        _custom_img_wrap.pack(side="left", padx=6, pady=8)
+        tk.Label(_custom_img_wrap, text="Custom:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
+        
+        # Combobox to select custom image
+        self.sel_custom_image = tk.StringVar(value="")
+        self._suppress_custom_image_trace = False
+        self._sel_custom_image_combo = ttk.Combobox(
+            _custom_img_wrap,
+            textvariable=self.sel_custom_image,
+            state="readonly",
+            values=[],
+            justify="center",
+            width=10
+        )
+        self._sel_custom_image_combo.pack(side="left")
+        
+        # Update selected object when combobox changes
+        def _on_custom_image_change(*_):
+            if getattr(self, "_suppress_custom_image_trace", False):
+                return
+            sel = getattr(self.selection, "_selected", None)
+            if not sel or sel not in self._items:
+                return
+            obj = self._items[sel]
+            if obj.get("type") != "image":
+                return
+            obj["custom_image"] = str(self.sel_custom_image.get() or "").strip()
+        self.sel_custom_image.trace_add("write", _on_custom_image_change)
+        
+        # Buttons line (Import/Remove) stacked below
+        def _on_import_custom_image():
+            sel = getattr(self.selection, "_selected", None)
+            if not sel or sel not in self._items:
+                return
+            obj = self._items[sel]
+            if obj.get("type") != "image":
+                return
+            self.custom_images.import_custom_image_for_object(obj)
+        
+        def _on_remove_custom_image():
+            sel = getattr(self.selection, "_selected", None)
+            if not sel or sel not in self._items:
+                return
+            obj = self._items[sel]
+            if obj.get("type") != "image":
+                return
+            self.custom_images.remove_custom_image_from_object(obj)
+        
+        _btn_line = tk.Frame(self.sel_custom_image_line, bg="black")
+        _btn_line.pack(side="top", anchor="w")
+        # Import
+        _import_btn = create_button(
+            ButtonInfo(
+                parent=_btn_line,
+                text_info=TextInfo(text="Import", color=COLOR_TEXT, font_size=10),
+                command=_on_import_custom_image,
+                background_color="#000000",
+                button_color=COLOR_PILL,
+                hover_color=COLOR_BG_DARK,
+                active_color=COLOR_PILL,
+                padding_x=15,
+                padding_y=4,
+            )
+        )
+        _import_btn.pack(side="left", padx=(6, 4))
+        
+        # Remove
+        _remove_btn = create_button(
+            ButtonInfo(
+                parent=_btn_line,
+                text_info=TextInfo(text="Remove", color=COLOR_TEXT, font_size=10),
+                command=_on_remove_custom_image,
+                background_color="#000000",
+                button_color=COLOR_PILL,
+                hover_color=COLOR_BG_DARK,
+                active_color=COLOR_PILL,
+                padding_x=12,
+                padding_y=4,
+            )
+        )
+        _remove_btn.pack(side="left", padx=8)
+        
+        # Initially hide custom image selector
+        self.sel_custom_image_line.pack_forget()
 
         # Separator and Amazon label
         # Options checkboxes placed after Amazon label
@@ -3476,6 +3569,73 @@ class NStickerCanvasScreen(Screen):
 
             _rewrite_and_copy_images(front_items)
             _rewrite_and_copy_images(back_items)
+            
+            # Copy custom images from each object's custom_images dict to product folder
+            def _copy_custom_images_for_objects(items_list):
+                """Copy custom images to product folder and update paths in object metadata."""
+                for obj in items_list:
+                    try:
+                        if obj.get("type") != "image":
+                            continue
+                        
+                        # Get this object's custom images dict
+                        custom_imgs = obj.get("custom_images", {})
+                        if not custom_imgs or not isinstance(custom_imgs, dict):
+                            continue
+                        
+                        # Copy each custom image file to product folder
+                        updated_imgs = {}
+                        for name, src_path_str in custom_imgs.items():
+                            try:
+                                src_path = _Path(src_path_str)
+                                if not src_path.exists():
+                                    logger.warning(f"Custom image not found: {src_path_str}")
+                                    updated_imgs[name] = src_path_str
+                                    continue
+                                
+                                # Check if already under current product folder
+                                try:
+                                    is_under_products = str(src_path).startswith(str(PRODUCTS_PATH))
+                                except Exception:
+                                    is_under_products = False
+                                
+                                needs_copy = (not is_under_products) or (src_path.parent != product_folder)
+                                
+                                if needs_copy:
+                                    dst_path = product_folder / src_path.name
+                                    try:
+                                        _shutil.copy2(src_path, dst_path)
+                                        logger.debug(f"Copied custom image: %s -> %s", src_path, dst_path)
+                                    except _shutil.SameFileError:
+                                        logger.debug(f"Custom image already exists: %s", dst_path)
+                                    except Exception:
+                                        logger.exception(f"Failed to copy: {src_path}")
+                                        try:
+                                            _shutil.copyfile(src_path, dst_path)
+                                        except Exception:
+                                            logger.exception(f"Failed second copy: {src_path}")
+                                            updated_imgs[name] = src_path_str
+                                            continue
+                                    
+                                    # Update to new path
+                                    updated_imgs[name] = str(dst_path)
+                                else:
+                                    # Already in correct location
+                                    updated_imgs[name] = src_path_str
+                            except Exception as e:
+                                logger.exception(f"Failed processing custom image '{name}': {e}")
+                                updated_imgs[name] = src_path_str
+                        
+                        # Update object's custom_images dict with new paths
+                        obj["custom_images"] = updated_imgs
+                    except Exception as e:
+                        logger.exception(f"Failed processing custom images for object: {e}")
+            
+            try:
+                _copy_custom_images_for_objects(front_items)
+                _copy_custom_images_for_objects(back_items)
+            except Exception:
+                logger.exception("Failed to copy custom images to product folder")
         except Exception:
             logger.exception("Failed to prepare internal product images and update paths")
 
@@ -3670,6 +3830,9 @@ class NStickerCanvasScreen(Screen):
                             "mask_path": _to_rel(str(Path(*mask_path_parts))) if mask_path_parts else "",
                             # Export file assignment
                             "export_file": str(it.get("export_file", "File 1")),
+                            # Custom images dict (name -> path mapping) and selected custom image
+                            "custom_images": dict(it.get("custom_images", {})),
+                            "custom_image": str(it.get("custom_image", "") or ""),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process image for slot: {e}")
@@ -4378,6 +4541,9 @@ class NStickerCanvasScreen(Screen):
                     continue
             elif t == "image":
                 try:
+                    custom_imgs_dict = dict(meta.get("custom_images", {}))
+                    custom_img_selected = str(meta.get("custom_image", ""))
+                    logger.info(f"Serializing image cid={cid}: custom_images={custom_imgs_dict}, custom_image={custom_img_selected}")
                     items.append({
                         "type": "image",
                         "amazon_label": meta.amazon_label,
@@ -4394,6 +4560,9 @@ class NStickerCanvasScreen(Screen):
                         "owner_major": str(meta.get("owner_major", "")),
                         # Export file assignment
                         "export_file": str(meta.get("export_file", "File 1")),
+                        # Custom images (name -> path mapping) and selected custom image
+                        "custom_images": custom_imgs_dict,
+                        "custom_image": custom_img_selected,
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize image item {cid}: {e}")
@@ -4605,6 +4774,11 @@ class NStickerCanvasScreen(Screen):
                         meta["is_static"] = self._as_bool(it.get("is_static", False))
                         # Restore export file assignment
                         meta["export_file"] = str(it.get("export_file", "File 1"))
+                        # Restore custom images dict and selected custom image
+                        custom_imgs_from_json = dict(it.get("custom_images", {}))
+                        meta["custom_images"] = custom_imgs_from_json
+                        meta["custom_image"] = str(it.get("custom_image", "") or "")
+                        logger.info(f"Restored image: custom_images={custom_imgs_from_json}, custom_image={meta['custom_image']}")
                     except Exception:
                         logger.exception("Failed to restore flags for image item")
                     photo = self._render_photo(meta, max(1, int(w_px)), max(1, int(h_px)))

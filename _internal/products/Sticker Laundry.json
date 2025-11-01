@@ -1,0 +1,2963 @@
+{
+  "ASINs": [
+    [
+      "B0FHL2BQF4",
+      50
+    ],
+    [
+      "B0FHL4WVG9",
+      100
+    ],
+    [
+      "B0FHKZV9X6",
+      150
+    ],
+    [
+      "B0FHL5739Z",
+      200
+    ],
+    [
+      "B0FHKCBXTD",
+      250
+    ],
+    [
+      "B0FHK8JLB4",
+      500
+    ],
+    [
+      "B0FHL149VW",
+      50
+    ],
+    [
+      "B0FHL52KS3",
+      100
+    ],
+    [
+      "B0FHL37X8J",
+      150
+    ],
+    [
+      "B0FHL2PJZS",
+      200
+    ],
+    [
+      "B0FHLFZ6FB",
+      250
+    ],
+    [
+      "B0FHL1QZ71",
+      500
+    ],
+    [
+      "B0FHKCFZN2",
+      50
+    ],
+    [
+      "B0FHL4DBBZ",
+      1
+    ],
+    [
+      "B0FHLQGD45",
+      150
+    ],
+    [
+      "B0FHL5FVLQ",
+      200
+    ],
+    [
+      "B0FHKCF52Q",
+      250
+    ],
+    [
+      "B0FHL3KH4C",
+      500
+    ],
+    [
+      "B0FHL5XDD8",
+      50
+    ],
+    [
+      "B0FHJW7CSD",
+      100
+    ],
+    [
+      "B0FHLDWVHT",
+      150
+    ],
+    [
+      "B0FHL5TLZV",
+      200
+    ],
+    [
+      "B0FHL3TQV7",
+      250
+    ],
+    [
+      "B0FHK8HRWP",
+      500
+    ]
+  ],
+  "SkuName": "Sticker Laundry",
+  "Scene": {
+    "jig": {
+      "width_mm": 205.0,
+      "height_mm": 105.0,
+      "cmyk": "75,0,75,0"
+    },
+    "slot_count": 56,
+    "objects_count": {
+      "images": 54,
+      "text": 54
+    },
+    "export_files": [
+      "File 1"
+    ],
+    "object_cmyk": "0,100,0,0",
+    "Majors": [
+      {
+        "rect": {
+          "x_mm": 0.0,
+          "y_mm": 0.0,
+          "width_mm": 205.0,
+          "height_mm": 105.0
+        },
+        "origin": {
+          "x_mm": 0.0,
+          "y_mm": 0.0
+        },
+        "slot_size": {
+          "width_mm": 29.0,
+          "height_mm": 13.0
+        },
+        "step_size": {
+          "x_mm": 0.0,
+          "y_mm": 0.0
+        },
+        "slot_count": 56
+      }
+    ]
+  },
+  "Frontside": [
+    {
+      "label": "Major 1",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 176.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -3,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 176.79166666666666,
+              "y_mm": 92.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 0,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 179.75,
+              "y_mm": 94.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 107,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 147.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -4,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 147.79166666666666,
+              "y_mm": 92.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 17280,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 150.75,
+              "y_mm": 94.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 17387,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 118.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -5,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 118.79166666666666,
+              "y_mm": 92.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 17388,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 121.75,
+              "y_mm": 94.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 17495,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 89.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -6,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 89.79166666666666,
+              "y_mm": 92.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 17496,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 92.75,
+              "y_mm": 94.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 17603,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 60.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -7,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 60.79166666666666,
+              "y_mm": 92.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 17604,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 63.75,
+              "y_mm": 94.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 17711,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 31.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -8,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 31.791666666666657,
+              "y_mm": 92.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 17712,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 34.75,
+              "y_mm": 94.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 17819,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 2.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -9,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 2.791666666666657,
+              "y_mm": 92.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 17820,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 5.75,
+              "y_mm": 94.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 17927,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 176.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -10,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 176.79166666666666,
+              "y_mm": 79.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 17928,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 179.75,
+              "y_mm": 81.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 18035,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 9",
+          "x_mm": 147.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -11,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 147.79166666666666,
+              "y_mm": 79.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 18036,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 150.75,
+              "y_mm": 81.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 18143,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 10",
+          "x_mm": 118.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -12,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 118.79166666666666,
+              "y_mm": 79.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 18144,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 121.75,
+              "y_mm": 81.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 18251,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 11",
+          "x_mm": 89.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -13,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 89.79166666666666,
+              "y_mm": 79.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 18252,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 92.75,
+              "y_mm": 81.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 18359,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 12",
+          "x_mm": 60.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -14,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 60.79166666666666,
+              "y_mm": 79.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 18360,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 63.75,
+              "y_mm": 81.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 18467,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 13",
+          "x_mm": 31.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -15,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 31.791666666666657,
+              "y_mm": 79.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 18468,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 34.75,
+              "y_mm": 81.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 18575,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 14",
+          "x_mm": 2.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -16,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 2.791666666666657,
+              "y_mm": 79.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 18576,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 5.75,
+              "y_mm": 81.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 18683,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 15",
+          "x_mm": 176.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -17,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 176.79166666666666,
+              "y_mm": 66.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 18684,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 179.75,
+              "y_mm": 68.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 18791,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 16",
+          "x_mm": 147.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -18,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 147.79166666666666,
+              "y_mm": 66.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 18792,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 150.75,
+              "y_mm": 68.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 18899,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 17",
+          "x_mm": 118.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -19,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 118.79166666666666,
+              "y_mm": 66.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 18900,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 121.75,
+              "y_mm": 68.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 19007,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 18",
+          "x_mm": 89.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -20,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 89.79166666666666,
+              "y_mm": 66.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 19008,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 92.75,
+              "y_mm": 68.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 19115,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 19",
+          "x_mm": 60.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -21,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 60.79166666666666,
+              "y_mm": 66.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 19116,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 63.75,
+              "y_mm": 68.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 19223,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 20",
+          "x_mm": 31.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -22,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 31.791666666666657,
+              "y_mm": 66.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 19224,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 34.75,
+              "y_mm": 68.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 19331,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 21",
+          "x_mm": 2.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -23,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 2.791666666666657,
+              "y_mm": 66.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 19332,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 5.75,
+              "y_mm": 68.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 19439,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 22",
+          "x_mm": 176.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -24,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 176.79166666666666,
+              "y_mm": 53.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 19440,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 179.75,
+              "y_mm": 55.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 19547,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 23",
+          "x_mm": 147.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -25,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 147.79166666666666,
+              "y_mm": 53.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 19548,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 150.75,
+              "y_mm": 55.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 19655,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 24",
+          "x_mm": 118.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -26,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 118.79166666666666,
+              "y_mm": 53.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 19656,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 121.70833333333333,
+              "y_mm": 55.375,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 19763,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 25",
+          "x_mm": 89.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -27,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 89.79166666666666,
+              "y_mm": 53.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 19764,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 92.75,
+              "y_mm": 55.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 19871,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 26",
+          "x_mm": 60.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -28,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 60.79166666666666,
+              "y_mm": 53.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 19872,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 63.75,
+              "y_mm": 55.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 19979,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 27",
+          "x_mm": 31.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -29,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 31.791666666666657,
+              "y_mm": 53.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 19980,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 34.75,
+              "y_mm": 55.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 20087,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 28",
+          "x_mm": 2.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -30,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 2.791666666666657,
+              "y_mm": 53.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 20088,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 5.75,
+              "y_mm": 55.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 20195,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 29",
+          "x_mm": 176.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -31,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 176.79166666666666,
+              "y_mm": 40.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 20196,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 179.75,
+              "y_mm": 42.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 20303,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 30",
+          "x_mm": 147.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -32,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 147.79166666666666,
+              "y_mm": 40.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 20304,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 150.75,
+              "y_mm": 42.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 20411,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 31",
+          "x_mm": 118.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -33,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 118.79166666666666,
+              "y_mm": 40.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 20412,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 121.75,
+              "y_mm": 42.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 20519,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 32",
+          "x_mm": 89.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -34,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 89.79166666666666,
+              "y_mm": 40.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 20520,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 92.75,
+              "y_mm": 42.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 20627,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 33",
+          "x_mm": 60.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -35,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 60.79166666666666,
+              "y_mm": 40.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 20628,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 63.75,
+              "y_mm": 42.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 20735,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 34",
+          "x_mm": 31.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -36,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 31.791666666666657,
+              "y_mm": 40.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 20736,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 34.75,
+              "y_mm": 42.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 20843,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 35",
+          "x_mm": 2.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -37,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 2.791666666666657,
+              "y_mm": 40.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 20844,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 5.75,
+              "y_mm": 42.416666666666664,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 20951,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 36",
+          "x_mm": 176.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -38,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 176.79166666666666,
+              "y_mm": 27.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 20952,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 179.75,
+              "y_mm": 29.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 21059,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 37",
+          "x_mm": 147.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -39,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 147.79166666666666,
+              "y_mm": 27.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 21060,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 150.75,
+              "y_mm": 29.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 21167,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 38",
+          "x_mm": 118.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -40,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 118.79166666666666,
+              "y_mm": 27.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 21168,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 121.75,
+              "y_mm": 29.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 21275,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 39",
+          "x_mm": 89.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -41,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 89.79166666666666,
+              "y_mm": 27.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 21276,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 92.75,
+              "y_mm": 29.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 21383,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 40",
+          "x_mm": 60.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -42,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 60.79166666666666,
+              "y_mm": 27.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 21384,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 63.75,
+              "y_mm": 29.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 21491,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 41",
+          "x_mm": 31.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -43,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 31.791666666666657,
+              "y_mm": 27.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 21492,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 34.75,
+              "y_mm": 29.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 21599,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 42",
+          "x_mm": 2.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -44,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 2.791666666666657,
+              "y_mm": 27.79166666666667,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 21600,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 5.75,
+              "y_mm": 29.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 21707,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 43",
+          "x_mm": 176.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -45,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 176.79166666666666,
+              "y_mm": 14.791666666666671,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 21708,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 179.75,
+              "y_mm": 16.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 21815,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 44",
+          "x_mm": 147.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -46,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 147.79166666666666,
+              "y_mm": 14.791666666666671,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 21816,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 150.75,
+              "y_mm": 16.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 21923,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 45",
+          "x_mm": 118.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -47,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 118.79166666666666,
+              "y_mm": 14.791666666666671,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 21924,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 121.75,
+              "y_mm": 16.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 22031,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 46",
+          "x_mm": 89.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -48,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 89.79166666666666,
+              "y_mm": 14.791666666666671,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 22032,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 92.75,
+              "y_mm": 16.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 22139,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 47",
+          "x_mm": 60.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -49,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 60.79166666666666,
+              "y_mm": 14.791666666666671,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 22140,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 63.75,
+              "y_mm": 16.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 22247,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 48",
+          "x_mm": 31.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -50,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 31.791666666666657,
+              "y_mm": 14.791666666666671,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 22248,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 34.75,
+              "y_mm": 16.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 22355,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 49",
+          "x_mm": 2.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -51,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 2.791666666666657,
+              "y_mm": 14.791666666666671,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 22356,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 5.75,
+              "y_mm": 16.41666666666667,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 22463,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 50",
+          "x_mm": 176.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -52,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 176.79166666666666,
+              "y_mm": 1.7916666666666714,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 22464,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 179.75,
+              "y_mm": 3.4166666666666714,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 22571,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 51",
+          "x_mm": 147.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -53,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 147.79166666666666,
+              "y_mm": 1.7916666666666714,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 22572,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 150.75,
+              "y_mm": 3.4166666666666714,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 22679,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 52",
+          "x_mm": 118.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -54,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 118.79166666666666,
+              "y_mm": 1.7916666666666714,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 22680,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 121.75,
+              "y_mm": 3.4166666666666714,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 22787,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 53",
+          "x_mm": 89.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -55,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 89.79166666666666,
+              "y_mm": 1.7916666666666714,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 22788,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 92.75,
+              "y_mm": 3.4166666666666714,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 22895,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 54",
+          "x_mm": 60.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -56,
+          "objects": [
+            {
+              "type": "image",
+              "path": "Sticker Laundry/stickermain laundry.png",
+              "x_mm": 60.79166666666666,
+              "y_mm": 1.7916666666666714,
+              "w_mm": 28.0,
+              "h_mm": 12.0,
+              "angle": 0.0,
+              "z": 22896,
+              "amazon_label": "Farbe",
+              "is_options": false,
+              "is_static": true,
+              "mask_path": "",
+              "export_file": "File 1"
+            },
+            {
+              "type": "text",
+              "label": "Text",
+              "amazon_label": "WUNSCHNAME",
+              "x_mm": 63.75,
+              "y_mm": 3.4166666666666714,
+              "w_mm": 23.0,
+              "h_mm": 9.0,
+              "angle": 0.0,
+              "z": 23003,
+              "label_fill": "#17a24b",
+              "label_font_size": 6,
+              "label_font_family": "Myriad Pro",
+              "is_options": false,
+              "is_static": false,
+              "export_file": "File 1"
+            }
+          ]
+        },
+        {
+          "label": "Slot 55",
+          "x_mm": 31.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -57,
+          "objects": []
+        },
+        {
+          "label": "Slot 56",
+          "x_mm": 2.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -58,
+          "objects": []
+        }
+      ]
+    }
+  ],
+  "Backside": [
+    {
+      "label": "Major 1",
+      "slots": [
+        {
+          "label": "Slot 1",
+          "x_mm": 176.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -3,
+          "objects": []
+        },
+        {
+          "label": "Slot 2",
+          "x_mm": 147.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -4,
+          "objects": []
+        },
+        {
+          "label": "Slot 3",
+          "x_mm": 118.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -5,
+          "objects": []
+        },
+        {
+          "label": "Slot 4",
+          "x_mm": 89.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -6,
+          "objects": []
+        },
+        {
+          "label": "Slot 5",
+          "x_mm": 60.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -7,
+          "objects": []
+        },
+        {
+          "label": "Slot 6",
+          "x_mm": 31.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -8,
+          "objects": []
+        },
+        {
+          "label": "Slot 7",
+          "x_mm": 2.0,
+          "y_mm": 92.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -9,
+          "objects": []
+        },
+        {
+          "label": "Slot 8",
+          "x_mm": 176.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -10,
+          "objects": []
+        },
+        {
+          "label": "Slot 9",
+          "x_mm": 147.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -11,
+          "objects": []
+        },
+        {
+          "label": "Slot 10",
+          "x_mm": 118.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -12,
+          "objects": []
+        },
+        {
+          "label": "Slot 11",
+          "x_mm": 89.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -13,
+          "objects": []
+        },
+        {
+          "label": "Slot 12",
+          "x_mm": 60.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -14,
+          "objects": []
+        },
+        {
+          "label": "Slot 13",
+          "x_mm": 31.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -15,
+          "objects": []
+        },
+        {
+          "label": "Slot 14",
+          "x_mm": 2.0,
+          "y_mm": 79.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -16,
+          "objects": []
+        },
+        {
+          "label": "Slot 15",
+          "x_mm": 176.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -17,
+          "objects": []
+        },
+        {
+          "label": "Slot 16",
+          "x_mm": 147.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -18,
+          "objects": []
+        },
+        {
+          "label": "Slot 17",
+          "x_mm": 118.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -19,
+          "objects": []
+        },
+        {
+          "label": "Slot 18",
+          "x_mm": 89.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -20,
+          "objects": []
+        },
+        {
+          "label": "Slot 19",
+          "x_mm": 60.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -21,
+          "objects": []
+        },
+        {
+          "label": "Slot 20",
+          "x_mm": 31.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -22,
+          "objects": []
+        },
+        {
+          "label": "Slot 21",
+          "x_mm": 2.0,
+          "y_mm": 66.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -23,
+          "objects": []
+        },
+        {
+          "label": "Slot 22",
+          "x_mm": 176.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -24,
+          "objects": []
+        },
+        {
+          "label": "Slot 23",
+          "x_mm": 147.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -25,
+          "objects": []
+        },
+        {
+          "label": "Slot 24",
+          "x_mm": 118.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -26,
+          "objects": []
+        },
+        {
+          "label": "Slot 25",
+          "x_mm": 89.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -27,
+          "objects": []
+        },
+        {
+          "label": "Slot 26",
+          "x_mm": 60.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -28,
+          "objects": []
+        },
+        {
+          "label": "Slot 27",
+          "x_mm": 31.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -29,
+          "objects": []
+        },
+        {
+          "label": "Slot 28",
+          "x_mm": 2.0,
+          "y_mm": 53.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -30,
+          "objects": []
+        },
+        {
+          "label": "Slot 29",
+          "x_mm": 176.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -31,
+          "objects": []
+        },
+        {
+          "label": "Slot 30",
+          "x_mm": 147.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -32,
+          "objects": []
+        },
+        {
+          "label": "Slot 31",
+          "x_mm": 118.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -33,
+          "objects": []
+        },
+        {
+          "label": "Slot 32",
+          "x_mm": 89.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -34,
+          "objects": []
+        },
+        {
+          "label": "Slot 33",
+          "x_mm": 60.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -35,
+          "objects": []
+        },
+        {
+          "label": "Slot 34",
+          "x_mm": 31.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -36,
+          "objects": []
+        },
+        {
+          "label": "Slot 35",
+          "x_mm": 2.0,
+          "y_mm": 40.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -37,
+          "objects": []
+        },
+        {
+          "label": "Slot 36",
+          "x_mm": 176.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -38,
+          "objects": []
+        },
+        {
+          "label": "Slot 37",
+          "x_mm": 147.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -39,
+          "objects": []
+        },
+        {
+          "label": "Slot 38",
+          "x_mm": 118.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -40,
+          "objects": []
+        },
+        {
+          "label": "Slot 39",
+          "x_mm": 89.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -41,
+          "objects": []
+        },
+        {
+          "label": "Slot 40",
+          "x_mm": 60.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -42,
+          "objects": []
+        },
+        {
+          "label": "Slot 41",
+          "x_mm": 31.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -43,
+          "objects": []
+        },
+        {
+          "label": "Slot 42",
+          "x_mm": 2.0,
+          "y_mm": 27.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -44,
+          "objects": []
+        },
+        {
+          "label": "Slot 43",
+          "x_mm": 176.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -45,
+          "objects": []
+        },
+        {
+          "label": "Slot 44",
+          "x_mm": 147.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -46,
+          "objects": []
+        },
+        {
+          "label": "Slot 45",
+          "x_mm": 118.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -47,
+          "objects": []
+        },
+        {
+          "label": "Slot 46",
+          "x_mm": 89.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -48,
+          "objects": []
+        },
+        {
+          "label": "Slot 47",
+          "x_mm": 60.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -49,
+          "objects": []
+        },
+        {
+          "label": "Slot 48",
+          "x_mm": 31.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -50,
+          "objects": []
+        },
+        {
+          "label": "Slot 49",
+          "x_mm": 2.0,
+          "y_mm": 14.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -51,
+          "objects": []
+        },
+        {
+          "label": "Slot 50",
+          "x_mm": 176.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -52,
+          "objects": []
+        },
+        {
+          "label": "Slot 51",
+          "x_mm": 147.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -53,
+          "objects": []
+        },
+        {
+          "label": "Slot 52",
+          "x_mm": 118.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -54,
+          "objects": []
+        },
+        {
+          "label": "Slot 53",
+          "x_mm": 89.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -55,
+          "objects": []
+        },
+        {
+          "label": "Slot 54",
+          "x_mm": 60.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -56,
+          "objects": []
+        },
+        {
+          "label": "Slot 55",
+          "x_mm": 31.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -57,
+          "objects": []
+        },
+        {
+          "label": "Slot 56",
+          "x_mm": 2.0,
+          "y_mm": 1.0,
+          "w_mm": 29.0,
+          "h_mm": 13.0,
+          "z": -58,
+          "objects": []
+        }
+      ]
+    }
+  ],
+  "FrontsideBarcode": {
+    "type": "barcode",
+    "amazon_label": "",
+    "is_options": false,
+    "is_static": false,
+    "label": "Barcode",
+    "w_mm": 40.0,
+    "h_mm": 10.0,
+    "x_mm": 10.416666666666666,
+    "y_mm": 2.0833333333333335,
+    "outline": "black",
+    "angle": 0.0,
+    "z": -1,
+    "label_fill": "#000000",
+    "label_font_size": 10,
+    "label_font_family": "Myriad Pro",
+    "owner_major": "",
+    "export_file": "File 1"
+  }
+}
