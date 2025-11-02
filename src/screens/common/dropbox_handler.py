@@ -190,7 +190,7 @@ class Dropbox:
             logger.exception("Network error")
 
 
-def index_dropbox(log_func: Callable[[str], None]):
+def index_dropbox(log_func: Callable[[str], None], progress_callback: Callable[[int, int], None] = None):
     client = Dropbox()
     if CACHE_PATH.exists():
         try:
@@ -256,12 +256,12 @@ def index_dropbox(log_func: Callable[[str], None]):
                 break
 
             completed_folders += 1
-            if completed_folders == twenty_percent * 3:
-                log_func(f"Indexing 75% complete")
-            elif completed_folders == twenty_percent * 2:
-                log_func(f"Indexing 50% complete")
-            elif completed_folders == twenty_percent:
-                log_func(f"Indexing 25% complete")
+            # report progress (completed_folders, total_folders)
+            try:
+                if progress_callback:
+                    progress_callback(completed_folders, total_folders)
+            except Exception:
+                pass
 
             res = client.download_folder(f"{BASE_FOLDER}/{parent_folder}/{FILES_FOLDER}/{file}", str(INTERNAL_PATH) + "/")
             if res is None:
@@ -296,6 +296,13 @@ def index_dropbox(log_func: Callable[[str], None]):
         with open(CACHE_PATH, 'w') as f:
             json.dump(cache, f, indent=4)
 
+    # ensure progress reports completion
+    try:
+        if progress_callback:
+            progress_callback(total_folders, total_folders)
+    except Exception:
+        pass
+
     log_func(f"Dropbox indexing completed", SUCCESS_COLOR)
 
 def _get_cached_orders() -> List[Tuple[str, str, str]]:
@@ -328,7 +335,7 @@ def get_indexed_orders_path(orders: List[str]) -> List[Tuple[str, str, str]]:
 
     return found_orders
 
-def get_orders_info(orders: List[str], log_func: Callable[[str], None]) -> Dict[str, Dict[str, Any]]:
+def get_orders_info(orders: List[str], log_func: Callable[[str], None], progress_callback: Callable[[int, int], None] = None) -> Dict[str, Dict[str, Any]]:
 
     def is_filled(orders, found_orders):
         result = []
@@ -344,7 +351,7 @@ def get_orders_info(orders: List[str], log_func: Callable[[str], None]) -> Dict[
     # if len(found_orders) < len(orders):
     if not found_orders or not is_filled(orders, found_orders):
         log_func("Some orders not found in cache", WARNING_COLOR)
-        index_dropbox(log_func)
+        index_dropbox(log_func, progress_callback=progress_callback)
 
     found_orders = get_indexed_orders_path(orders)
     not_found_orders = []

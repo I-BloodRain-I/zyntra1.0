@@ -176,6 +176,9 @@ class OrderRangeScreen(Screen):
         self.progress = ttk.Progressbar(pb_wrap, orient="horizontal", length=486, mode="determinate", maximum=100)
         self.progress.pack(ipady=scale_px(12), pady=(5, 5))
         self.progress["value"] = 100
+        # We don't show a separate text label under the logger. Keep progress_label reference None so
+        # any existing update helpers won't attempt to render text below the logger.
+        self.progress_label = None
         # ---------------------------------------------------------------------
 
         # Scrollable logger area inside a rounded "pill" container
@@ -319,6 +322,33 @@ class OrderRangeScreen(Screen):
                 self.log_text.configure(state="disabled")
             except Exception:
                 pass
+
+    def _ui_update_progress(self, value: float = None, current_index: int = None, total: int = None) -> None:
+        """Thread-safe update for progress bar and index label.
+
+        Call this from worker threads to schedule an update on the Tk mainloop.
+        """
+        try:
+            def _update():
+                try:
+                    if value is not None and hasattr(self, "progress"):
+                        self.progress["value"] = value
+                    if hasattr(self, "progress_label") and self.progress_label is not None:
+                        if current_index is not None and total is not None:
+                            self.progress_label.config(text=f"{current_index}/{total}")
+                        elif current_index is not None:
+                            self.progress_label.config(text=str(current_index))
+                except Exception:
+                    pass
+
+            # schedule on main thread
+            try:
+                self.after(0, _update)
+            except Exception:
+                # fallback if .after not available
+                _update()
+        except Exception:
+            pass
 
     # ------------------------------- Start --------------------------------
     def _get_image_customization_objs(self, root_obj: Union[Dict[str, Any], List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
@@ -1301,7 +1331,17 @@ class OrderRangeScreen(Screen):
             except Exception as e:
                 self.log(f"Failed to open the {state.saved_product} pattern file: {e}", ERROR_COLOR)
                 self.start_btn.configure(state="normal")
-                self.progress["value"] = 100
+                # Finalize progress in a thread-safe way
+                try:
+                    if 'total_orders' in locals() and isinstance(total_orders, int) and total_orders > 0:
+                        self._ui_update_progress(value=100, current_index=total_orders, total=total_orders)
+                    else:
+                        self._ui_update_progress(value=100)
+                except Exception:
+                    try:
+                        self.progress["value"] = 100
+                    except Exception:
+                        pass
                 return
             self.log(f"{state.saved_product} pattern file opened successfully", SUCCESS_COLOR)
 
@@ -1312,12 +1352,21 @@ class OrderRangeScreen(Screen):
             total_orders_items: Dict[str, Tuple[Dict[str, Any], str, str]] = {}
             if state.order_from.find("-") != -1 and state.order_from.count("-") == 1:
                 self.log(f"Starting processing for range [{state.order_from}]")
-                orders_info = get_orders_info([str(i) for i in range(int(state.order_from.split("-")[0].strip()), int(state.order_from.split("-")[1].strip()) + 1)], self.log)
+                # Pass progress callback to index Dropbox so progress bar is used for indexing phase
+                orders_info = get_orders_info(
+                    [str(i) for i in range(int(state.order_from.split("-")[0].strip()), int(state.order_from.split("-")[1].strip()) + 1)],
+                    self.log,
+                    progress_callback=lambda done, total: self._ui_update_progress(value=(done / total * 100) if total else 0, current_index=done, total=total),
+                )
                 total_orders_items = orders_info["orders"]
             elif state.order_from.find(",") != -1 or state.order_from.strip().isdigit():
                 orders_ = [order_.strip() for order_ in state.order_from.split(",")]
                 self.log(f"Starting processing for orders {orders_}")
-                orders_info = get_orders_info(orders_, self.log)
+                orders_info = get_orders_info(
+                    orders_,
+                    self.log,
+                    progress_callback=lambda done, total: self._ui_update_progress(value=(done / total * 100) if total else 0, current_index=done, total=total),
+                )
                 total_orders_items = orders_info["orders"]
             else:
                 messagebox.showerror("Incorrect format", "Order input should be like 0-10 or 3,7,9 or just 3")
@@ -1342,6 +1391,12 @@ class OrderRangeScreen(Screen):
             progress_step = 100 / len(orders_to_process)
             orders_to_process = dict(sorted(orders_to_process.items(), key=lambda x: int(x[0].split("_")[0])))
             last_order_i = max(int(order_path.split("_")[0]) for order_path in orders_to_process)
+
+            # Initialize progress bar as zero and show indexing label (thread-safe)
+            try:
+                self._ui_update_progress(value=0, current_index=0, total=total_orders)
+            except Exception:
+                pass
 
             front_barcode = None
             back_barcode = None
@@ -1438,7 +1493,18 @@ class OrderRangeScreen(Screen):
                     pdf_data.clear()
                     pdf_start_oder_i = None
 
-                self.progress["value"] += progress_step
+                # Update progress (value is percent). Use thread-safe scheduler so UI updates from worker thread.
+                try:
+                    new_value = min(100.0, float(i + 1) / float(total_orders) * 100.0)
+                except Exception:
+                    new_value = None
+                try:
+                    if new_value is not None:
+                        self._ui_update_progress(value=new_value, current_index=min(i + 1, total_orders), total=total_orders)
+                    else:
+                        self._ui_update_progress(current_index=min(i + 1, total_orders), total=total_orders)
+                except Exception:
+                    pass
 
             # Finalize and combine all pending PDFs
             # True True False 2
@@ -1471,6 +1537,7 @@ class OrderRangeScreen(Screen):
                 self._restore_start_button_interactions()
                 # Restore original cursor exactly as before processing
                 self.start_btn.configure(cursor=getattr(self, "_start_btn_default_cursor", ""))
+                # No visible label to finalize (we intentionally removed the index label)
             except Exception:
                 pass
             self._is_processing = False

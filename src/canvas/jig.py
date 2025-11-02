@@ -140,6 +140,16 @@ class JigController:
         # Create or update polygon
         rid = int(meta.get("rot_id", 0) or 0)
         fill_col = "white" if meta.get("type") == "barcode" else "#2b2b2b"
+        # For imported text-block rectangles we want the background to be semi-
+        # transparent (50%). Tkinter canvas shapes don't support true alpha,
+        # so use the built-in stipple pattern to simulate 50% opacity for the
+        # fill only. Keep the outline fully opaque so borders/labels are not
+        # affected.
+        try:
+            is_text_block = str(meta.get("label", "")).strip().lower() == "text"
+        except Exception:
+            is_text_block = False
+        stipple_opt = "gray50" if is_text_block else ""
         # If this rect is currently selected, use blue selection color and thicker stroke
         try:
             sel_id = getattr(self.s.selection, "_selected", None)
@@ -151,9 +161,12 @@ class JigController:
         try:
             if rid and self.s.canvas.type(rid):
                 self.s.canvas.coords(rid, *rot)
-                self.s.canvas.itemconfig(rid, fill=fill_col, outline=outline_col, width=stroke_w)
+                # Apply stipple only to the fill; outline stays opaque
+                self.s.canvas.itemconfig(rid, fill=fill_col, outline=outline_col, width=stroke_w, stipple=stipple_opt)
             else:
+                # Create polygon with optional stipple to simulate transparency
                 rid = self.s.canvas.create_polygon(*rot, fill=fill_col, outline=outline_col, width=stroke_w,
+                                                    stipple=stipple_opt,
                                                     tags=("text_item",) if outline_col == "#17a24b" else None)
                 meta["rot_id"] = rid
         except Exception as e:
