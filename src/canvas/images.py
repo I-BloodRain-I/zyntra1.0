@@ -90,6 +90,7 @@ class ImageManager:
                     pil = pil.convert("RGBA")
                 except Exception as e:
                     logger.exception(f"Failed to convert SVG image to RGBA: {e}")
+                # Mirror is a per-ASIN export flag; do NOT alter canvas rendering here
                 # Apply mask using clip (cut) logic: keep pixels only where mask alpha > 0
                 try:
                     mpath = str(meta.get("mask_path", "") or "")
@@ -121,6 +122,7 @@ class ImageManager:
                 except Exception as e:
                     logger.exception(f"Failed to convert raster image to RGBA: {e}")
                 resized = pil.resize((int(w_px), int(h_px)), Image.LANCZOS)
+                # Mirror is a per-ASIN export flag; do NOT alter canvas rendering here
                 # Apply mask using clip (cut) logic: keep pixels only where mask alpha > 0
                 try:
                     mpath = str(meta.get("mask_path", "") or "")
@@ -278,6 +280,14 @@ class ImageManager:
         max_z = max(int(m.get("z", 0)) for _cid, m in self.s._items.items()) if self.s._items else 0
         meta["z"] = int(max_z + 1)
         self.s._items[img_id] = meta
+        
+        # Auto-save to current ASIN after adding new object
+        try:
+            if hasattr(self.s, '_save_current_asin_objects'):
+                logger.debug(f"[OBJECT_CREATE] Image created: id={img_id}, path={os.path.basename(path)}, x={sx_mm:.2f}, y={sy_mm:.2f} - auto-saving to ASIN")
+                self.s._save_current_asin_objects()
+        except Exception:
+            pass
         self.s.selection.select(img_id)
         self.s._update_scrollregion()
         self.s.selection._reorder_by_z()

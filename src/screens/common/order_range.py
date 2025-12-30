@@ -1,5 +1,6 @@
 import logging
 import os
+from pprint import pprint
 import threading
 import time
 import requests
@@ -12,7 +13,7 @@ from copy import deepcopy
 import tkinter as tk
 from tkinter import TclError, ttk, messagebox
 from typing import Any, Dict, List
-from PIL import ImageDraw, ImageChops, ImageFilter
+from PIL import ImageDraw, ImageChops, ImageFile, ImageFilter, ExifTags
 from PIL import Image as _PILImage
 from rembg import remove, new_session
 import numpy as np
@@ -41,6 +42,7 @@ logger = logging.getLogger(__name__)
 DROPBOX_CLIENT = Dropbox()
 
 model_session = new_session("u2net_custom", model_path=str(MODEL_PATH))
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class OrderRangeScreen(Screen):
     def __init__(self, master, app):
@@ -384,9 +386,11 @@ class OrderRangeScreen(Screen):
             side = "front" if i == 0 else "back"
             for area in surface['areas']:
                 if area["customizationType"] == "Options":
-                    if not area["optionImage"] or not area["optionValue"] or area["optionValue"].lower().startswith("NEIN"):
+                    if not area["optionImage"] or not area["optionValue"] or area["optionValue"].lower().startswith("nein"):
                         continue
-                    if (area["optionValue"].lower() in ["nein", "ja"] or area["optionValue"].lower().startswith("nein ") or area["optionValue"].lower().startswith("ja ")) and str(order_info).count(area["optionImage"]) > 3:
+                    if (area["optionValue"].lower() in ["nein", "ja"] or area["optionValue"].lower().startswith("nein ") or area["optionValue"].lower().startswith("ja ")) or str(order_info).count(area["optionImage"]) > 3:
+                        continue
+                    if "GESCHENKBOX" in area["label"].strip().upper():
                         continue
                     objects[side].append({
                         "type": "options",
@@ -398,18 +402,19 @@ class OrderRangeScreen(Screen):
                     if not area['text']:
                         continue
 
-                    font_family = area["fontFamily"]
-                    with open(FONTS_PATH / "fonts.json", "r", encoding="utf-8") as f:
-                        all_fonts = json.load(f)
-                    if font_family not in all_fonts:
-                        return {"status": "error", "message": f"Font family {font_family} not found"}
+                    if "fontFamily" in area:
+                        font_family = area["fontFamily"]
+                        with open(FONTS_PATH / "fonts.json", "r", encoding="utf-8") as f:
+                            all_fonts = json.load(f)
+                        if font_family not in all_fonts:
+                            return {"status": "error", "message": f"Font family {font_family} not found"}
 
                     objects[side].append({
                         "type": "text",
-                        "color": area["fill"],
-                        "font_family": area["fontFamily"],
-                        "size": area["Dimensions"],
-                        "position": area["Position"],
+                        "color": area.get("fill", None),
+                        "font_family": area.get("fontFamily", None),
+                        "size": area.get("Dimensions", None),
+                        "position": area.get("Position", None),
                         "label": area["label"].strip(),
                         "text": area["text"],
                     })
@@ -464,13 +469,36 @@ class OrderRangeScreen(Screen):
     def _remove_background(self, image: Image.Image) -> Image.Image:
         return remove(image, session=model_session)
 
+    def _fix_orientation_by_exif(self, img: Image.Image) -> Image.Image:
+        try:
+            exif = img._getexif()
+            if exif:
+                orientation_key = next(
+                    k for k, v in ExifTags.TAGS.items() if v == 'Orientation'
+                )
+                orientation = exif.get(orientation_key)
+
+                if orientation == 3:
+                    img = img.rotate(180, expand=True)
+                elif orientation == 6:
+                    img = img.rotate(270, expand=True)
+                elif orientation == 8:
+                    img = img.rotate(90, expand=True)
+
+            return img
+        except Exception:
+            logger.exception("Failed to fix image orientation by EXIF")
+            return {"status": "error", "message": "Failed to fix image orientation by EXIF"}
+
     def _download_image_from_dropbox(self, parent_folder: str, child_folder: str, image_path: str) -> Dict[str, Union[str, Image.Image]]:
         try:
             self.log(f"Downloading image {image_path} from Dropbox")
             info = DROPBOX_CLIENT.download_big_file(f"{BASE_FOLDER}/{parent_folder}/{FILES_FOLDER}/{child_folder}/{IMAGES_FOLDER}/{image_path}", str(INTERNAL_PATH) + "/", raw_data=True)
             if info is None:
-                return {"status": "error", "message": f"Image {child_folder}/{image_path} not found in Dropbox"}
+                return {"status": "error", "message": f"Image {child_folder}/{image_path} not found in Dropbox"} 
             img_ = Image.open(info[1])
+            img_.load()
+            img_ = self._fix_orientation_by_exif(img_)
             return {"status": "success", "image": img_}
         except Exception as e:
             logger.exception("Failed download image from dropbox")
@@ -483,8 +511,8 @@ class OrderRangeScreen(Screen):
         angle_deg: float,
         place_xy: Tuple[float, float],
         mask_rect: Tuple[int, int, int, int],
-        canvas_size: Tuple[int, int] = (2000, 2000),
-        rotate_resample: str = "bicubic",
+        canvas_size: Tuple[int, int] = (500, 500),
+        rotate_resample: str = "bilinear",
         apply_unsharp: bool = True,
         unsharp_radius: float = 0.6,
         unsharp_percent: int = 80,
@@ -498,7 +526,38 @@ class OrderRangeScreen(Screen):
         5) Mask the canvas (outside mask -> transparent).
         6) Optional UnsharpMask for extra crispness.
         """
-        assert 0 < scale <= 1, "scale must be in (0,1]."
+        # --- ORIGINAL LOAD ---
+        # if im.mode != "RGBA":
+        #     im = im.convert("RGBA")
+
+        # im_scaled = im
+        # print("Original size", im.size)
+
+        # canvas_w, canvas_h = mask_rect[2], mask_rect[3]
+        # canvas_w = int(canvas_w / scale)
+        # canvas_h = int(canvas_h / scale)
+        # print("Canvas size" , canvas_w, canvas_h)
+
+        # canvas = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+
+        # if rotate_resample == "bicubic":
+        #     resamp = Image.Resampling.BICUBIC
+        # elif rotate_resample == "nearest":
+        #     resamp = Image.Resampling.NEAREST
+        # else:
+        #     resamp = Image.Resampling.BILINEAR
+
+        # warped = im_scaled.rotate(angle_deg, resample=resamp, expand=True)
+
+        # px, py = place_xy
+        # cx, cy = mask_rect[0], mask_rect[1]
+        # px = int((px - cx) / scale)
+        # py = int((py - cy) / scale)
+        # print("Image size after rotate", warped.size)
+        # print("Placing at", px, py)
+        # canvas.paste(warped, (px, py), warped)
+
+        # return canvas
         if im.mode != "RGBA":
             im = im.convert("RGBA")
 
@@ -525,6 +584,8 @@ class OrderRangeScreen(Screen):
 
         # 3) Affine rotation+translation with exact anchoring for ORIGINAL TL -> place_xy
         k = 1.0  # scale already applied
+        if angle_deg < 0.5:
+            angle_deg = 0.0
         theta = math.radians(angle_deg)
         c, s = math.cos(theta), math.sin(theta)
         px, py = place_xy
@@ -694,6 +755,7 @@ class OrderRangeScreen(Screen):
         if mask_img.size != template.size:
             mask_img = mask_img.resize(template.size, Image.NEAREST)
 
+        im = self._crop_image(im)
         if im.mode != "RGBA":
             im = im.convert("RGBA")
 
@@ -716,9 +778,22 @@ class OrderRangeScreen(Screen):
         bw, bh = right - left, bottom - top
 
         fitted = scale_min_cover_active(im, bw, bh, thr=1)
+        # w0, h0 = im.size
+
+        # scale = min(bw / w0, bh / h0)
+        # nw, nh = max(1, int(round(w0 * scale))), max(1, int(round(h0 * scale)))
+
+        # scaled = im.resize((nw, nh), Image.LANCZOS)
+
+        # # Центровка внутри окна маски
+        # fitted = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
+        # offset_x = (bw - nw) // 2
+        # offset_y = (bh - nh) // 2
+        # fitted.paste(scaled, (offset_x, offset_y))
         matte = (window[top:bottom, left:right].astype(np.uint8) * 255)
 
         result = paste_with_alpha(template, fitted, matte, (left, top))
+        # result.save("after_apply_mask.png")
         return {"status": "success", "image": result}
 
     def _prepare_order_data(self, parent_folder: str, child_folder: str, order_info: Dict[str, Any], order_i: int, total_orders: int) -> Dict[str, Any]:
@@ -761,6 +836,7 @@ class OrderRangeScreen(Screen):
                             place_xy=[object["position"]["x"], object["position"]["y"]], 
                             mask_rect=[object["mask_position"]["x"], object["mask_position"]["y"], object["mask_size"]["width"], object["mask_size"]["height"]]
                         )
+                        # image.save("amazon_transformed_image.png")
                         object["loaded_image"] = image
 
                 elif object["type"] == "options":
@@ -1055,9 +1131,13 @@ class OrderRangeScreen(Screen):
         pdf_start_oder_id: int,
         order_id: int, 
         last_order_id: int,
+        scene_info: Dict[str, Any],
+        asins_info: List[List[Any]] = None,
         pdf_combiner: PDFCombiner = None,
         front_barcode: Optional[dict] = None,
-        back_barcode: Optional[dict] = None
+        back_barcode: Optional[dict] = None,
+        all_asin_patterns: Dict[str, Dict[str, Any]] = None,
+        original_all_asin_patterns: Dict[str, Dict[str, Any]] = None
     ) -> Dict[str, Any]:
 
         def _is_pattern_filled(pattern_info: Dict[str, Any], original_pattern_info: Dict[str, Any]) -> bool:
@@ -1085,7 +1165,10 @@ class OrderRangeScreen(Screen):
 
                 return is_filled_front or is_filled_back
 
-        def _select_slot(order_side_data: Dict[str, Any], pattern_info: Dict[str, Any], side: str, slot_label: Optional[str] = None) -> Dict[str, Any]:
+        def _select_slot(order_side_data: Dict[str, Any], pattern_info: Dict[str, Any], side: str, slot_label: Optional[str] = None, all_asin_patterns: Dict[str, Dict[str, Any]] = None) -> Dict[str, Any]:
+            not_found_objs = []
+            print("Slots Front: ", [slot["label"] for major in pattern_info["Frontside"] for slot in major["slots"]])
+            print("Slots Back: ", [slot["label"] for major in pattern_info["Backside"] for slot in major["slots"]])
             for major_index, major in enumerate(pattern_info[side]):
                 for slot_index, slot in enumerate(major["slots"]):
                     if not slot["objects"]:
@@ -1095,12 +1178,50 @@ class OrderRangeScreen(Screen):
 
                     slot_labels_and_types = {(object["amazon_label"], object["type"]) for object in slot["objects"]}
                     for object in order_side_data:
-                        if (object["label"], object["type"] if object["type"] != "options" else "image") in slot_labels_and_types:
-                            return pattern_info[side][major_index]["slots"].pop(slot_index)
+                        if_found = True
+                        if (object["label"], object["type"] if object["type"] != "options" else "image") not in slot_labels_and_types:
+                            not_found_objs.append((object["label"], object["type"] if object["type"] != "options" else "image"))
+                            if_found = False
+                            break
+                        if if_found:
+                            # Remove slot from current pattern
+                            slot_to_return = pattern_info[side][major_index]["slots"].pop(slot_index)
+                            
+                            # Also remove the same slot from all other ASIN patterns to prevent reuse
+                            if all_asin_patterns:
+                                for other_asin, other_pattern in all_asin_patterns.items():
+                                    if other_pattern == pattern_info:
+                                        # Skip current pattern (already removed above)
+                                        continue
+                                    # Remove slot with the same label from other ASIN patterns
+                                    for other_side in ["Frontside", "Backside"]:
+                                        for other_major_index, other_major in enumerate(other_pattern[other_side]):
+                                            for other_slot_index, other_slot in enumerate(other_major["slots"]):
+                                                if other_slot["label"] == slot_to_return["label"]:
+                                                    other_pattern[other_side][other_major_index]["slots"].pop(other_slot_index)
+                                                    break
+                            
+                            return {"status": "success", "slot": slot_to_return}
+                        
+            return {"status": "error", "message": f"Objects not found in pattern slot: {set(not_found_objs)}"}
 
-            return None
+        def _remove_slot_by_label(pattern_info: Dict[str, Any], side: str, slot_label: str) -> None:
+            try:
+                removed = False
+                print("slot_label", slot_label)
+                print("Front", [slot["label"] for major in pattern_info["Frontside"] for slot in major["slots"]])
+                print("Back", [slot["label"] for major in pattern_info["Backside"] for slot in major["slots"]])
+                for major_index, major in enumerate(pattern_info[side]):
+                    for slot_index, slot in enumerate(major["slots"]):
+                        if slot["label"] == slot_label:
+                            pattern_info[side][major_index]["slots"].pop(slot_index)
+                            removed = True
+                return removed
+            except Exception as e:
+                logger.exception(f"Error removing slot by label '{slot_label}': {e}")
+                return removed
 
-        def _process_object(order_side_data: Dict[str, Any], slot_info: Dict[str, Any]) -> Dict[str, Any]:
+        def _process_object(order_side_data: Dict[str, Any], slot_info: Dict[str, Any], asin_mirror: bool = False) -> Dict[str, Any]:
             for object in slot_info["objects"]:
                 # Check if object is static - static objects don't need Amazon data match
                 is_static = bool(object.get("is_static", False))
@@ -1121,6 +1242,8 @@ class OrderRangeScreen(Screen):
                 order_object = order_object[0]
 
                 if object["type"] == "image":
+                    # Add mirror flag for image objects (from per-ASIN setting)
+                    object["mirror"] = bool(asin_mirror)
                     # Check if object has custom_images and use custom image instead of Amazon/Dropbox
                     custom_images_dict = object.get("custom_images", {})
                     has_custom_images = bool(custom_images_dict and len(custom_images_dict) > 0)
@@ -1173,10 +1296,14 @@ class OrderRangeScreen(Screen):
                             object["processed"] = True
 
                 elif object["type"] == "text":
+                    # Add mirror flag for text objects (from per-ASIN setting)
+                    object["mirror"] = bool(asin_mirror)
                     object["type"] = "rect"
                     object["label"] = order_object["text"]
-                    object["label_fill"] = order_object["color"]
-                    object["label_font_family"] = order_object["font_family"]
+                    if order_object["color"]:
+                        object["label_fill"] = order_object["color"]
+                    if order_object["font_family"]:
+                        object["label_font_family"] = order_object["font_family"]
                     object["processed"] = True
 
                 object["slot_x_mm"] = slot_info["x_mm"]
@@ -1189,13 +1316,23 @@ class OrderRangeScreen(Screen):
             return {"status": "error", "message": result["message"]}
         order_data = result["data"]
         order_asin = result["asin"]
+        
+        # Extract mirror flag for this ASIN from ASINs list
+        asin_mirror = False
+        try:
+            if asins_info:
+                for asin_entry in asins_info:
+                    if isinstance(asin_entry, (list, tuple)) and len(asin_entry) >= 3 and asin_entry[0] == order_asin:
+                        asin_mirror = bool(asin_entry[2])
+                        break
+        except Exception:
+            logger.exception(f"Failed to extract mirror flag for ASIN {order_asin}")
 
         link_to_pattern_info = pattern_info
         started_pattern_info = deepcopy(pattern_info)
         is_saved_slots_processed = False
 
         selected_slots = []
-        asins_info = pattern_info.get("ASINs", None)
         DEBUG_MULTIPLIER = 1
         try:
             if asins_info is None:
@@ -1214,28 +1351,50 @@ class OrderRangeScreen(Screen):
             selected_slot_front = None
             selected_slot_back = None
             if order_data.get("front", {}):
-                selected_slot_front = _select_slot(order_data["front"], pattern_info, "Frontside")
-                if not selected_slot_front:
-                    return {"status": "error", "message": f"Not found front pattern slot for order {order_id}"}
+                selected_slot_front = _select_slot(order_data["front"], pattern_info, "Frontside", all_asin_patterns=all_asin_patterns)
+                if selected_slot_front["status"] == "error":
+                    return {"status": "error", "message": f"{selected_slot_front['message']}; Order id: {order_id} (ASIN: {order_asin})"}
+                selected_slot_front = selected_slot_front["slot"]
             if order_data.get("back", {}):
-                selected_slot_back = _select_slot(order_data["back"], pattern_info, "Backside", slot_label=selected_slot_front["label"] if selected_slot_front else None)
-                if not selected_slot_back:
-                    return {"status": "error", "message": f"Not found back pattern slot for order {order_id}"}
+                selected_slot_back = _select_slot(order_data["back"], pattern_info, "Backside", slot_label=selected_slot_front["label"] if selected_slot_front else None, all_asin_patterns=all_asin_patterns)
+                if selected_slot_back["status"] == "error":
+                    return {"status": "error", "message": f"{selected_slot_back['message']}; Order id: {order_id} (ASIN: {order_asin})"}
+                selected_slot_back = selected_slot_back["slot"]
+            
+            logger.info(f"Order {order_id}: Selected slots - Front: {selected_slot_front['label'] if selected_slot_front else 'None'}, Back: {selected_slot_back['label'] if selected_slot_back else 'None'}")
             
             if selected_slot_front:
-                res = _process_object(order_data["front"], selected_slot_front)
+                res = _process_object(order_data["front"], selected_slot_front, asin_mirror=asin_mirror)
                 if res and res.get("status") == "error":
-                    return {"status": "error", "message": res["message"]}
+                    return {"status": "error", "message": f"{res['message']} (ASIN: {order_asin})"}
+
+                if not selected_slot_back:
+                    res = _remove_slot_by_label(pattern_info, "Backside", selected_slot_front["label"])
+                    if not res:
+                        return {"status": "error", "message": f"Failed to remove back slot by label for order {order_id} (ASIN: {order_asin})"}
             if selected_slot_back:
-                res = _process_object(order_data["back"], selected_slot_back)
+                res = _process_object(order_data["back"], selected_slot_back, asin_mirror=asin_mirror)
                 if res and res.get("status") == "error":
-                    return {"status": "error", "message": res["message"]}
+                    return {"status": "error", "message": f"{res['message']} (ASIN: {order_asin})"}
+
+                if not selected_slot_front:
+                    res = _remove_slot_by_label(pattern_info, "Frontside", selected_slot_back["label"])
+                    if not res:
+                        return {"status": "error", "message": f"Failed to remove front slot by label for order {order_id} (ASIN: {order_asin})"}
+                
             selected_slots.append((selected_slot_front, selected_slot_back))
 
             if _is_pattern_filled(pattern_info, original_pattern_info):
                 self.log(f"[{order_id}] [{i+1}/{total_count}] The export data is filled, making files...")
                 pattern_info = deepcopy(original_pattern_info)
-                jig_info = pattern_info["Scene"]["jig"]
+                
+                # Reset ALL ASIN patterns to original state after PDF render
+                if all_asin_patterns and original_all_asin_patterns:
+                    for asin_key in list(all_asin_patterns.keys()):
+                        all_asin_patterns[asin_key].clear()
+                        all_asin_patterns[asin_key].update(deepcopy(original_all_asin_patterns[asin_key]))
+                
+                jig_info = scene_info["jig"]
                 jig_cmyk = jig_info.get("cmyk", "75,0,75,0")
                 result = self._make_pdf(
                     saved_slots + selected_slots,
@@ -1254,7 +1413,7 @@ class OrderRangeScreen(Screen):
                 if result["status"] == "error":
                     link_to_pattern_info.clear()
                     link_to_pattern_info.update(started_pattern_info)
-                    return {"status": "error", "message": "Failed to make pdf: " + result["message"]}
+                    return {"status": "error", "message": f"Failed to make pdf: {result['message']} (ASIN: {order_asin})"}
                 self.log(f"[{order_id}] [{i+1}/{total_count}] Files made successfully", SUCCESS_COLOR)
                 
                 # Add PDFs to combiner
@@ -1312,21 +1471,51 @@ class OrderRangeScreen(Screen):
             try:
                 with open(PRODUCTS_PATH / f"{state.saved_product}.json", "r", encoding="utf-8") as f:
                     pattern_info = json.load(f)
-                    for side in ["Frontside", "Backside"]:
-                        for major in pattern_info[side]:
-                            for slot in major["slots"]:
-                                for obj_ in slot["objects"]:
-                                    if obj_["type"] == "image":
-                                        if obj_["mask_path"] in [None, ".", "None", "none"]:
-                                            obj_["mask_path"] = ""
-                                        else:
-                                            try:
-                                                Path(obj_["mask_path"])
-                                            except Exception: 
-                                                obj_["mask_path"] = ""
 
-                                    elif obj_["type"] == "text":
-                                        obj_["label"] = ""
+                    # Keep immutable original copy to fully reset state after each PDF
+                    original_pattern_info = deepcopy(pattern_info)
+                    
+                    # Check if the new ASINObjects structure exists
+                    has_asin_objects = "ASINObjects" in pattern_info and pattern_info["ASINObjects"]
+                    
+                    if has_asin_objects:
+                        # New structure: clean up each ASIN's objects
+                        self.log(f"Detected ASINObjects structure with {len(pattern_info['ASINObjects'])} ASINs", SUCCESS_COLOR)
+                        for asin, asin_data in pattern_info["ASINObjects"].items():
+                            for side in ["Frontside", "Backside"]:
+                                if side not in asin_data:
+                                    continue
+                                for major in asin_data[side]:
+                                    for slot in major["slots"]:
+                                        for obj_ in slot["objects"]:
+                                            if obj_["type"] == "image":
+                                                if obj_["mask_path"] in [None, ".", "None", "none"]:
+                                                    obj_["mask_path"] = ""
+                                                else:
+                                                    try:
+                                                        Path(obj_["mask_path"])
+                                                    except Exception: 
+                                                        obj_["mask_path"] = ""
+                                            elif obj_["type"] == "text":
+                                                obj_["label"] = ""
+                    else:
+                        # Old structure: clean up global Frontside/Backside
+                        self.log(f"Using legacy pattern structure (no ASINObjects)", WARNING_COLOR)
+                        for side in ["Frontside", "Backside"]:
+                            for major in pattern_info[side]:
+                                for slot in major["slots"]:
+                                    for obj_ in slot["objects"]:
+                                        if obj_["type"] == "image":
+                                            if obj_["mask_path"] in [None, ".", "None", "none"]:
+                                                obj_["mask_path"] = ""
+                                            else:
+                                                try:
+                                                    Path(obj_["mask_path"])
+                                                except Exception: 
+                                                    obj_["mask_path"] = ""
+
+                                        elif obj_["type"] == "text":
+                                            obj_["label"] = ""
 
             except Exception as e:
                 self.log(f"Failed to open the {state.saved_product} pattern file: {e}", ERROR_COLOR)
@@ -1349,30 +1538,65 @@ class OrderRangeScreen(Screen):
             pdf_combiner = PDFCombiner(OUTPUT_PATH)
             self.log("PDF combiner initialized for combining rendered PDFs")
 
+            # Parse order input (supports mixed format like "1,2,3,4-8,10")
+            def parse_order_input(input_str: str) -> List[int]:
+                """Parse order input that can contain both ranges and individual numbers.
+                
+                Examples:
+                    "1,2,3" -> [1, 2, 3]
+                    "1-5" -> [1, 2, 3, 4, 5]
+                    "1,2,3,4-8,10" -> [1, 2, 3, 4, 5, 6, 7, 8, 10]
+                """
+                order_numbers = set()
+                parts = [p.strip() for p in input_str.split(",")]
+                
+                for part in parts:
+                    if "-" in part:
+                        # Handle range
+                        range_parts = part.split("-")
+                        if len(range_parts) == 2:
+                            try:
+                                start = int(range_parts[0].strip())
+                                end = int(range_parts[1].strip())
+                                order_numbers.update(range(start, end + 1))
+                            except ValueError:
+                                continue
+                    else:
+                        # Handle single number
+                        try:
+                            order_numbers.add(int(part))
+                        except ValueError:
+                            continue
+                
+                return sorted(list(order_numbers))
+
             total_orders_items: Dict[str, Tuple[Dict[str, Any], str, str]] = {}
-            if state.order_from.find("-") != -1 and state.order_from.count("-") == 1:
-                self.log(f"Starting processing for range [{state.order_from}]")
-                # Pass progress callback to index Dropbox so progress bar is used for indexing phase
+            try:
+                parsed_orders = parse_order_input(state.order_from)
+                if not parsed_orders:
+                    messagebox.showerror("Incorrect format", "Order input should be like 1-10 or 3,7,9 or 1,2,4-8,10")
+                    return
+                
+                self.log(f"Starting processing for orders: {parsed_orders}")
                 orders_info = get_orders_info(
-                    [str(i) for i in range(int(state.order_from.split("-")[0].strip()), int(state.order_from.split("-")[1].strip()) + 1)],
+                    [str(i) for i in parsed_orders],
                     self.log,
                     progress_callback=lambda done, total: self._ui_update_progress(value=(done / total * 100) if total else 0, current_index=done, total=total),
                 )
                 total_orders_items = orders_info["orders"]
-            elif state.order_from.find(",") != -1 or state.order_from.strip().isdigit():
-                orders_ = [order_.strip() for order_ in state.order_from.split(",")]
-                self.log(f"Starting processing for orders {orders_}")
-                orders_info = get_orders_info(
-                    orders_,
-                    self.log,
-                    progress_callback=lambda done, total: self._ui_update_progress(value=(done / total * 100) if total else 0, current_index=done, total=total),
-                )
-                total_orders_items = orders_info["orders"]
-            else:
-                messagebox.showerror("Incorrect format", "Order input should be like 0-10 or 3,7,9 or just 3")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to parse order input: {e}")
+                return
                  
             orders_to_process: Dict[str, Tuple[Dict[str, Any], str, str]] = {}
-            asins = [asin_ for asin_, _ in state.asins]
+            # Extract ASINs from state.asins (format: [asin, count, mirror])
+            asins = []
+            for asin_entry in state.asins:
+                if isinstance(asin_entry, (list, tuple)) and len(asin_entry) >= 1:
+                    asins.append(asin_entry[0])
+                else:
+                    asins.append(asin_entry)
+            
             for order_file, order_info in total_orders_items.items():
                 if "asin" not in order_info[0]:
                     self.log(f"Order {order_file} has no asin", ERROR_COLOR)
@@ -1398,16 +1622,23 @@ class OrderRangeScreen(Screen):
             except Exception:
                 pass
 
-            front_barcode = None
-            back_barcode = None
-            if "FrontsideBarcode" in pattern_info:
-                front_barcode = pattern_info["FrontsideBarcode"]
-            if "BacksideBarcode" in pattern_info:
-                back_barcode = pattern_info["BacksideBarcode"]
+            # Check if using new ASINObjects structure (use original_pattern_info to avoid dependency on mutations)
+            has_asin_objects = "ASINObjects" in original_pattern_info and original_pattern_info["ASINObjects"]
 
             failed_orders = []
             current_processing_orders = []
-            pattern_data = deepcopy(pattern_info)
+            
+            # Create SINGLE shared pattern_data dict for ALL ASINs to ensure slots are globally removed.
+            # Build from original_pattern_info so we can always reset to fresh state after each PDF.
+            if has_asin_objects:
+                # pattern_data will be a dict keyed by ASIN, BUT shared across all order processing
+                pattern_data = {}
+                for asin in original_pattern_info["ASINObjects"]:
+                    pattern_data[asin] = deepcopy(original_pattern_info["ASINObjects"][asin])
+            else:
+                # Legacy: single pattern for all ASINs
+                pattern_data = deepcopy(original_pattern_info)
+                
             pdf_data: List[Tuple[Dict[str, Any], Dict[str, Any]]] = []
             pdf_start_oder_i = None
             is_sucess = False
@@ -1422,6 +1653,36 @@ class OrderRangeScreen(Screen):
                     logger.debug("Processing cancelled by user.")
                     break
 
+                # Determine order ASIN and get the appropriate pattern
+                order_asin = order_info.get("asin")
+                if not order_asin:
+                    self.log(f"[{order_id}] Order has no ASIN, skipping", ERROR_COLOR)
+                    failed_orders.append(order_file)
+                    continue
+
+                if has_asin_objects:
+                    # Get ASIN-specific pattern
+                    if order_asin not in original_pattern_info["ASINObjects"]:
+                        self.log(f"[{order_id}] ASIN '{order_asin}' not found in ASINObjects, skipping", ERROR_COLOR)
+                        failed_orders.append(order_file)
+                        continue
+                    
+                    # Use the ASIN-specific pattern for this order (from ORIGINAL, immutable copy)
+                    original_pattern_for_order = original_pattern_info["ASINObjects"][order_asin]
+                    pattern_data_for_order = pattern_data[order_asin]
+                    
+                    # Extract barcodes from ASIN-specific pattern
+                    front_barcode = original_pattern_for_order.get("FrontsideBarcode", None)
+                    back_barcode = original_pattern_for_order.get("BacksideBarcode", None)
+                else:
+                    # Legacy: use global pattern for all ASINs (from ORIGINAL, immutable copy)
+                    original_pattern_for_order = original_pattern_info
+                    pattern_data_for_order = pattern_data
+                    
+                    # Extract barcodes from global pattern
+                    front_barcode = original_pattern_info.get("FrontsideBarcode", None)
+                    back_barcode = original_pattern_info.get("BacksideBarcode", None)
+
                 self.log(f"Processing of Order {order_id}/{last_order_i} has been initiated")
                 logger.debug(f"Processing of Order {order_id}/{last_order_i} has been initiated")
                 order_result = self._process_order(
@@ -1429,14 +1690,18 @@ class OrderRangeScreen(Screen):
                     child_folder,
                     pdf_data,
                     order_info,
-                    deepcopy(pattern_info),
-                    pattern_data,
+                    deepcopy(original_pattern_for_order),
+                    pattern_data_for_order,
                     pdf_start_oder_i,
                     order_id,
                     last_order_i,
+                    pattern_info["Scene"],
+                    pattern_info.get("ASINs", None),
                     pdf_combiner,
                     front_barcode=front_barcode,
-                    back_barcode=back_barcode
+                    back_barcode=back_barcode,
+                    all_asin_patterns=pattern_data if has_asin_objects else None,
+                    original_all_asin_patterns=original_pattern_info.get("ASINObjects") if has_asin_objects else None
                 )
                 if order_result["status"] == "error":
                     if order_result.get("message") == "Cancelled":
@@ -1460,9 +1725,26 @@ class OrderRangeScreen(Screen):
                     self.log("Processing cancelled by user.", WARNING_COLOR)
                     break
 
-                if _is_pattern_filled(pattern_data, pattern_info) or (i == total_orders - 1 and pdf_data):
+                # Check if pattern is filled - need to pass the correct pattern based on structure
+                if has_asin_objects:
+                    # For ASINObjects: check the specific ASIN's pattern
+                    pattern_filled = _is_pattern_filled(pattern_data_for_order, original_pattern_for_order)
+                else:
+                    # For legacy: check the global pattern
+                    pattern_filled = _is_pattern_filled(pattern_data, pattern_info)
+
+                if pattern_filled or (i == total_orders - 1 and pdf_data):
                     self.log(f"[{pdf_start_oder_i}-{order_id}] The export data is filled, making files...")
-                    pattern_data = deepcopy(pattern_info)
+
+                    # Reset pattern_data based on structure
+                    if has_asin_objects:
+                        # Reset ALL ASINs to original state
+                        for asin_key in original_pattern_info["ASINObjects"]:
+                            pattern_data[asin_key] = deepcopy(original_pattern_info["ASINObjects"][asin_key])
+                    else:
+                        # Reset global pattern
+                        pattern_data = deepcopy(pattern_info)
+
                     jig_info = pattern_info["Scene"]["jig"]
                     jig_cmyk = jig_info.get("cmyk", "75,0,75,0")
                     result = self._make_pdf(
@@ -1484,12 +1766,12 @@ class OrderRangeScreen(Screen):
                     else:
                         self.log(f"[{pdf_start_oder_i}-{order_id}] Files made successfully", SUCCESS_COLOR)
                         is_sucess = True
-                        
-                        # Add PDFs to combiner
-                        if "pdf_infos" in result and (front_barcode or back_barcode):
-                            for pdf_info in result["pdf_infos"]:
-                                pdf_combiner.add_pdf(pdf_info)
-                                
+
+                    # Add PDFs to combiner
+                    if "pdf_infos" in result and (front_barcode or back_barcode):
+                        for pdf_info in result["pdf_infos"]:
+                            pdf_combiner.add_pdf(pdf_info)
+
                     pdf_data.clear()
                     pdf_start_oder_i = None
 

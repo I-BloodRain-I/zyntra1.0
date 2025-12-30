@@ -1,457 +1,461 @@
 {
-  "ASINs": [
-    [
-      "B0F4DQR21L",
-      1
-    ]
-  ],
-  "SkuName": "Just for Test",
-  "Scene": {
-    "jig": {
-      "width_mm": 296.0,
-      "height_mm": 394.5831
+    "ASINs": [
+        [
+            "B0F4DQR21L",
+            1
+        ]
+    ],
+    "SkuName": "Just for Test",
+    "Scene": {
+        "jig": {
+            "width_mm": 296.0,
+            "height_mm": 394.5831
+        },
+        "slot_count": 8,
+        "objects_count": {
+            "images": 8,
+            "text": 8
+        },
+        "Majors": [
+            {
+                "rect": {
+                    "x_mm": 100.0,
+                    "y_mm": 195.0,
+                    "width_mm": 196.0,
+                    "height_mm": 199.5831
+                },
+                "origin": {
+                    "x_mm": 11.76,
+                    "y_mm": 12.52
+                },
+                "slot_size": {
+                    "width_mm": 40.66,
+                    "height_mm": 28.9
+                },
+                "step_size": {
+                    "x_mm": 72.55,
+                    "y_mm": 47.85
+                },
+                "slot_count": 8
+            }
+        ]
     },
-    "slot_count": 8,
-    "objects_count": {
-      "images": 8,
-      "text": 8
-    },
-    "Majors": [
-      {
-        "rect": {
-          "x_mm": 100.0,
-          "y_mm": 195.0,
-          "width_mm": 196.0,
-          "height_mm": 199.5831
-        },
-        "origin": {
-          "x_mm": 11.76,
-          "y_mm": 12.52
-        },
-        "slot_size": {
-          "width_mm": 40.66,
-          "height_mm": 28.9
-        },
-        "step_size": {
-          "x_mm": 72.55,
-          "y_mm": 47.85
-        },
-        "slot_count": 8
-      }
-    ]
-  },
-  "Frontside": [
-    {
-      "label": "Major 1",
-      "slots": [
-        {
-          "label": "Slot 1",
-          "x_mm": 243.58000000000004,
-          "y_mm": 353.16310000000004,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -37,
-          "objects": [
-            {
-              "type": "image",
-              "path": "Just for Test/layer 0.png",
-              "x_mm": 243.45871862768547,
-              "y_mm": 355.4466459681083,
-              "w_mm": 23.926514830508467,
-              "h_mm": 40.65999999999999,
-              "angle": 270.0,
-              "z": -21,
-              "amazon_label": "BITTE BILD HOCHLADEN !",
-              "is_options": false,
-              "is_static": false,
-              "mask_path": "."
-            }
-          ]
-        },
-        {
-          "label": "Slot 2",
-          "x_mm": 171.03000000000003,
-          "y_mm": 353.16310000000004,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -38,
-          "objects": [
-            {
-              "type": "image",
-              "path": "Just for Test/layer 0.png",
-              "x_mm": 170.79666001319976,
-              "y_mm": 355.4466459681083,
-              "w_mm": 23.926514830508467,
-              "h_mm": 40.65999999999999,
-              "angle": 270.0,
-              "z": 8,
-              "amazon_label": "BITTE BILD HOCHLADEN !",
-              "is_options": false,
-              "is_static": false,
-              "mask_path": "Just for Test/layer 0_mask_2.png"
-            }
-          ]
-        },
-        {
-          "label": "Slot 3",
-          "x_mm": 243.58000000000004,
-          "y_mm": 305.3131,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -39,
-          "objects": [
-            {
-              "type": "image",
-              "path": "Just for Test/layer 0.png",
-              "x_mm": 243.33666666666667,
-              "y_mm": 307.52007591807904,
-              "w_mm": 23.926514830508467,
-              "h_mm": 40.65999999999999,
-              "angle": 270.0,
-              "z": 9,
-              "amazon_label": "BITTE BILD HOCHLADEN !",
-              "is_options": false,
-              "is_static": false,
-              "mask_path": "Just for Test/layer 0_mask_2.png"
-            }
-          ]
-        },
-        {
-          "label": "Slot 4",
-          "x_mm": 171.03000000000003,
-          "y_mm": 305.3131,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -40,
-          "objects": [
-            {
-              "type": "image",
-              "path": "Just for Test/layer 0.png",
-              "x_mm": 170.78666666666666,
-              "y_mm": 307.52007591807904,
-              "w_mm": 23.926514830508467,
-              "h_mm": 40.65999999999999,
-              "angle": 270.0,
-              "z": 10,
-              "amazon_label": "BITTE BILD HOCHLADEN !",
-              "is_options": false,
-              "is_static": false,
-              "mask_path": "Just for Test/layer 0_mask_2.png"
-            }
-          ]
-        },
-        {
-          "label": "Slot 5",
-          "x_mm": 243.58000000000004,
-          "y_mm": 257.46310000000005,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -41,
-          "objects": [
-            {
-              "type": "image",
-              "path": "Just for Test/layer 0.png",
-              "x_mm": 243.33666666666667,
-              "y_mm": 259.6700759180791,
-              "w_mm": 23.926514830508467,
-              "h_mm": 40.65999999999999,
-              "angle": 270.0,
-              "z": 11,
-              "amazon_label": "BITTE BILD HOCHLADEN !",
-              "is_options": false,
-              "is_static": false,
-              "mask_path": "Just for Test/layer 0_mask_2.png"
-            }
-          ]
-        },
-        {
-          "label": "Slot 6",
-          "x_mm": 171.03000000000003,
-          "y_mm": 257.46310000000005,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -42,
-          "objects": [
-            {
-              "type": "image",
-              "path": "Just for Test/layer 0.png",
-              "x_mm": 170.78666666666666,
-              "y_mm": 259.6700759180791,
-              "w_mm": 23.926514830508467,
-              "h_mm": 40.65999999999999,
-              "angle": 270.0,
-              "z": 12,
-              "amazon_label": "BITTE BILD HOCHLADEN !",
-              "is_options": false,
-              "is_static": false,
-              "mask_path": "Just for Test/layer 0_mask_2.png"
-            }
-          ]
-        },
-        {
-          "label": "Slot 7",
-          "x_mm": 243.58000000000004,
-          "y_mm": 209.61310000000003,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -43,
-          "objects": [
-            {
-              "type": "image",
-              "path": "Just for Test/layer 0.png",
-              "x_mm": 243.33666666666667,
-              "y_mm": 211.82007591807906,
-              "w_mm": 23.926514830508467,
-              "h_mm": 40.65999999999999,
-              "angle": 270.0,
-              "z": 13,
-              "amazon_label": "BITTE BILD HOCHLADEN !",
-              "is_options": false,
-              "is_static": false,
-              "mask_path": "Just for Test/layer 0_mask_2.png"
-            }
-          ]
-        },
-        {
-          "label": "Slot 8",
-          "x_mm": 171.03000000000003,
-          "y_mm": 209.61310000000003,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -44,
-          "objects": [
-            {
-              "type": "image",
-              "path": "Just for Test/layer 0.png",
-              "x_mm": 170.78666666666666,
-              "y_mm": 211.82007591807906,
-              "w_mm": 23.926514830508467,
-              "h_mm": 40.65999999999999,
-              "angle": 270.0,
-              "z": 14,
-              "amazon_label": "BITTE BILD HOCHLADEN !",
-              "is_options": false,
-              "is_static": false,
-              "mask_path": "Just for Test/layer 0_mask_2.png"
-            }
-          ]
+    "ASINObjects": {
+        "B0F4DQR21L": {
+            "Frontside": [
+                {
+                    "label": "Major 1",
+                    "slots": [
+                        {
+                            "label": "Slot 1",
+                            "x_mm": 243.58000000000004,
+                            "y_mm": 353.16310000000004,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -37,
+                            "objects": [
+                                {
+                                    "type": "image",
+                                    "path": "Just for Test/layer 0.png",
+                                    "x_mm": 243.45871862768547,
+                                    "y_mm": 355.4466459681083,
+                                    "w_mm": 23.926514830508467,
+                                    "h_mm": 40.65999999999999,
+                                    "angle": 270.0,
+                                    "z": -21,
+                                    "amazon_label": "BITTE BILD HOCHLADEN !",
+                                    "is_options": false,
+                                    "is_static": false,
+                                    "mask_path": "."
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 2",
+                            "x_mm": 171.03000000000003,
+                            "y_mm": 353.16310000000004,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -38,
+                            "objects": [
+                                {
+                                    "type": "image",
+                                    "path": "Just for Test/layer 0.png",
+                                    "x_mm": 170.79666001319976,
+                                    "y_mm": 355.4466459681083,
+                                    "w_mm": 23.926514830508467,
+                                    "h_mm": 40.65999999999999,
+                                    "angle": 270.0,
+                                    "z": 8,
+                                    "amazon_label": "BITTE BILD HOCHLADEN !",
+                                    "is_options": false,
+                                    "is_static": false,
+                                    "mask_path": "Just for Test/layer 0_mask_2.png"
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 3",
+                            "x_mm": 243.58000000000004,
+                            "y_mm": 305.3131,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -39,
+                            "objects": [
+                                {
+                                    "type": "image",
+                                    "path": "Just for Test/layer 0.png",
+                                    "x_mm": 243.33666666666667,
+                                    "y_mm": 307.52007591807904,
+                                    "w_mm": 23.926514830508467,
+                                    "h_mm": 40.65999999999999,
+                                    "angle": 270.0,
+                                    "z": 9,
+                                    "amazon_label": "BITTE BILD HOCHLADEN !",
+                                    "is_options": false,
+                                    "is_static": false,
+                                    "mask_path": "Just for Test/layer 0_mask_2.png"
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 4",
+                            "x_mm": 171.03000000000003,
+                            "y_mm": 305.3131,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -40,
+                            "objects": [
+                                {
+                                    "type": "image",
+                                    "path": "Just for Test/layer 0.png",
+                                    "x_mm": 170.78666666666666,
+                                    "y_mm": 307.52007591807904,
+                                    "w_mm": 23.926514830508467,
+                                    "h_mm": 40.65999999999999,
+                                    "angle": 270.0,
+                                    "z": 10,
+                                    "amazon_label": "BITTE BILD HOCHLADEN !",
+                                    "is_options": false,
+                                    "is_static": false,
+                                    "mask_path": "Just for Test/layer 0_mask_2.png"
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 5",
+                            "x_mm": 243.58000000000004,
+                            "y_mm": 257.46310000000005,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -41,
+                            "objects": [
+                                {
+                                    "type": "image",
+                                    "path": "Just for Test/layer 0.png",
+                                    "x_mm": 243.33666666666667,
+                                    "y_mm": 259.6700759180791,
+                                    "w_mm": 23.926514830508467,
+                                    "h_mm": 40.65999999999999,
+                                    "angle": 270.0,
+                                    "z": 11,
+                                    "amazon_label": "BITTE BILD HOCHLADEN !",
+                                    "is_options": false,
+                                    "is_static": false,
+                                    "mask_path": "Just for Test/layer 0_mask_2.png"
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 6",
+                            "x_mm": 171.03000000000003,
+                            "y_mm": 257.46310000000005,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -42,
+                            "objects": [
+                                {
+                                    "type": "image",
+                                    "path": "Just for Test/layer 0.png",
+                                    "x_mm": 170.78666666666666,
+                                    "y_mm": 259.6700759180791,
+                                    "w_mm": 23.926514830508467,
+                                    "h_mm": 40.65999999999999,
+                                    "angle": 270.0,
+                                    "z": 12,
+                                    "amazon_label": "BITTE BILD HOCHLADEN !",
+                                    "is_options": false,
+                                    "is_static": false,
+                                    "mask_path": "Just for Test/layer 0_mask_2.png"
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 7",
+                            "x_mm": 243.58000000000004,
+                            "y_mm": 209.61310000000003,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -43,
+                            "objects": [
+                                {
+                                    "type": "image",
+                                    "path": "Just for Test/layer 0.png",
+                                    "x_mm": 243.33666666666667,
+                                    "y_mm": 211.82007591807906,
+                                    "w_mm": 23.926514830508467,
+                                    "h_mm": 40.65999999999999,
+                                    "angle": 270.0,
+                                    "z": 13,
+                                    "amazon_label": "BITTE BILD HOCHLADEN !",
+                                    "is_options": false,
+                                    "is_static": false,
+                                    "mask_path": "Just for Test/layer 0_mask_2.png"
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 8",
+                            "x_mm": 171.03000000000003,
+                            "y_mm": 209.61310000000003,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -44,
+                            "objects": [
+                                {
+                                    "type": "image",
+                                    "path": "Just for Test/layer 0.png",
+                                    "x_mm": 170.78666666666666,
+                                    "y_mm": 211.82007591807906,
+                                    "w_mm": 23.926514830508467,
+                                    "h_mm": 40.65999999999999,
+                                    "angle": 270.0,
+                                    "z": 14,
+                                    "amazon_label": "BITTE BILD HOCHLADEN !",
+                                    "is_options": false,
+                                    "is_static": false,
+                                    "mask_path": "Just for Test/layer 0_mask_2.png"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "Backside": [
+                {
+                    "label": "Major 1",
+                    "slots": [
+                        {
+                            "label": "Slot 1",
+                            "x_mm": 243.58000000000004,
+                            "y_mm": 353.16310000000004,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -37,
+                            "objects": [
+                                {
+                                    "type": "text",
+                                    "label": "Text",
+                                    "amazon_label": "Gib deinen gew\u00fcnschten Text ein",
+                                    "x_mm": 252.26840152084318,
+                                    "y_mm": 357.3784494766667,
+                                    "w_mm": 20.0,
+                                    "h_mm": 10.0,
+                                    "angle": -270.0,
+                                    "z": 1,
+                                    "label_fill": "#ffffff",
+                                    "label_font_size": 6,
+                                    "label_font_family": "Brontidev",
+                                    "is_options": false,
+                                    "is_static": false
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 2",
+                            "x_mm": 171.03000000000003,
+                            "y_mm": 353.16310000000004,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -38,
+                            "objects": [
+                                {
+                                    "type": "text",
+                                    "label": "Text",
+                                    "amazon_label": "Gib deinen gew\u00fcnschten Text ein",
+                                    "x_mm": 179.71840152084317,
+                                    "y_mm": 357.3784494766667,
+                                    "w_mm": 20.0,
+                                    "h_mm": 10.0,
+                                    "angle": -270.0,
+                                    "z": 58,
+                                    "label_fill": "#ffffff",
+                                    "label_font_size": 6,
+                                    "label_font_family": "Brontidev",
+                                    "is_options": false,
+                                    "is_static": false
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 3",
+                            "x_mm": 243.58000000000004,
+                            "y_mm": 305.3131,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -39,
+                            "objects": [
+                                {
+                                    "type": "text",
+                                    "label": "Text",
+                                    "amazon_label": "Gib deinen gew\u00fcnschten Text ein",
+                                    "x_mm": 252.26840152084318,
+                                    "y_mm": 309.52844947666665,
+                                    "w_mm": 20.0,
+                                    "h_mm": 10.0,
+                                    "angle": -270.0,
+                                    "z": 59,
+                                    "label_fill": "#ffffff",
+                                    "label_font_size": 6,
+                                    "label_font_family": "Brontidev",
+                                    "is_options": false,
+                                    "is_static": false
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 4",
+                            "x_mm": 171.03000000000003,
+                            "y_mm": 305.3131,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -40,
+                            "objects": [
+                                {
+                                    "type": "text",
+                                    "label": "Text",
+                                    "amazon_label": "Gib deinen gew\u00fcnschten Text ein",
+                                    "x_mm": 179.71840152084317,
+                                    "y_mm": 309.52844947666665,
+                                    "w_mm": 20.0,
+                                    "h_mm": 10.0,
+                                    "angle": -270.0,
+                                    "z": 60,
+                                    "label_fill": "#ffffff",
+                                    "label_font_size": 6,
+                                    "label_font_family": "Brontidev",
+                                    "is_options": false,
+                                    "is_static": false
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 5",
+                            "x_mm": 243.58000000000004,
+                            "y_mm": 257.46310000000005,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -41,
+                            "objects": [
+                                {
+                                    "type": "text",
+                                    "label": "Text",
+                                    "amazon_label": "Gib deinen gew\u00fcnschten Text ein",
+                                    "x_mm": 252.26840152084318,
+                                    "y_mm": 261.6784494766667,
+                                    "w_mm": 20.0,
+                                    "h_mm": 10.0,
+                                    "angle": -270.0,
+                                    "z": 61,
+                                    "label_fill": "#ffffff",
+                                    "label_font_size": 6,
+                                    "label_font_family": "Brontidev",
+                                    "is_options": false,
+                                    "is_static": false
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 6",
+                            "x_mm": 171.03000000000003,
+                            "y_mm": 257.46310000000005,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -42,
+                            "objects": [
+                                {
+                                    "type": "text",
+                                    "label": "Text",
+                                    "amazon_label": "Gib deinen gew\u00fcnschten Text ein",
+                                    "x_mm": 179.71840152084317,
+                                    "y_mm": 261.6784494766667,
+                                    "w_mm": 20.0,
+                                    "h_mm": 10.0,
+                                    "angle": -270.0,
+                                    "z": 62,
+                                    "label_fill": "#ffffff",
+                                    "label_font_size": 6,
+                                    "label_font_family": "Brontidev",
+                                    "is_options": false,
+                                    "is_static": false
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 7",
+                            "x_mm": 243.58000000000004,
+                            "y_mm": 209.61310000000003,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -43,
+                            "objects": [
+                                {
+                                    "type": "text",
+                                    "label": "Text",
+                                    "amazon_label": "Gib deinen gew\u00fcnschten Text ein",
+                                    "x_mm": 252.26840152084318,
+                                    "y_mm": 213.82844947666666,
+                                    "w_mm": 20.0,
+                                    "h_mm": 10.0,
+                                    "angle": -270.0,
+                                    "z": 63,
+                                    "label_fill": "#ffffff",
+                                    "label_font_size": 6,
+                                    "label_font_family": "Brontidev",
+                                    "is_options": false,
+                                    "is_static": false
+                                }
+                            ]
+                        },
+                        {
+                            "label": "Slot 8",
+                            "x_mm": 171.03000000000003,
+                            "y_mm": 209.61310000000003,
+                            "w_mm": 40.66,
+                            "h_mm": 28.9,
+                            "z": -44,
+                            "objects": [
+                                {
+                                    "type": "text",
+                                    "label": "Text",
+                                    "amazon_label": "Gib deinen gew\u00fcnschten Text ein",
+                                    "x_mm": 179.71840152084317,
+                                    "y_mm": 213.82844947666666,
+                                    "w_mm": 20.0,
+                                    "h_mm": 10.0,
+                                    "angle": -270.0,
+                                    "z": 64,
+                                    "label_fill": "#ffffff",
+                                    "label_font_size": 6,
+                                    "label_font_family": "Brontidev",
+                                    "is_options": false,
+                                    "is_static": false
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
         }
-      ]
     }
-  ],
-  "Backside": [
-    {
-      "label": "Major 1",
-      "slots": [
-        {
-          "label": "Slot 1",
-          "x_mm": 243.58000000000004,
-          "y_mm": 353.16310000000004,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -37,
-          "objects": [
-            {
-              "type": "text",
-              "label": "Text",
-              "amazon_label": "Gib deinen gewünschten Text ein",
-              "x_mm": 252.26840152084318,
-              "y_mm": 357.3784494766667,
-              "w_mm": 20.0,
-              "h_mm": 10.0,
-              "angle": -270.0,
-              "z": 1,
-              "label_fill": "#ffffff",
-              "label_font_size": 6,
-              "label_font_family": "Brontidev",
-              "is_options": false,
-              "is_static": false
-            }
-          ]
-        },
-        {
-          "label": "Slot 2",
-          "x_mm": 171.03000000000003,
-          "y_mm": 353.16310000000004,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -38,
-          "objects": [
-            {
-              "type": "text",
-              "label": "Text",
-              "amazon_label": "Gib deinen gewünschten Text ein",
-              "x_mm": 179.71840152084317,
-              "y_mm": 357.3784494766667,
-              "w_mm": 20.0,
-              "h_mm": 10.0,
-              "angle": -270.0,
-              "z": 58,
-              "label_fill": "#ffffff",
-              "label_font_size": 6,
-              "label_font_family": "Brontidev",
-              "is_options": false,
-              "is_static": false
-            }
-          ]
-        },
-        {
-          "label": "Slot 3",
-          "x_mm": 243.58000000000004,
-          "y_mm": 305.3131,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -39,
-          "objects": [
-            {
-              "type": "text",
-              "label": "Text",
-              "amazon_label": "Gib deinen gewünschten Text ein",
-              "x_mm": 252.26840152084318,
-              "y_mm": 309.52844947666665,
-              "w_mm": 20.0,
-              "h_mm": 10.0,
-              "angle": -270.0,
-              "z": 59,
-              "label_fill": "#ffffff",
-              "label_font_size": 6,
-              "label_font_family": "Brontidev",
-              "is_options": false,
-              "is_static": false
-            }
-          ]
-        },
-        {
-          "label": "Slot 4",
-          "x_mm": 171.03000000000003,
-          "y_mm": 305.3131,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -40,
-          "objects": [
-            {
-              "type": "text",
-              "label": "Text",
-              "amazon_label": "Gib deinen gewünschten Text ein",
-              "x_mm": 179.71840152084317,
-              "y_mm": 309.52844947666665,
-              "w_mm": 20.0,
-              "h_mm": 10.0,
-              "angle": -270.0,
-              "z": 60,
-              "label_fill": "#ffffff",
-              "label_font_size": 6,
-              "label_font_family": "Brontidev",
-              "is_options": false,
-              "is_static": false
-            }
-          ]
-        },
-        {
-          "label": "Slot 5",
-          "x_mm": 243.58000000000004,
-          "y_mm": 257.46310000000005,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -41,
-          "objects": [
-            {
-              "type": "text",
-              "label": "Text",
-              "amazon_label": "Gib deinen gewünschten Text ein",
-              "x_mm": 252.26840152084318,
-              "y_mm": 261.6784494766667,
-              "w_mm": 20.0,
-              "h_mm": 10.0,
-              "angle": -270.0,
-              "z": 61,
-              "label_fill": "#ffffff",
-              "label_font_size": 6,
-              "label_font_family": "Brontidev",
-              "is_options": false,
-              "is_static": false
-            }
-          ]
-        },
-        {
-          "label": "Slot 6",
-          "x_mm": 171.03000000000003,
-          "y_mm": 257.46310000000005,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -42,
-          "objects": [
-            {
-              "type": "text",
-              "label": "Text",
-              "amazon_label": "Gib deinen gewünschten Text ein",
-              "x_mm": 179.71840152084317,
-              "y_mm": 261.6784494766667,
-              "w_mm": 20.0,
-              "h_mm": 10.0,
-              "angle": -270.0,
-              "z": 62,
-              "label_fill": "#ffffff",
-              "label_font_size": 6,
-              "label_font_family": "Brontidev",
-              "is_options": false,
-              "is_static": false
-            }
-          ]
-        },
-        {
-          "label": "Slot 7",
-          "x_mm": 243.58000000000004,
-          "y_mm": 209.61310000000003,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -43,
-          "objects": [
-            {
-              "type": "text",
-              "label": "Text",
-              "amazon_label": "Gib deinen gewünschten Text ein",
-              "x_mm": 252.26840152084318,
-              "y_mm": 213.82844947666666,
-              "w_mm": 20.0,
-              "h_mm": 10.0,
-              "angle": -270.0,
-              "z": 63,
-              "label_fill": "#ffffff",
-              "label_font_size": 6,
-              "label_font_family": "Brontidev",
-              "is_options": false,
-              "is_static": false
-            }
-          ]
-        },
-        {
-          "label": "Slot 8",
-          "x_mm": 171.03000000000003,
-          "y_mm": 209.61310000000003,
-          "w_mm": 40.66,
-          "h_mm": 28.9,
-          "z": -44,
-          "objects": [
-            {
-              "type": "text",
-              "label": "Text",
-              "amazon_label": "Gib deinen gewünschten Text ein",
-              "x_mm": 179.71840152084317,
-              "y_mm": 213.82844947666666,
-              "w_mm": 20.0,
-              "h_mm": 10.0,
-              "angle": -270.0,
-              "z": 64,
-              "label_fill": "#ffffff",
-              "label_font_size": 6,
-              "label_font_family": "Brontidev",
-              "is_options": false,
-              "is_static": false
-            }
-          ]
-        }
-      ]
-    }
-  ]
 }

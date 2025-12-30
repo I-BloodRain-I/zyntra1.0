@@ -878,6 +878,26 @@ class NStickerCanvasScreen(Screen):
             #         counts = {}
             return counts
 
+        def _asin_initial_mirrors() -> dict[str, bool]:
+            mirrors: dict[str, bool] = {}
+            try:
+                for asin_pair in state.asins:
+                    try:
+                        if isinstance(asin_pair, (list, tuple)) and len(asin_pair) >= 1:
+                            a = str(asin_pair[0])
+                            m = False
+                            if len(asin_pair) >= 3:
+                                try:
+                                    m = bool(asin_pair[2])
+                                except Exception:
+                                    m = False
+                            mirrors[a] = m
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+            return mirrors
+
         asin_combo_wrap = tk.Frame(asin_col, bg="#6f6f6f")
         asin_combo_wrap.pack(side="top", pady=2, anchor="w", fill="x")
         try:
@@ -889,7 +909,15 @@ class NStickerCanvasScreen(Screen):
         self._asin_list: list[str] = _asin_load_all()
         self.asin_combo_var = tk.StringVar(value=(self._asin_list[0] if self._asin_list else ""))
         _initial_counts = _asin_initial_counts()
+        _initial_mirrors = _asin_initial_mirrors()
         self._asin_counts: dict[str, int] = {k: int(_initial_counts.get(k, 1)) for k in self._asin_list}
+        # Per-ASIN mirror flag (do not alter canvas rendering; used for export JSON only)
+        self._asin_mirror: dict[str, bool] = {k: bool(_initial_mirrors.get(k, False)) for k in self._asin_list}
+        
+        # Per-ASIN object storage: each ASIN has its own objects for front and back
+        self._asin_objects: dict[str, dict[str, list[dict]]] = {}
+        for asin in self._asin_list:
+            self._asin_objects[asin] = {"front": [], "back": []}
 
         self._asin_combo = ttk.Combobox(
             asin_combo_wrap,
@@ -937,21 +965,85 @@ class NStickerCanvasScreen(Screen):
 
         def _on_asin_combo(_e=None):
             try:
+                prev_asin = state.asins[0][0] if state.asins else None
                 sel = (self.asin_combo_var.get() or "").strip()
+                
+                # Save previous ASIN state (only objects, NOT slots)
+                if prev_asin and prev_asin in self._asin_objects:
+                    current_objects = [it for it in self._serialize_scene() if it.get("type") != "slot"]
+                    self._asin_objects[prev_asin][self._current_side] = current_objects
+                    
+                    other_side = "back" if self._current_side == "front" else "front"
+                    if other_side in self._scene_store:
+                        other_objects = [it for it in self._scene_store[other_side] if it.get("type") != "slot"]
+                        self._asin_objects[prev_asin][other_side] = other_objects
+                    # Persist per-ASIN mirror flag from UI for previous ASIN
+                    try:
+                        if hasattr(self, "asin_mirror_var"):
+                            self._asin_mirror[prev_asin] = bool(self.asin_mirror_var.get())
+                    except Exception:
+                        pass
+                    
+                    logger.debug(f"[ASIN] Switch '{prev_asin}'→'{sel}': Saved {len(current_objects)} objects")
+                
+                # Switch to new ASIN
                 self.sku_var.set(sel)
-                state.asins = sel
+                state.asins = [[sel, self._asin_counts.get(sel, 1)]]
+                
+                # Restore new ASIN objects (slots stay on canvas!)
+                if sel and sel in self._asin_objects:
+                    self._clear_scene(keep_slots=True)
+                    objects_to_restore = self._asin_objects[sel].get(self._current_side, [])
+                    
+                    if objects_to_restore:
+                        self._restore_scene(objects_to_restore)
+                        logger.debug(f"[ASIN] Restored '{sel}': {len(objects_to_restore)} objects")
+                    
+                    other_side = "back" if self._current_side == "front" else "front"
+                    other_objects = [it for it in self._asin_objects[sel].get(other_side, []) if it.get("type") != "slot"]
+                    self._scene_store[other_side] = other_objects
+                    
+                    self._redraw_jig(center=False)
+                    self._raise_all_labels()
+                    self.selection._reorder_by_z()
+                    # Restore mirror UI for newly selected ASIN
+                    try:
+                        if hasattr(self, "asin_mirror_var"):
+                            self.asin_mirror_var.set(bool(self._asin_mirror.get(sel, False)))
+                    except Exception:
+                        pass
+                else:
+                    logger.warning(f"[ASIN] '{sel}' not found! Available: {list(self._asin_objects.keys())}")
+                    try:
+                        if hasattr(self, "asin_mirror_var"):
+                            self.asin_mirror_var.set(False)
+                    except Exception:
+                        pass
+                
                 try:
                     _apply_count_from_selection()
                 except Exception:
                     pass
             except Exception:
+                logger.exception("Failed to switch ASIN")
                 pass
 
-        self._asin_combo.bind("<<ComboboxSelected>>", _on_asin_combo)
+        def _on_asin_combo_trace(*args):
+            logger.debug(f"[ASIN_TRACE] asin_combo_var changed to: '{self.asin_combo_var.get()}'")
+            _on_asin_combo()
+        
+        self._asin_combo.bind("<<ComboboxSelected>>", lambda e: (logger.debug("[ASIN_EVENT] ComboboxSelected event triggered"), _on_asin_combo(e)))
+        
+        # Also trace the variable directly to catch all changes
+        try:
+            self.asin_combo_var.trace_add("write", _on_asin_combo_trace)
+        except Exception:
+            pass
+        
         try:
             # Top-menu combobox shares the same variable; ensure it also triggers selection logic
             if hasattr(self, "_asin_combo_top"):
-                self._asin_combo_top.bind("<<ComboboxSelected>>", _on_asin_combo)
+                self._asin_combo_top.bind("<<ComboboxSelected>>", lambda e: (logger.debug("[ASIN_EVENT] Top ComboboxSelected event triggered"), _on_asin_combo(e)))
         except Exception:
             pass
 
@@ -990,12 +1082,14 @@ class NStickerCanvasScreen(Screen):
         def _asin_add():
             try:
                 val = (self.sku_var.get() or "").strip()
+                
                 if not val:
                     messagebox.showwarning("Missing ASIN", "Please enter an ASIN to add.")
                     return
                 if len(val) < 3:
                     messagebox.showwarning("Invalid ASIN", "ASIN is too short.")
                     return
+                
                 # Read the intended count BEFORE changing selection
                 try:
                     cnt_txt = (self.count_in_order.get() or "1").strip()
@@ -1003,22 +1097,70 @@ class NStickerCanvasScreen(Screen):
                 except Exception:
                     cnt = 1
                 cnt = max(1, cnt)
+                
+                # Save current ASIN's state FIRST before copying
+                current_asin = state.asins[0][0] if state.asins else None
+                
+                if current_asin and current_asin in self._asin_objects:
+                    current_objects = [it for it in self._serialize_scene() if it.get("type") != "slot"]
+                    self._asin_objects[current_asin][self._current_side] = current_objects
+                    
+                    other_side = "back" if self._current_side == "front" else "front"
+                    if other_side in self._scene_store:
+                        other_objects = [it for it in self._scene_store[other_side] if it.get("type") != "slot"]
+                        self._asin_objects[current_asin][other_side] = other_objects
+                
+                # Copy current objects (NOT slots!) if this is a new ASIN
                 if val not in self._asin_list:
                     self._asin_list.append(val)
+                    
+                    # Get current objects (excluding slots - they're shared)
+                    # Important: Respect which side is currently active on canvas
+                    current_canvas_objects = [it for it in self._serialize_scene() if it.get("type") != "slot"]
+                    
+                    # Determine which side is on canvas and which is in storage
+                    if self._current_side == "front":
+                        current_front = current_canvas_objects
+                        current_back = [it for it in self._scene_store.get("back", []) if it.get("type") != "slot"]
+                    else:  # backside is active
+                        current_back = current_canvas_objects
+                        current_front = [it for it in self._scene_store.get("front", []) if it.get("type") != "slot"]
+                    
+                    # Deep copy to avoid reference issues
+                    import copy
+                    self._asin_objects[val] = {
+                        "front": copy.deepcopy(current_front),
+                        "back": copy.deepcopy(current_back)
+                    }
+                    # Initialize mirror flag for new ASIN (default False)
+                    try:
+                        self._asin_mirror[val] = False
+                    except Exception:
+                        pass
+                    logger.debug(f"[ASIN] Added '{val}' (count={cnt}): copied {len(current_front)} front objs, {len(current_back)} back objs from '{current_asin}' (current_side={self._current_side})")
+                
                 # Persist count for the new ASIN immediately
                 self._asin_counts[val] = cnt
+                
                 # Select the new ASIN, but do not let selection overwrite the entered count
                 self._suppress_asin_apply = True
                 _asin_refresh_values(select_value=val)
                 self._suppress_asin_apply = False
                 # Ensure Count reflects stored value for newly selected ASIN
                 self.count_in_order.set(str(cnt))
-                state.asins = val
+                state.asins = [[val, cnt]]
+                
+                # Update SKU var to reflect the new ASIN but DON'T trigger restore
+                # The canvas already has the correct objects (just copied to new ASIN)
+                self.sku_var.set(val)
+
+                
                 try:
                     messagebox.showinfo("ASIN", f"Added ASIN '{val}' with count {self._asin_counts[val]}.")
                 except Exception:
                     pass
             except Exception:
+                logger.exception("Failed to add ASIN")
                 pass
 
         def _asin_remove():
@@ -1031,6 +1173,15 @@ class NStickerCanvasScreen(Screen):
                         pass
                     try:
                         self._asin_counts.pop(sel, None)
+                    except Exception:
+                        pass
+                    try:
+                        self._asin_mirror.pop(sel, None)
+                    except Exception:
+                        pass
+                    # Also remove from _asin_objects to prevent copying backside to other ASINs
+                    try:
+                        self._asin_objects.pop(sel, None)
                     except Exception:
                         pass
                 # Choose next selection
@@ -1413,6 +1564,19 @@ class NStickerCanvasScreen(Screen):
         tk.Entry(_cnt, textvariable=self.count_in_order, width=13, bg="#d9d9d9", justify="center",
                  validate="key", validatecommand=(validate_min1(self), "%P")).pack(side="left")
         tk.Label(_cnt, text="pcs", bg="#6f6f6f", fg="white").pack(side="left")
+        
+        # Row 4: Mirror checkbox per-ASIN (new row below Count)
+        _a_row4 = tk.Frame(panel_amazon, bg="black"); _a_row4.grid(row=5, column=0, sticky="ew", pady=(6, 0))
+        _mirror = tk.Frame(_a_row4, bg="#6f6f6f"); _mirror.pack(side="left")
+        self.asin_mirror_var = tk.BooleanVar(value=False)
+        def _on_mirror_changed(*_):
+            try:
+                sel = (self.asin_combo_var.get() or "").strip()
+                self._asin_mirror[sel] = bool(self.asin_mirror_var.get())
+            except Exception:
+                pass
+        self.asin_mirror_var.trace_add("write", _on_mirror_changed)
+        tk.Checkbutton(_mirror, text="Mirror", variable=self.asin_mirror_var, bg="#6f6f6f", fg="white", activebackground="#6f6f6f", activeforeground="white", selectcolor="black").pack(side="left", padx=6)
 
         
 
@@ -3640,6 +3804,7 @@ class NStickerCanvasScreen(Screen):
             logger.exception("Failed to prepare internal product images and update paths")
 
         # Validate that all non-slot, non-barcode, non-static objects have a non-empty amazon_label
+        # Check objects for ALL ASINs, not just current canvas
         try:
             def _missing_label(obj: dict) -> bool:
                 try:
@@ -3653,10 +3818,24 @@ class NStickerCanvasScreen(Screen):
                     return str(obj.get("amazon_label", "") or "").strip() == ""
                 except Exception:
                     return True
-            if any(_missing_label(it) for it in (front_items + back_items)):
+            
+            # Save current ASIN state before validation
+            self._save_current_asin_objects()
+            
+            # Check all ASINs for missing labels
+            missing_asins = []
+            for asin in self._asin_list:
+                if asin in self._asin_objects:
+                    asin_front = self._asin_objects[asin].get("front", [])
+                    asin_back = self._asin_objects[asin].get("back", [])
+                    
+                    if any(_missing_label(it) for it in (asin_front + asin_back)):
+                        missing_asins.append(asin)
+            
+            if missing_asins:
                 messagebox.showwarning(
                     "Missing Amazon label",
-                    "One or more objects have empty Amazon Label. Please fill all labels before proceeding.",
+                    f"Objects in ASIN(s) {', '.join(missing_asins)} have empty Amazon Label.\nPlease fill all labels before proceeding.",
                 )
                 return
         except Exception:
@@ -4099,6 +4278,13 @@ class NStickerCanvasScreen(Screen):
             front_barcode = _extract_barcode(self._scene_store.get("front") or [])
             back_barcode = _extract_barcode(self._scene_store.get("back") or [])
 
+            # Save current ASIN's objects before building JSON
+            self._save_current_asin_objects()
+            
+            logger.debug(f"[JSON_SAVE] _asin_objects contents: {list(self._asin_objects.keys())}")
+            for asin, sides in self._asin_objects.items():
+                logger.debug(f"[JSON_SAVE]   '{asin}': front={len(sides.get('front', []))}objs, back={len(sides.get('back', []))}objs")
+            
             # Persist ASINs as [asin, count] pairs from current selection list and counts
             try:
                 asin_pairs = []
@@ -4107,28 +4293,66 @@ class NStickerCanvasScreen(Screen):
                         c = int((getattr(self, "_asin_counts", {}) or {}).get(a, 1))
                     except Exception:
                         c = 1
-                    asin_pairs.append([a, max(1, c)])
+                    try:
+                        m = bool((getattr(self, "_asin_mirror", {}) or {}).get(a, False))
+                    except Exception:
+                        m = False
+                    # Persist ASIN as [asin, count, mirror]
+                    asin_pairs.append([a, max(1, c), m])
             except Exception:
                 asin_pairs = []
+
+            # Build per-ASIN objects structure with proper slot grouping
+            asin_objects_map = {}
+            logger.debug(f"[JSON_SAVE] Building ASINObjects for ASINs: {self._asin_list}")
+            
+            # Get shared slots from canvas (same for all ASINs)
+            slots_only = [it for it in self._serialize_scene() if it.get("type") == "slot"]
+            logger.debug(f"[JSON_SAVE] Found {len(slots_only)} shared slots")
+            
+            for asin in self._asin_list:
+                if asin in self._asin_objects:
+                    # Get objects for this ASIN (WITHOUT slots)
+                    asin_front_objects = self._asin_objects[asin].get("front", [])
+                    asin_back_objects = self._asin_objects[asin].get("back", [])
+                    
+                    # Combine shared slots + this ASIN's objects (like old logic)
+                    asin_front_items = list(slots_only) + list(asin_front_objects)
+                    asin_back_items = list(slots_only) + list(asin_back_objects)
+                    
+                    logger.debug(f"[JSON_SAVE] Processing '{asin}': front={len(asin_front_items)} items (slots+objs), back={len(asin_back_items)} items")
+                    
+                    # Use old logic: _compose_side + _group_side_by_major
+                    asin_front_grouped = _group_side_by_major(_compose_side(asin_front_items, state.sku_name, state.prev_sku_name))
+                    asin_back_grouped = _group_side_by_major(_compose_side(asin_back_items, state.sku_name, state.prev_sku_name))
+                    
+                    logger.debug(f"[JSON_SAVE] After grouping '{asin}': front={len(asin_front_grouped)} groups, back={len(asin_back_grouped)} groups")
+                    
+                    # Extract barcodes for this ASIN
+                    asin_front_barcode = _extract_barcode(asin_front_objects)
+                    asin_back_barcode = _extract_barcode(asin_back_objects)
+                    
+                    asin_data = {
+                        "Frontside": asin_front_grouped,
+                        "Backside": asin_back_grouped,
+                    }
+                    
+                    if asin_front_barcode:
+                        asin_data["FrontsideBarcode"] = asin_front_barcode
+                    if asin_back_barcode:
+                        asin_data["BacksideBarcode"] = asin_back_barcode
+                    
+                    asin_objects_map[asin] = asin_data
+                    logger.debug(f"[JSON_SAVE] Added '{asin}' to ASINObjects map")
+                else:
+                    logger.warning(f"[JSON_SAVE] ASIN '{asin}' not found in _asin_objects!")
 
             combined = {
                 "ASINs": asin_pairs,
                 "SkuName": state.sku_name or "",
                 "Scene": scene_top,
-                "Frontside": front_grouped,
-                "Backside": back_grouped,
+                "ASINObjects": asin_objects_map,
             }
-            # Persist optional barcode objects outside of slots per side
-            if front_barcode:
-                try:
-                    combined["FrontsideBarcode"] = front_barcode
-                except Exception:
-                    logger.exception("Failed to attach FrontsideBarcode to combined JSON")
-            if back_barcode:
-                try:
-                    combined["BacksideBarcode"] = back_barcode
-                except Exception:
-                    logger.exception("Failed to attach BacksideBarcode to combined JSON")
         except Exception as e:
             logger.exception(f"Failed to build combined JSON: {e}")
             combined = {"Sku": str(state.sku_name or ""), "Scene": {}, "Frontside": {}, "Backside": {}}
@@ -4468,6 +4692,14 @@ class NStickerCanvasScreen(Screen):
             logger.exception("Failed to render rotated rect label on create")
         # Create overlay to visualize rotation; base rect stays invisible
         self._update_rect_overlay(rect, self._items[rect], new_left, new_top, w, h)
+        
+        # Auto-save to current ASIN after adding new object
+        try:
+            logger.debug(f"[OBJECT_CREATE] Rect created: id={rect}, label='{label}', x={x_mm:.2f}, y={y_mm:.2f} - auto-saving to ASIN")
+            self._save_current_asin_objects()
+        except Exception:
+            pass
+        
         return rect
 
     def _create_text_at_mm(self, text: str, x_mm: float, y_mm: float, fill: str = "#17a24b"):
@@ -4487,8 +4719,40 @@ class NStickerCanvasScreen(Screen):
             canvas_id=tid,
             export_file=self._export_files_list[0],
         )
+        
+        # Auto-save to current ASIN after adding new object
+        try:
+            logger.debug(f"[OBJECT_CREATE] Text created: id={tid}, text='{text}', x={x_mm:.2f}, y={y_mm:.2f} - auto-saving to ASIN")
+            self._save_current_asin_objects()
+        except Exception:
+            pass
+        
         return tid
 
+    def _save_current_asin_objects(self):
+        """Save current canvas objects to the current ASIN's storage (both sides)."""
+        try:
+            current_asin = state.asins[0][0] if state.asins else None
+            if current_asin:
+                # Create ASIN entry if it doesn't exist
+                if current_asin not in self._asin_objects:
+                    self._asin_objects[current_asin] = {"front": [], "back": []}
+                    logger.debug(f"[ASIN] Created new entry for '{current_asin}'")
+                
+                # Save only objects (NOT slots - they're shared!)
+                all_serialized = self._serialize_scene()
+                current_objects = [it for it in all_serialized if it.get("type") != "slot"]
+                
+                other_side = "back" if self._current_side == "front" else "front"
+                other_objects = [it for it in self._scene_store.get(other_side, []) if it.get("type") != "slot"]
+                
+                logger.debug(f"[ASIN] Saved '{current_asin}': {self._current_side}={len(current_objects)} objs, {other_side}={len(other_objects)} objs")
+                
+                self._asin_objects[current_asin][self._current_side] = current_objects
+                self._asin_objects[current_asin][other_side] = other_objects
+        except Exception:
+            logger.exception("Failed to save current ASIN objects")
+    
     def _serialize_scene(self) -> list[dict]:
         items: list[dict] = []
         for cid, meta in self._items.items():
@@ -4972,6 +5236,29 @@ class NStickerCanvasScreen(Screen):
                 self.sku_var.set(sku_val[0][0])
             self.sku_name_var.set(sku_name_val)
             state.asins = sku_val
+            # Restore per-ASIN mirror flags from saved ASINs (if present as third element)
+            try:
+                for entry in sku_val:
+                    try:
+                        if isinstance(entry, (list, tuple)) and len(entry) >= 1:
+                            a = str(entry[0])
+                            m = False
+                            if len(entry) >= 3:
+                                try:
+                                    m = bool(entry[2])
+                                except Exception:
+                                    m = False
+                            try:
+                                # ensure mapping exists
+                                if not hasattr(self, "_asin_mirror"):
+                                    self._asin_mirror = {}
+                                self._asin_mirror[a] = m
+                            except Exception:
+                                pass
+                    except Exception:
+                        continue
+            except Exception:
+                pass
             state.sku_name = sku_name_val
 
         scene = data.get("Scene") or {}
@@ -5074,8 +5361,56 @@ class NStickerCanvasScreen(Screen):
             _set_str(self.slot_w, slot_size.get("width_mm", self.slot_w.get()))
             _set_str(self.slot_h, slot_size.get("height_mm", self.slot_h.get()))
 
-        front = data.get("Frontside") or {}
-        back = data.get("Backside") or {}
+        # Check if we have per-ASIN objects (new format) or legacy format
+        asin_objects_data = data.get("ASINObjects", {})
+        use_per_asin_format = bool(asin_objects_data)
+        
+        # If we have per-ASIN objects, load them into _asin_objects
+        if use_per_asin_format:
+            import copy
+            logger.debug(f"[RESTORE] Loading per-ASIN objects for {len(asin_objects_data)} ASINs")
+            for asin in self._asin_list:
+                if asin in asin_objects_data:
+                    asin_data = asin_objects_data[asin]
+                    
+                    # Data is always in grouped format (with slots)
+                    frontside = asin_data.get("Frontside", [])
+                    backside = asin_data.get("Backside", [])
+                    
+                    # Store grouped format
+                    self._asin_objects[asin] = {
+                        "front_grouped": copy.deepcopy(frontside),
+                        "back_grouped": copy.deepcopy(backside),
+                        "front_barcode": copy.deepcopy(asin_data.get("FrontsideBarcode")) if "FrontsideBarcode" in asin_data else None,
+                        "back_barcode": copy.deepcopy(asin_data.get("BacksideBarcode")) if "BacksideBarcode" in asin_data else None,
+                    }
+                    logger.debug(f"[RESTORE] Loaded '{asin}' grouped format with {len(frontside)} front groups, {len(backside)} back groups")
+            
+            # Use first ASIN's data for building slots and initial display
+            current_asin = self._asin_list[0] if self._asin_list else None
+            if current_asin and current_asin in self._asin_objects:
+                asin_obj = self._asin_objects[current_asin]
+                # Always use grouped format
+                front = asin_obj.get("front_grouped", [])
+                back = asin_obj.get("back_grouped", [])
+            else:
+                front = []
+                back = []
+        else:
+            # Legacy format: single Frontside/Backside for all ASINs
+            # Initialize all ASINs with the same objects
+            front = data.get("Frontside") or {}
+            back = data.get("Backside") or {}
+            
+            # Copy to all ASINs in legacy mode
+            import copy
+            for asin in self._asin_list:
+                self._asin_objects[asin] = {
+                    "front_grouped": copy.deepcopy(front),
+                    "back_grouped": copy.deepcopy(back),
+                    "front_barcode": copy.deepcopy(data.get("FrontsideBarcode")) if "FrontsideBarcode" in data else None,
+                    "back_barcode": copy.deepcopy(data.get("BacksideBarcode")) if "BacksideBarcode" in data else None,
+                }
 
         # Build majors and slots depending on new or legacy format
         scene_majors = list((data.get("Scene") or {}).get("Majors") or [])
@@ -5161,22 +5496,73 @@ class NStickerCanvasScreen(Screen):
                         items.append(dict(obj))
             return slots, items
 
+        # Always use grouped format for extraction
         front_slots, front_items = _collect_slots_and_items(front)
         back_slots, back_items = _collect_slots_and_items(back)
+        logger.debug(f"[RESTORE] Extracted front={len(front_items)}objs ({len(front_slots)}slots), back={len(back_items)}objs ({len(back_slots)}slots)")
 
         # Barcode is stored per side outside of slots; append if present
-        try:
-            fb = data.get("FrontsideBarcode")
-            if isinstance(fb, dict) and str(fb.get("type", "")) == "barcode":
-                front_items.append(dict(fb))
-        except Exception:
-            logger.exception("Failed to restore FrontsideBarcode from JSON")
-        try:
-            bb = data.get("BacksideBarcode")
-            if isinstance(bb, dict) and str(bb.get("type", "")) == "barcode":
-                back_items.append(dict(bb))
-        except Exception:
-            logger.exception("Failed to restore BacksideBarcode from JSON")
+        if use_per_asin_format:
+            # Get barcodes from current ASIN's data
+            current_asin = self._asin_list[0] if self._asin_list else None
+            if current_asin and current_asin in self._asin_objects:
+                try:
+                    fb = self._asin_objects[current_asin].get("front_barcode")
+                    if isinstance(fb, dict) and str(fb.get("type", "")) == "barcode":
+                        front_items.append(dict(fb))
+                except Exception:
+                    logger.exception("Failed to restore FrontsideBarcode from per-ASIN data")
+                try:
+                    bb = self._asin_objects[current_asin].get("back_barcode")
+                    if isinstance(bb, dict) and str(bb.get("type", "")) == "barcode":
+                        back_items.append(dict(bb))
+                except Exception:
+                    logger.exception("Failed to restore BacksideBarcode from per-ASIN data")
+        else:
+            # Legacy: get barcodes from root level
+            try:
+                fb = data.get("FrontsideBarcode")
+                if isinstance(fb, dict) and str(fb.get("type", "")) == "barcode":
+                    front_items.append(dict(fb))
+            except Exception:
+                logger.exception("Failed to restore FrontsideBarcode from JSON")
+            try:
+                bb = data.get("BacksideBarcode")
+                if isinstance(bb, dict) and str(bb.get("type", "")) == "barcode":
+                    back_items.append(dict(bb))
+            except Exception:
+                logger.exception("Failed to restore BacksideBarcode from JSON")
+        
+        # Convert grouped format back to flat items for _asin_objects storage
+        if use_per_asin_format:
+            for asin in self._asin_list:
+                if asin in self._asin_objects:
+                    asin_obj = self._asin_objects[asin]
+                    
+                    # Convert from grouped format to flat
+                    def _flatten_grouped(grouped_side):
+                        items = []
+                        if isinstance(grouped_side, list):
+                            for section in grouped_side:
+                                sec_slots = list((section or {}).get("slots") or [])
+                                for s in sec_slots:
+                                    for obj in list(s.get("objects") or []):
+                                        items.append(dict(obj))
+                        return items
+                    
+                    front_flat = _flatten_grouped(asin_obj.get("front_grouped", []))
+                    back_flat = _flatten_grouped(asin_obj.get("back_grouped", []))
+                    
+                    # Add barcodes
+                    if asin_obj.get("front_barcode"):
+                        front_flat.append(dict(asin_obj["front_barcode"]))
+                    if asin_obj.get("back_barcode"):
+                        back_flat.append(dict(asin_obj["back_barcode"]))
+                    
+                    # Update storage with flat format (for internal use)
+                    self._asin_objects[asin]["front"] = front_flat
+                    self._asin_objects[asin]["back"] = back_flat
+                    logger.debug(f"[RESTORE] Converted '{asin}' from grouped to flat: front={len(front_flat)}objs, back={len(back_flat)}objs")
 
         def _do_restore():
             # If majors present in new format, replace presets and render rectangles
@@ -5278,16 +5664,30 @@ class NStickerCanvasScreen(Screen):
     def _on_backside_toggle(self, *_):
         # Deselect any current selection before switching sides
         self.selection.select(None)
-        # Save current scene under current side (exclude slots)
+        
+        # Save current scene under current side (exclude slots) - both to scene_store and per-ASIN
         data_no_slots = [it for it in self._serialize_scene() if it.get("type") != "slot"]
         self._scene_store[self._current_side] = data_no_slots
+        
+        # Also save to current ASIN's storage
+        self._save_current_asin_objects()
+        
         # Switch side based on checkbox
         self._current_side = "back" if self.backside.get() else "front"
+        
         # Clear and restore the target scene; keep slots persistent across sides
         self._clear_scene(keep_slots=True)
-        data = self._scene_store.get(self._current_side) or []
+        
+        # Restore from current ASIN's storage for the new side
+        current_asin = state.asins[0][0] if state.asins else None
+        if current_asin and current_asin in self._asin_objects:
+            data = self._asin_objects[current_asin].get(self._current_side, [])
+        else:
+            data = self._scene_store.get(self._current_side) or []
+        
         if data:
             self._restore_scene(data)
+        
         # Keep jig in place without recentering
         self._redraw_jig(center=False)
         # Ensure labels on top after switching sides

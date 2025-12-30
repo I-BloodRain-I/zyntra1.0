@@ -193,6 +193,7 @@ class PdfExporter:
             font,
             fill: tuple[int, int, int, int],
             angle_deg: float,
+            mirror: bool = False,
         ) -> None:
             """Render (with Pilmoji) centered text at (center_x, center_y).
 
@@ -215,6 +216,13 @@ class PdfExporter:
 
             temp_img = _PIL_Image.new("RGBA", (tw + pad * 2, th + pad * 2), (0, 0, 0, 0))
             draw_text_with_emojis(temp_img, (pad - bb[0], pad - bb[1]), text, font, fill=fill, emoji_scale=1.0)
+
+            # Apply mirror (flip horizontally) if mirror flag is set BEFORE rotation
+            if mirror:
+                try:
+                    temp_img = temp_img.transpose(_PIL_Image.FLIP_LEFT_RIGHT)
+                except Exception:
+                    logger.exception("Failed to apply mirror flip for text render")
 
             # Поворот
             if abs(float(angle_deg)) > 1e-6:
@@ -685,6 +693,9 @@ class PdfExporter:
                     )
                     label = str(it.get("label", "")).strip()
                     if label:
+                        # Get mirror flag for rect text objects (from per-ASIN setting)
+                        mirror = bool(it.get("mirror", False))
+                        
                         # Use rotated bounds to compute correct center from stored top-left
                         # Desired styling (with sensible defaults)
                         fam = str(it.get("label_font_family", "Myriad Pro"))
@@ -726,7 +737,7 @@ class PdfExporter:
                             x_mm, y_mm = 0.0, 0.0
                         cx = jx0 + mm_to_px(x_mm + bw_mm / 2.0)
                         cy = jy0 + mm_to_px(y_mm + bh_mm / 2.0)
-                        _draw_rotated_text_center(label, int(cx), int(cy), fnt, col, ang)
+                        _draw_rotated_text_center(label, int(cx), int(cy), fnt, col, ang, mirror)
 
                     _draw_borders_around_slots(it)
 
@@ -769,6 +780,13 @@ class PdfExporter:
                                     logger.exception(f"Failed to open image file {path_img}")
                                     raise
 
+                        # Apply mirror (flip horizontally) if per-ASIN mirror flag is set BEFORE any transformations
+                        try:
+                            if it.get("mirror", False):
+                                im = im.transpose(_PIL_Image.FLIP_LEFT_RIGHT)
+                        except Exception:
+                            logger.exception("Failed to apply mirror flip for PDF render")
+                        
                         im_resized = im.resize((int(w_px), int(h_px)), _PIL_Image.LANCZOS)
                         # Apply clip-based mask (same cut behavior as canvas)
                         try:
@@ -814,6 +832,9 @@ class PdfExporter:
                         ang = 0.0
                         raise
 
+                    # Get mirror flag for text objects (from per-ASIN setting)
+                    mirror = bool(it.get("mirror", False))
+
                     has_block_size = ("w_mm" in it) and ("h_mm" in it)
                     if has_block_size:
                         # Text block serialized in slot: use label_* fields
@@ -849,7 +870,7 @@ class PdfExporter:
                         # Center using rotated bounds (matches on-canvas block placement semantics)
                         cx = jx0 + mm_to_px(x_mm + bw_mm / 2.0)
                         cy = jy0 + mm_to_px(y_mm + bh_mm / 2.0)
-                        _draw_rotated_text_center(txt, int(cx), int(cy), fnt, col, ang)
+                        _draw_rotated_text_center(txt, int(cx), int(cy), fnt, col, ang, mirror)
                     else:
                         # Plain free text object, centered at (x_mm, y_mm)
                         txt = str(it.get("text", "")).strip()
@@ -866,7 +887,7 @@ class PdfExporter:
                         fnt = _truetype_for_family(fam, size_px)
                         cx = jx0 + mm_to_px(it.get("x_mm", 0.0))
                         cy = jy0 + mm_to_px(it.get("y_mm", 0.0))
-                        _draw_rotated_text_center(txt, int(cx), int(cy), fnt, col, ang)
+                        _draw_rotated_text_center(txt, int(cx), int(cy), fnt, col, ang, mirror)
 
                     _draw_borders_around_slots(it)
 

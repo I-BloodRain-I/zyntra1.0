@@ -228,6 +228,7 @@ def index_dropbox(log_func: Callable[[str], None], progress_callback: Callable[[
         files_info = client.get_files_in_folder(f"{BASE_FOLDER}/{folder}/{FILES_FOLDER}")
         if files_info is None:
             logger.error(f"{FILES_FOLDER} folder not found in {folder} folder")
+            log_func(f"{FILES_FOLDER} folder not found in {folder} folder", ERROR_COLOR)
             continue
 
         printable_folders = []
@@ -265,6 +266,7 @@ def index_dropbox(log_func: Callable[[str], None], progress_callback: Callable[[
 
             res = client.download_folder(f"{BASE_FOLDER}/{parent_folder}/{FILES_FOLDER}/{file}", str(INTERNAL_PATH) + "/")
             if res is None:
+                log_func(f"Error occurs during downloading file: {BASE_FOLDER}/{parent_folder}/{FILES_FOLDER}/{file}", ERROR_COLOR)
                 logger.error(f"Error occurs during downloading file: {BASE_FOLDER}/{parent_folder}/{FILES_FOLDER}/{file}")
                 continue
 
@@ -273,13 +275,21 @@ def index_dropbox(log_func: Callable[[str], None], progress_callback: Callable[[
             if file_path.exists():
                 shutil.rmtree(file_path, ignore_errors=True)
 
-            with zipfile.ZipFile(str(file_path) + ".zip", 'r') as zip_ref:
-                zip_ref.extractall(INTERNAL_PATH)
+            try:
+                print(res)
+                print(f"Unzipping {str(file_path) + '.zip'} to {INTERNAL_PATH}")
+                with zipfile.ZipFile(str(file_path) + ".zip", 'r') as zip_ref:
+                    zip_ref.extractall(INTERNAL_PATH)
+            except Exception as e:
+                log_func(f"Error occurs during unzipping file: {str(file_path) + '.zip'} ({e})", ERROR_COLOR)
+                logger.exception(f"Error occurs during unzipping file: {str(file_path) + '.zip'} {e}")
+                continue
 
             cache[str(parent_folder)][str(file)] = []
 
             file_list = os.listdir(file_path)
             if JSON_FOLDER not in file_list:
+                log_func(f"{JSON_FOLDER} folder not found in {file_path}", ERROR_COLOR)
                 logger.error(f"{JSON_FOLDER} folder not found in {file_path}")
 
             for json_path in os.listdir(file_path / JSON_FOLDER):

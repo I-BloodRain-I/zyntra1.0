@@ -1,0 +1,2359 @@
+{
+  "ASINs": [
+    [
+      "B0DHPJS4W9",
+      1,
+      false
+    ],
+    [
+      "B0DST5Y6DC",
+      1,
+      false
+    ],
+    [
+      "B0CSKN8QQM",
+      1,
+      false
+    ],
+    [
+      "B0FWKQXVJD",
+      1,
+      false
+    ],
+    [
+      "B0D54HRFJY",
+      1,
+      false
+    ],
+    [
+      "B0G1N5LJLH",
+      1,
+      false
+    ],
+    [
+      "B0DN2RFQQH",
+      1,
+      false
+    ],
+    [
+      "B0F6D7CZK1",
+      1,
+      false
+    ],
+    [
+      "B0F8RCSRYN",
+      1,
+      false
+    ],
+    [
+      "B0F8RB4RLB",
+      1,
+      false
+    ],
+    [
+      "B0F8RC2C5V",
+      1,
+      false
+    ],
+    [
+      "B0F94CJQ51",
+      1,
+      false
+    ],
+    [
+      "B0F44BGKLT",
+      1,
+      false
+    ],
+    [
+      "B0F447YZMX",
+      1,
+      false
+    ],
+    [
+      "B0F44BMYXC",
+      1,
+      false
+    ],
+    [
+      "B0F44DWSZF",
+      1,
+      false
+    ],
+    [
+      "B0F44DJH9G",
+      1,
+      false
+    ],
+    [
+      "B0F44CCL7V",
+      1,
+      false
+    ],
+    [
+      "B0F44BQ52B",
+      1,
+      false
+    ],
+    [
+      "B0F448MY8J",
+      1,
+      false
+    ],
+    [
+      "B0F4478Y8Y",
+      1,
+      false
+    ],
+    [
+      "B0F44BY9N7",
+      1,
+      false
+    ]
+  ],
+  "SkuName": "Dogtags preview",
+  "Scene": {
+    "jig": {
+      "width_mm": 28.0,
+      "height_mm": 46.95,
+      "cmyk": "75,0,75,0"
+    },
+    "slot_count": 1,
+    "objects_count": {
+      "images": 1,
+      "text": 1
+    },
+    "export_files": [
+      "File 1"
+    ],
+    "object_cmyk": "0,100,0,0",
+    "Majors": [
+      {
+        "rect": {
+          "x_mm": 0.0,
+          "y_mm": 0.0,
+          "width_mm": 28.0,
+          "height_mm": 46.95
+        },
+        "origin": {
+          "x_mm": 0.0,
+          "y_mm": 0.0
+        },
+        "slot_size": {
+          "width_mm": 28.0,
+          "height_mm": 46.95
+        },
+        "step_size": {
+          "x_mm": 0.0,
+          "y_mm": 0.0
+        },
+        "slot_count": 1
+      }
+    ]
+  },
+  "ASINObjects": {
+    "B0DHPJS4W9": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "1.ZEILE",
+                  "x_mm": 1.75,
+                  "y_mm": 8.25,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": -1,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "2.ZEILE",
+                  "x_mm": 1.9166666666666667,
+                  "y_mm": 14.25,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 0,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "3.ZEILE",
+                  "x_mm": 1.75,
+                  "y_mm": 19.916666666666668,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 1,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "4.ZEILE",
+                  "x_mm": 1.9166666666666667,
+                  "y_mm": 25.916666666666668,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 2,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "5.ZEILE",
+                  "x_mm": 1.9166666666666667,
+                  "y_mm": 32.083333333333336,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 3,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0DST5Y6DC": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Verewige dein Datum auf der Rückseite",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 14.916666666666666,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": -1,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "WUNSCHNAMEN",
+                  "x_mm": 1.4166666666666667,
+                  "y_mm": 25.25,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 0,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0CSKN8QQM": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 1",
+                  "x_mm": 1.0833333333333333,
+                  "y_mm": 9.083333333333334,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": -1,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 2",
+                  "x_mm": 1.0833333333333333,
+                  "y_mm": 15.083333333333334,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 0,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 3",
+                  "x_mm": 1.25,
+                  "y_mm": 21.583333333333332,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 1,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 4",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 28.416666666666668,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 2,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 5",
+                  "x_mm": 1.75,
+                  "y_mm": 35.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 3,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0FWKQXVJD": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Zeile 1",
+                  "x_mm": 1.0833333333333333,
+                  "y_mm": 9.083333333333334,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": -1,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Zeile 2",
+                  "x_mm": 1.0833333333333333,
+                  "y_mm": 15.083333333333334,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 0,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Zeile 3",
+                  "x_mm": 1.25,
+                  "y_mm": 21.583333333333332,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 1,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Zeile 4",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 28.416666666666668,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 2,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Zeile 5",
+                  "x_mm": 1.75,
+                  "y_mm": 35.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 3,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0D54HRFJY": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": 0.0,
+                  "y_mm": 0.0,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BILD HOCHLADEN",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 1",
+                  "x_mm": 1.0833333333333333,
+                  "y_mm": 9.083333333333334,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": -1,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 2",
+                  "x_mm": 1.0833333333333333,
+                  "y_mm": 15.083333333333334,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 0,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 3",
+                  "x_mm": 1.25,
+                  "y_mm": 21.583333333333332,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 1,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 4",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 28.416666666666668,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 2,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 5",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 34.083333333333336,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 3,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 6",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0G1N5LJLH": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 1",
+                  "x_mm": 1.75,
+                  "y_mm": 6.75,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "ZEILE 2",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 14.083333333333334,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 5,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Zeile 3",
+                  "x_mm": 1.9166666666666667,
+                  "y_mm": 22.25,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 6,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Zeile 4",
+                  "x_mm": 1.75,
+                  "y_mm": 28.416666666666668,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 7,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Zeile 5",
+                  "x_mm": 1.75,
+                  "y_mm": 34.416666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 8,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Zeile 6",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 40.416666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 9,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0DN2RFQQH": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "WUNSCHNAME",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F6D7CZK1": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": 0,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "1.ZEILE",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F8RCSRYN": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BILD HOCHLADEN",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Wunschname",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F8RB4RLB": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Wunschname",
+                  "x_mm": 1.25,
+                  "y_mm": 7.583333333333333,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gewünschtes Datum",
+                  "x_mm": 1.25,
+                  "y_mm": 14.583333333333334,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 5,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gewünschtes Datum",
+                  "x_mm": 0.9166666666666666,
+                  "y_mm": 21.583333333333332,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 6,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gewünschtes Datum",
+                  "x_mm": 1.0833333333333333,
+                  "y_mm": 28.583333333333332,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 7,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F8RC2C5V": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtags preview/car j.png",
+                  "x_mm": 4.083333333333333,
+                  "y_mm": 6.916666666666667,
+                  "w_mm": 20.0,
+                  "h_mm": 30.0,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "Anzahl der Kinder wählen",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Geben Sie Ihren gewünschten Namen ein 1",
+                  "x_mm": 1.75,
+                  "y_mm": 39.083333333333336,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 0,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F94CJQ51": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BILD HOCHLADEN",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Texteingabe 1",
+                  "x_mm": 1.75,
+                  "y_mm": 9.583333333333334,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Texteingabe 2",
+                  "x_mm": 1.75,
+                  "y_mm": 15.583333333333334,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 5,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Texteingabe 3",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 22.25,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 6,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Texteingabe 4 ♥",
+                  "x_mm": 1.9166666666666667,
+                  "y_mm": 29.75,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 7,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F44BGKLT": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Wunschname/ Datum",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F447YZMX": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Wunschname",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F44BMYXC": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Wunschname",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F44DWSZF": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Wunschname",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Wunschname (optional)",
+                  "x_mm": 1.4166666666666667,
+                  "y_mm": 33.583333333333336,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 5,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F44DJH9G": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Wunschname",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F44CCL7V": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Wunschname",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F44BQ52B": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Wunschname",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F448MY8J": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Wunschname",
+                  "x_mm": 1.0833333333333333,
+                  "y_mm": 5.583333333333333,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gewünschtes Datum",
+                  "x_mm": 1.4166666666666667,
+                  "y_mm": 11.916666666666666,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 5,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gewünschtes Datum",
+                  "x_mm": 1.0833333333333333,
+                  "y_mm": 18.083333333333332,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 6,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gewünschtes Datum",
+                  "x_mm": 0.4166666666666667,
+                  "y_mm": 25.416666666666668,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 7,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F4478Y8Y": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "BITTE BILD HOCHLADEN !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gib deinen gewünschten Text ein",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 7.25,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gib deinen gewünschten Text ein",
+                  "x_mm": 1.4166666666666667,
+                  "y_mm": 13.416666666666666,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 5,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gib deinen gewünschten Text ein",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 19.25,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 6,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gib deinen gewünschten Text ein",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 25.25,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 7,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gib deinen gewünschten Text ein",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 31.083333333333332,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 8,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "Gib deinen gewünschten Text ein ♥",
+                  "x_mm": 1.75,
+                  "y_mm": 37.25,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 9,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "B0F44BY9N7": {
+      "Frontside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "image",
+                  "path": "Dogtag All Sku/bg.jpg",
+                  "x_mm": -0.08333333333333333,
+                  "y_mm": -0.14166666666667047,
+                  "w_mm": 28.0,
+                  "h_mm": 46.95,
+                  "angle": 0.0,
+                  "z": -1,
+                  "amazon_label": "LADE EIN BILD HOCH !",
+                  "is_options": false,
+                  "is_static": false,
+                  "mask_path": "Dogtag All Sku/mask.png",
+                  "export_file": "File 1",
+                  "custom_images": {},
+                  "custom_image": ""
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "Backside": [
+        {
+          "label": "Major 1",
+          "slots": [
+            {
+              "label": "Slot 1",
+              "x_mm": 0.0,
+              "y_mm": 0.0,
+              "w_mm": 28.0,
+              "h_mm": 46.95,
+              "z": -3,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "WUNSCHNAME",
+                  "x_mm": 1.5833333333333333,
+                  "y_mm": 39.916666666666664,
+                  "w_mm": 25.0,
+                  "h_mm": 5.0,
+                  "angle": 0.0,
+                  "z": 4,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 5,
+                  "label_font_family": "Myriad Pro",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

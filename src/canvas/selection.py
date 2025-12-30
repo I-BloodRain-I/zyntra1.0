@@ -446,6 +446,15 @@ class CanvasSelection:
                         self.s._renumber_slots()
         except Exception:
             logger.exception("Failed to refresh slots after moving major")
+        
+        # Auto-save current ASIN's objects after any drag operation
+        try:
+            if hasattr(self.s, '_save_current_asin_objects'):
+                logger.debug(f"[DRAG_END] Drag operation completed - auto-saving to ASIN")
+                self.s._save_current_asin_objects()
+        except Exception:
+            logger.exception("Failed to auto-save ASIN objects after drag")
+        
         self._drag_kind = None
 
     def destroy_context_popup(self):
@@ -644,6 +653,8 @@ class CanvasSelection:
         except Exception:
             logger.exception("Failed to refresh image after removing mask")
 
+    # mirror toggle handled as per-ASIN setting; per-object mirroring is not supported
+
     def on_delete(self, _evt=None):
         if not self._selected:
             return
@@ -720,6 +731,7 @@ class CanvasSelection:
                     nmeta["custom_image"] = str(obj.get("custom_image"))
                 if obj.get("export_file"):
                     nmeta["export_file"] = str(obj.get("export_file"))
+                # mirror is a per-ASIN setting and isn't copied per-object
                 # Angle and re-render
                 try:
                     ang = float(obj.get("angle", 0.0) or 0.0)
