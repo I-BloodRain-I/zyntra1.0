@@ -34,8 +34,6 @@ class NStickerCanvasScreen(Screen):
     def __init__(self, master, app):
         super().__init__(master, app)
 
-        # App title + left-aligned header row with SKU input
-        # self.brand_bar(self)
         if not self.app.is_fullscreen:
             self.app.toggle_fullscreen()
 
@@ -92,8 +90,6 @@ class NStickerCanvasScreen(Screen):
         # Top horizontal bar for Import, Jig size, tools, and shortcuts
         bar = tk.Frame(self, bg="green")
         bar.pack(fill="none", padx=0, pady=(0, 0))
-
-        # (Replaced) Old Import Image pill removed in favor of tool tile in tools section
 
         # 2) Jig size values (UI moved to left bar below)
         # Keep StringVars here so other logic can reference them early
@@ -804,40 +800,11 @@ class NStickerCanvasScreen(Screen):
         
         tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
 
-        # ASIN section (moved from top header): entry + combobox + Add/Remove
-        asin_col = tk.Frame(left_bar, bg="black")
-        asin_col.pack(side="top", padx=8, pady=8, anchor="w", fill="x")
-        # Build ASIN list from existing product JSONs
+        # Initialize ASIN data (UI is in top menu panel_amazon)
         def _asin_load_all() -> list[str]:
-            # If editing an existing product, load ASINs from its JSON; else default to 1 ASIN (current entry)
-            # try:
-            #     prod = str(getattr(state, "saved_product", "") or "").strip()
-            # except Exception:
-            #     prod = ""
             asins: list[str] = [asin_pair[0] for asin_pair in state.asins]
-            # if prod:
-            #     try:
-            #         p = PRODUCTS_PATH / f"{prod}.json"
-            #         if p.exists():
-            #             with open(p, "r", encoding="utf-8") as _f:
-            #                 data = json.load(_f)
-            #             arr = data.get("ASINs") or []
-            #             for entry in arr:
-            #                 try:
-            #                     if isinstance(entry, (list, tuple)) and entry:
-            #                         a = str(entry[0]).strip()
-            #                     else:
-            #                         a = str(entry).strip()
-            #                     if a:
-            #                         asins.append(a)
-            #                 except Exception:
-            #                     continue
-            #     except Exception:
-            #         asins = []
-            # Default to zero ASINs when not editing or none found
             if not asins:
                 asins = []
-            # Deduplicate while preserving order
             seen = set()
             uniq: list[str] = []
             for v in asins:
@@ -848,34 +815,6 @@ class NStickerCanvasScreen(Screen):
 
         def _asin_initial_counts() -> dict[str, int]:
             counts: dict[str, int] = {asin_pair[0]: asin_pair[1] for asin_pair in state.asins}
-            # try:
-            #     prod = str(getattr(state, "saved_product", "") or "").strip()
-            # except Exception:
-            #     prod = ""
-            # if prod:
-            #     try:
-            #         p = PRODUCTS_PATH / f"{prod}.json"
-            #         if p.exists():
-            #             with open(p, "r", encoding="utf-8") as _f:
-            #                 data = json.load(_f)
-            #             arr = data.get("ASINs") or []
-            #             for entry in arr:
-            #                 try:
-            #                     if isinstance(entry, (list, tuple)) and len(entry) >= 2:
-            #                         a = str(entry[0]).strip()
-            #                         try:
-            #                             c = int(entry[1])
-            #                         except Exception:
-            #                             c = 1
-            #                     else:
-            #                         a = str(entry).strip()
-            #                         c = 1
-            #                     if a:
-            #                         counts[a] = max(1, int(c))
-            #                 except Exception:
-            #                     continue
-            #     except Exception:
-            #         counts = {}
             return counts
 
         def _asin_initial_mirrors() -> dict[str, bool]:
@@ -898,20 +837,11 @@ class NStickerCanvasScreen(Screen):
                 pass
             return mirrors
 
-        asin_combo_wrap = tk.Frame(asin_col, bg="#6f6f6f")
-        asin_combo_wrap.pack(side="top", pady=2, anchor="w", fill="x")
-        try:
-            asin_combo_wrap.configure(width=500)
-            asin_combo_wrap.pack_propagate(False)
-        except Exception:
-            pass
-        tk.Label(asin_combo_wrap, text="Select:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
         self._asin_list: list[str] = _asin_load_all()
         self.asin_combo_var = tk.StringVar(value=(self._asin_list[0] if self._asin_list else ""))
         _initial_counts = _asin_initial_counts()
         _initial_mirrors = _asin_initial_mirrors()
         self._asin_counts: dict[str, int] = {k: int(_initial_counts.get(k, 1)) for k in self._asin_list}
-        # Per-ASIN mirror flag (do not alter canvas rendering; used for export JSON only)
         self._asin_mirror: dict[str, bool] = {k: bool(_initial_mirrors.get(k, False)) for k in self._asin_list}
         
         # Per-ASIN object storage: each ASIN has its own objects for front and back
@@ -919,45 +849,14 @@ class NStickerCanvasScreen(Screen):
         for asin in self._asin_list:
             self._asin_objects[asin] = {"front": [], "back": []}
 
-        self._asin_combo = ttk.Combobox(
-            asin_combo_wrap,
-            textvariable=self.asin_combo_var,
-            state="readonly",
-            values=self._asin_list,
-            justify="center",
-            width=500
-        )
-        self._asin_combo.pack(side="left", fill="x", expand=True)
-
-        _asinbox = tk.Frame(asin_col, bg="#6f6f6f")
-        _asinbox.pack(side="top", pady=2)
-        tk.Label(_asinbox, text="ASIN:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_asinbox, textvariable=self.sku_var, width=12, bg="#d9d9d9", justify="center").pack(side="left")
-        # Flat style for ASIN buttons without padding
-        _asin_btn_style = ttk.Style()
-        _asin_btn_style.configure("Asin.TButton", font=("Myriad Pro", 9), padding=0)
-        # Buttons similar to Major presets (placed under ASIN entry)
-        asin_btns = tk.Frame(asin_col, bg="black")
-        asin_btns.pack(side="top", pady=0, anchor="w")
-        self._asin_btn_add = ttk.Button(asin_btns, text="Add", style="Asin.TButton", width=10)
-        self._asin_btn_add.pack(side="left")
-        self._asin_btn_remove = ttk.Button(asin_btns, text="Remove", style="Asin.TButton", width=8)
-        self._asin_btn_remove.pack(side="left", padx=(5, 0))
-
         def _asin_refresh_values(select_value: Optional[str] = None):
             try:
                 values = list(self._asin_list)
-                self._asin_combo.configure(values=values)
                 try:
                     if hasattr(self, "_asin_combo_top"):
                         self._asin_combo_top.configure(values=values)
                 except Exception:
                     pass
-                # Enable/disable Remove button
-                if len(self._asin_list) == 0:
-                    self._asin_btn_remove.configure(state="disabled")
-                else:
-                    self._asin_btn_remove.configure(state="normal")
                 if select_value is not None:
                     self.asin_combo_var.set(select_value)
             except Exception:
@@ -1032,18 +931,9 @@ class NStickerCanvasScreen(Screen):
             logger.debug(f"[ASIN_TRACE] asin_combo_var changed to: '{self.asin_combo_var.get()}'")
             _on_asin_combo()
         
-        self._asin_combo.bind("<<ComboboxSelected>>", lambda e: (logger.debug("[ASIN_EVENT] ComboboxSelected event triggered"), _on_asin_combo(e)))
-        
-        # Also trace the variable directly to catch all changes
+        # Trace the variable to catch all changes
         try:
             self.asin_combo_var.trace_add("write", _on_asin_combo_trace)
-        except Exception:
-            pass
-        
-        try:
-            # Top-menu combobox shares the same variable; ensure it also triggers selection logic
-            if hasattr(self, "_asin_combo_top"):
-                self._asin_combo_top.bind("<<ComboboxSelected>>", lambda e: (logger.debug("[ASIN_EVENT] Top ComboboxSelected event triggered"), _on_asin_combo(e)))
         except Exception:
             pass
 
@@ -1068,16 +958,8 @@ class NStickerCanvasScreen(Screen):
         except Exception:
             pass
 
-        # Count field (moved here to be above Add/Remove)
+        # Count field initialized here (UI in panel_amazon)
         self.count_in_order = tk.StringVar(value="1")
-        _countbox = tk.Frame(asin_col, bg="#6f6f6f")
-        _countbox.pack(side="top", pady=2)
-        tk.Label(_countbox, text="Count:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_countbox, textvariable=self.count_in_order, width=1, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(validate_min1(self), "%P")).pack(side="left")
-        tk.Label(_countbox, text="pcs", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-
-        
 
         def _asin_add():
             try:
@@ -1193,11 +1075,6 @@ class NStickerCanvasScreen(Screen):
             except Exception:
                 pass
 
-        self._asin_btn_add.configure(command=_asin_add)
-        self._asin_btn_remove.configure(command=_asin_remove)
-
-        # Do not sync combobox when typing in the ASIN entry; combobox reflects only added ASINs
-
         # Update count map when count changes for the selected ASIN
         def _on_count_change(*_):
             try:
@@ -1241,14 +1118,6 @@ class NStickerCanvasScreen(Screen):
 
         columns = tk.Frame(top_menu, bg="black")
         columns.pack(side="top", fill="x", expand=True)
-        # Use grid for three equal columns
-        # try:
-        #     columns.grid_columnconfigure(0, weight=1, uniform="cols")
-        #     columns.grid_columnconfigure(1, weight=1, uniform="cols")
-        #     columns.grid_columnconfigure(2, weight=1, uniform="cols")
-        #     columns.grid_rowconfigure(0, weight=1)
-        # except Exception:
-        #     pass
 
         # Panels
         panel_basic = tk.Frame(columns, bg="black")
@@ -1366,8 +1235,6 @@ class NStickerCanvasScreen(Screen):
         self._obj_cmyk_entry.bind("<FocusOut>", _on_obj_cmyk_focus_out)
         # horizontal separator (moved down)
         tk.Frame(panel_basic, bg="white", height=2).grid(row=4, column=0, sticky="ew", pady=(6, 6))
-
-    # (Jig size visible label removed from Basic panel — moved to left bar)
 
         # Major size (Preset + fields + Add/Remove)
         _b_row3 = tk.Frame(panel_basic, bg="black"); _b_row3.grid(row=5, column=0, sticky="ew", pady=(6, 0))
@@ -1534,7 +1401,6 @@ class NStickerCanvasScreen(Screen):
         # Row 1: ASIN selector (no label)
         _a_row1 = tk.Frame(panel_amazon, bg="black"); _a_row1.grid(row=1, column=0, sticky="ew")
         _asin_wrap = tk.Frame(_a_row1, bg="#6f6f6f"); _asin_wrap.pack(side="left", fill="x", expand=True)
-        # tk.Label(_asin_wrap, text="Amazon", bg="black", fg=COLOR_TEXT, font=("Myriad Pro", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(0, 6))
         # Keep reference to top-menu ASIN combobox so we can refresh its values
         self._asin_combo_top = ttk.Combobox(
             _asin_wrap,
@@ -1545,6 +1411,8 @@ class NStickerCanvasScreen(Screen):
             width=16,
         )
         self._asin_combo_top.pack(side="left", fill="x", expand=True)
+        # Bind event to top combobox
+        self._asin_combo_top.bind("<<ComboboxSelected>>", lambda e: (logger.debug("[ASIN_EVENT] Top ComboboxSelected event triggered"), _on_asin_combo(e)))
 
         # Row 2: ASIN entry + Add/Remove buttons
         _a_row2 = tk.Frame(panel_amazon, bg="black"); _a_row2.grid(row=2, column=0, sticky="ew")
@@ -1593,7 +1461,7 @@ class NStickerCanvasScreen(Screen):
                 bar.pack_forget()
             except Exception:
                 pass
-            for _legacy in (locals().get("slot_col"), locals().get("origin_col"), locals().get("step_col"), locals().get("asin_col")):
+            for _legacy in (locals().get("slot_col"), locals().get("origin_col"), locals().get("step_col")):
                 try:
                     if _legacy is not None:
                         _legacy.pack_forget()
@@ -1665,13 +1533,7 @@ class NStickerCanvasScreen(Screen):
         tools_row1.pack(side="top", anchor="center")
         tools_row2 = tk.Frame(tools, bg="black")
         tools_row2.pack(side="top", anchor="center")
-        # self._create_tool_tile(
-        #     tools,
-        #     icon_image=self._img_cursor,
-        #     icon_text=None,
-        #     label_text="Select tool",
-        #     command=lambda: None,
-        # )
+        
         # New Image import tool tile
         self._create_tool_tile(
             tools_row1,
@@ -1716,16 +1578,6 @@ class NStickerCanvasScreen(Screen):
         # 2 columns x 3 rows grid of shortcuts
         shortcuts.grid_columnconfigure(0, weight=0)
         shortcuts.grid_columnconfigure(1, weight=0)
-
-        # tk.Label(shortcuts, text="+ / -", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=0, column=0, sticky="e", padx=(0, 0))
-        # tk.Label(shortcuts, text="→    Zoom in/out", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=0, column=1, sticky="w")
-
-        # tk.Label(shortcuts, text="CTRL + Middle Mouse", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=1, column=0, sticky="e", padx=(0, 0))
-        # tk.Label(shortcuts, text="→    Zoom in/out", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=1, column=1, sticky="w")
-
-        # tk.Label(shortcuts, text="Delete", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=2, column=0, sticky="e", padx=(0, 0))
-        # tk.Label(shortcuts, text="→ Remove object", fg="white", bg="black", font=("Myriad Pro", 12)).grid(row=2, column=1, sticky="w")
-
 
         # Object controls moved to the left sidebar (above backside checkbox), vertically stacked
         row2 = tk.Frame(left_bar, bg="black")
@@ -1893,7 +1745,6 @@ class NStickerCanvasScreen(Screen):
         self._suppress_flag_traces = False
         self.sel_is_options = tk.BooleanVar(value=False)
         self.sel_is_static = tk.BooleanVar(value=False)
-        # ttk.Checkbutton(_flags, variable=self.sel_is_options, text="Is Options").pack(side="left", pady=6, padx=(0,6))
         ttk.Checkbutton(_flags, variable=self.sel_is_static, text="Static").pack(side="left", pady=6)
         # Persist flags into selected object
         def _on_flags_change(*_):
@@ -4389,34 +4240,6 @@ class NStickerCanvasScreen(Screen):
 
         def _worker():
             try:
-                # Render PDFs
-                # logger.debug(f"Rendering jig SVG...")
-                # state.processing_message = "Rendering jig SVG..."
-                # # For the jig cut file we only need the outer jig frame and slot rectangles
-                # if state.is_cancelled:
-                #     logger.debug(f"Processing cancelled")
-                #     return
-                # self._render_jig_to_svg(p_jig, slots_only, jx, jy)
-                # Render Single Pattern (first slot with its objects from front side)
-                # try:
-                    # state.processing_message = "Rendering single pattern SVG..."
-                    # logger.debug(f"Rendering single pattern SVG...")
-                #     front_sections = combined.get("Frontside", [])
-                #     slots_desc = []
-                #     if isinstance(front_sections, list) and front_sections:
-                #         first_section = front_sections[0] or {}
-                #         slots_desc = list(first_section.get("slots", []))
-                #     if slots_desc:
-                #         state.processing_message = "Rendering single pattern SVG..."
-                #         if state.is_cancelled:
-                #             logger.debug(f"Processing cancelled")
-                #             return
-                #         self._render_single_pattern_svg(p_pattern, slots_desc[0])
-                # except Exception as e:
-                #     state.is_failed = True
-                #     state.error_message = str(e)
-                #     logger.exception(f"Failed to render single pattern: {e}")
-
                 # Get export files list
                 export_files_to_render = list(getattr(self, "_export_files_list", ["File 1"]))
                 fmts = list(getattr(self, "_export_formats", ["pdf"]))
