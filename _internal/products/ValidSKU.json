@@ -1,0 +1,55 @@
+{
+  "ASINs": [
+    [
+      "ASIN1",
+      10,
+      false
+    ]
+  ],
+  "SkuName": "ValidSKU",
+  "Scene": {
+    "jig": {
+      "width_mm": 296.0,
+      "height_mm": 394.5831,
+      "cmyk": "75,0,75,0"
+    },
+    "slot_count": 0,
+    "objects_count": {
+      "images": 0,
+      "text": 0
+    },
+    "export_files": [
+      "File 1"
+    ],
+    "object_cmyk": "0,100,0,0",
+    "Majors": [
+      {
+        "rect": {
+          "x_mm": 12.0,
+          "y_mm": 15.0,
+          "width_mm": 64.0,
+          "height_mm": 53.0
+        },
+        "origin": {
+          "x_mm": 11.76,
+          "y_mm": 12.52
+        },
+        "slot_size": {
+          "width_mm": 40.66,
+          "height_mm": 28.9
+        },
+        "step_size": {
+          "x_mm": 72.55,
+          "y_mm": 47.85
+        },
+        "slot_count": 0
+      }
+    ]
+  },
+  "ASINObjects": {
+    "ASIN1": {
+      "Frontside": [],
+      "Backside": []
+    }
+  }
+}

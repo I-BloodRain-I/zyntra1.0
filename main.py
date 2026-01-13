@@ -4,12 +4,10 @@ from src.screens.common import *
 from src.screens.nonsticker import *
 from src.screens.sticker import *
 
-# 182125, 182145, 182163, 182170, 182172, 182196, 182206, 182212, 182223, 182254, 182273, 182294, 182334, 182346
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s %(name)s] [%(levelname)s] %(message)s")
     logging.getLogger("PIL").setLevel(logging.WARNING)
     app = App(title=APP_TITLE)
-    # app.show_screen(NStickerResultsDownloadScreen)
     app.show_screen(SelectProductScreen)
     # app.show_screen(NStickerCanvasScreen)
-    app.mainloop()
+    app.mainloop()  

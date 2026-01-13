@@ -24,9 +24,30 @@ DEFAULT_JIG_SIZE   = (296.0, 394.5831)
 DEFAULT_SLOT_SIZE  = (40.66, 28.9)
 DEFAULT_ORIGIN_POS = (11.76, 12.52)
 DEFAULT_STEP_SIZE  = (72.55, 47.85)
-# Major must be at least as large as a single slot to render slots
 DEFAULT_MAJOR_SIZE = tuple((int(DEFAULT_SLOT_SIZE[i] + (DEFAULT_ORIGIN_POS[i]*2)) for i in range(2)))
 DEFAULT_MAJOR_POS  = (12, 15)
+
+# Left menu colors (reusing top menu scheme)
+BUTTON_COLOR = "#3a5f8f"
+BUTTON_HOVER_COLOR = "#4a7faf"
+BORDER_COLOR = TOP_MENU_CONTAINER_BORDER = "#3d3d3d"
+TOP_MENU_ACCENT_BLUE = "#4a90d9"
+
+# Top menu colors
+TOP_MENU_BG = "#1a1a1a"
+TOP_MENU_CONTAINER_BG = "#2d2d2d"
+TOP_MENU_CONTAINER_BORDER = "#3d3d3d"
+TOP_MENU_BOX_BG = "#252525"
+TOP_MENU_INPUT_BG = "#2d2d2d"
+TOP_MENU_LABEL_FG = "#888888"
+TOP_MENU_TEXT_FG = "white"
+TOP_MENU_SEPARATOR = "#3d3d3d"
+TOP_MENU_ACCENT_BLUE = "#4a90d9"
+TOP_MENU_ACCENT_ORANGE = "#e67e22"
+TOP_MENU_ACCENT_PURPLE = "#9b59b6"
+TOP_MENU_ACCENT_GREEN = "#27ae60"
+TOP_MENU_ACCENT_RED = "#c0392b"
+TOP_MENU_BUTTON_INACTIVE = "#3d3d3d"
 
 
 class NStickerCanvasScreen(Screen):
@@ -36,6 +57,7 @@ class NStickerCanvasScreen(Screen):
 
         if not self.app.is_fullscreen:
             self.app.toggle_fullscreen()
+        # self.app.set_small_size()
 
         state.is_failed = False
         state.error_message = ""
@@ -79,8 +101,9 @@ class NStickerCanvasScreen(Screen):
         self._scene_store: dict[str, list[dict]] = {"front": [], "back": []}
         self._current_side: str = "front"
 
-        left_bar = tk.Frame(self, bg="black")
-        left_bar.pack(side="left", fill="y", padx=10, pady=(7, 60))
+        left_bar = tk.Frame(self, bg=TOP_MENU_BG, width=250)
+        left_bar.pack(side="left", fill="y", padx=0, pady=0)
+        left_bar.pack_propagate(False)
         # Expose left bar for child managers (e.g., Fonts) to attach their UI
         self.left_bar = left_bar
 
@@ -474,7 +497,7 @@ class NStickerCanvasScreen(Screen):
         ms_btns = tk.Frame(ms_preset_col, bg="black")
         ms_btns.pack(side="top", pady=0, anchor="w")
         _small_btn_style = ttk.Style()
-        _small_btn_style.configure("Small.TButton", font=("Myriad Pro", 9), padding=(0, 1))
+        _small_btn_style.configure("Small.TButton", font=("Segoe UI", 9), padding=(0, 1))
         self._ms_btn_add = ttk.Button(ms_btns, text="Add", command=_ms_add, style="Small.TButton", width=6, padding=(10, 0, 10, 0))
         self._ms_btn_add.pack(side="left")
         self._ms_btn_remove = ttk.Button(ms_btns, text="Remove", command=_ms_remove, style="Small.TButton", width=8, padding=(8, 0, 8, 0))
@@ -610,195 +633,15 @@ class NStickerCanvasScreen(Screen):
         # Column 5: white vertical separator after Major Size block
         tk.Frame(bar, bg="white", width=2).pack(side="left", fill="y", padx=12, pady=6)
 
-        # Jig size label and fields (moved from top bar)
-        tk.Label(left_bar, text="Jig size:", fg="white", bg="black", font=("Myriad Pro", 10, "bold")).pack(side="top", anchor="w", padx=(40, 6), pady=(10, 0))
-        # Reuse existing StringVars: self.jig_x, self.jig_y
-        jig_col_left = tk.Frame(left_bar, bg="black")
-        jig_col_left.pack(side="top", padx=8, pady=8, anchor="w")
-        # Jig Width row
-        _jlxbox = tk.Frame(jig_col_left, bg="#6f6f6f")
-        _jlxbox.pack(side="top", pady=2)
-        tk.Label(_jlxbox, text="Width: ", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_jlxbox, textvariable=self.jig_x, width=12, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        tk.Label(_jlxbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        # Jig Height row
-        _jlybox = tk.Frame(jig_col_left, bg="#6f6f6f")
-        _jlybox.pack(side="top", pady=2)
-        tk.Label(_jlybox, text="Height:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_jlybox, textvariable=self.jig_y, width=12, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        tk.Label(_jlybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-
-        # Slot size label and fields
-        tk.Label(left_bar, text="Slot size:", fg="white", bg="black", font=("Myriad Pro", 10, "bold")).pack(side="top", anchor="w", padx=(40, 6), pady=(10, 0))
         self.slot_w = tk.StringVar(value="40.66")
         self.slot_h = tk.StringVar(value="28.9")
-        slot_col = tk.Frame(left_bar, bg="black")
-        slot_col.pack(side="top", padx=8, pady=8, anchor="w")
-        # Slot Width row
-        _swbox = tk.Frame(slot_col, bg="#6f6f6f")
-        _swbox.pack(side="top", pady=2)
-        tk.Label(_swbox, text="Width: ", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_swbox, textvariable=self.slot_w, width=12, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        tk.Label(_swbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        # Slot Height row
-        _shbox = tk.Frame(slot_col, bg="#6f6f6f")
-        _shbox.pack(side="top", pady=2)
-        tk.Label(_shbox, text="Height:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_shbox, textvariable=self.slot_h, width=12, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        tk.Label(_shbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-
-        # Horizontal separator
-        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
-
-        # Origin Pos label and fields
-        tk.Label(left_bar, text="Origin Pos:", fg="white", bg="black", font=("Myriad Pro", 10, "bold")).pack(side="top", anchor="w", padx=(35, 6))
         self.origin_x = tk.StringVar(value="11.76")
         self.origin_y = tk.StringVar(value="12.52")
-        origin_col = tk.Frame(left_bar, bg="black")
-        origin_col.pack(side="top", padx=8, pady=8, anchor="w")
-        # Origin X row
-        _oxbox = tk.Frame(origin_col, bg="#6f6f6f")
-        _oxbox.pack(side="top", pady=2)
-        tk.Label(_oxbox, text="X:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_oxbox, textvariable=self.origin_x, width=12, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        tk.Label(_oxbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        # Origin Y row
-        _oybox = tk.Frame(origin_col, bg="#6f6f6f")
-        _oybox.pack(side="top", pady=2)
-        tk.Label(_oybox, text="Y:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_oybox, textvariable=self.origin_y, width=12, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        tk.Label(_oybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-
-        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
-        # Backside toggle between tool buttons and Step Size block
-
-
-        # Step Size label and fields
-        tk.Label(left_bar, text="Step Size:", fg="white", bg="black", font=("Myriad Pro", 10, "bold")).pack(side="top", anchor="w", padx=(40, 6))
         self.step_x = tk.StringVar(value="72.55")
         self.step_y = tk.StringVar(value="47.85")
-        step_col = tk.Frame(left_bar, bg="black")
-        step_col.pack(side="top", padx=8, pady=8, anchor="w")
-        # Step X row
-        _sxbox = tk.Frame(step_col, bg="#6f6f6f")
-        _sxbox.pack(side="top", pady=2)
-        tk.Label(_sxbox, text="X:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_sxbox, textvariable=self.step_x, width=12, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        tk.Label(_sxbox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        # Step Y row
-        _sybox = tk.Frame(step_col, bg="#6f6f6f")
-        _sybox.pack(side="top", pady=2)
-        tk.Label(_sybox, text="Y:", bg="#6f6f6f", fg="white", width=5).pack(side="left", padx=6)
-        tk.Entry(_sybox, textvariable=self.step_y, width=12, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        tk.Label(_sybox, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
-
-        # Export Files section
-        tk.Label(left_bar, text="Export Files:", fg="white", bg="black", font=("Myriad Pro", 10, "bold")).pack(side="top", anchor="w", padx=(35, 6))
-        self._export_files_list = ["File 1"]  # Default: one export file
+        
+        self._export_files_list = ["File 1"]
         self.export_file_var = tk.StringVar(value="File 1")
-        
-        export_files_col = tk.Frame(left_bar, bg="black")
-        export_files_col.pack(side="top", padx=8, pady=8, anchor="w")
-        
-        # Selector
-        export_file_combo_wrap = tk.Frame(export_files_col, bg="#6f6f6f")
-        export_file_combo_wrap.pack(side="top", pady=2)
-        tk.Label(export_file_combo_wrap, text="Select:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        self._export_file_combo = ttk.Combobox(
-            export_file_combo_wrap,
-            textvariable=self.export_file_var,
-            state="readonly",
-            values=self._export_files_list,
-            justify="center",
-            width=13
-        )
-        self._export_file_combo.pack(side="left")
-        
-        # Add/Remove buttons
-        def _export_file_refresh_values():
-            values = list(self._export_files_list)
-            self._export_file_combo.configure(values=values)
-            # Update left menu selector too
-            try:
-                if hasattr(self, "_export_file_selector_left"):
-                    self._export_file_selector_left.configure(values=values)
-            except Exception:
-                pass
-            # Enable/disable Remove based on count
-            if len(self._export_files_list) <= 1:
-                self._export_file_btn_remove.configure(state="disabled")
-            else:
-                self._export_file_btn_remove.configure(state="normal")
-        
-        def _export_file_add():
-            try:
-                # Find next available file number
-                idx = 1
-                while True:
-                    name = f"File {idx}"
-                    if name not in self._export_files_list:
-                        self._export_files_list.append(name)
-                        self.export_file_var.set(name)
-                        _export_file_refresh_values()
-                        break
-                    idx += 1
-            except Exception as e:
-                logger.exception(f"Failed to add export file: {e}")
-        
-        def _export_file_remove():
-            try:
-                if len(self._export_files_list) <= 1:
-                    return
-                current = self.export_file_var.get()
-                if current in self._export_files_list:
-                    self._export_files_list.remove(current)
-                    # Reassign objects from removed file to File 1
-                    for cid, meta in self._items.items():
-                        if meta.get("type") not in ("slot", "major"):
-                            if meta.get("export_file", "File 1") == current:
-                                meta["export_file"] = "File 1"
-                    # Select first file
-                    if self._export_files_list:
-                        self.export_file_var.set(self._export_files_list[0])
-                    _export_file_refresh_values()
-            except Exception as e:
-                logger.exception(f"Failed to remove export file: {e}")
-        
-        export_file_btns = tk.Frame(export_files_col, bg="black")
-        export_file_btns.pack(side="top", pady=0, anchor="w")
-        _export_file_btn_style = ttk.Style()
-        _export_file_btn_style.configure("ExportFile.TButton", font=("Myriad Pro", 9), padding=(0, 1))
-        self._export_file_btn_add = ttk.Button(
-            export_file_btns, 
-            text="Add", 
-            command=_export_file_add, 
-            style="ExportFile.TButton", 
-            width=6, 
-            padding=(10, 0, 10, 0)
-        )
-        self._export_file_btn_add.pack(side="left")
-        self._export_file_btn_remove = ttk.Button(
-            export_file_btns, 
-            text="Remove", 
-            command=_export_file_remove, 
-            style="ExportFile.TButton", 
-            width=8, 
-            padding=(8, 0, 8, 0)
-        )
-        self._export_file_btn_remove.pack(side="left", padx=(5, 0))
-        # Initialize button state
-        _export_file_refresh_values()
-        
-        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=6)
 
         # Initialize ASIN data (UI is in top menu panel_amazon)
         def _asin_load_all() -> list[str]:
@@ -853,8 +696,8 @@ class NStickerCanvasScreen(Screen):
             try:
                 values = list(self._asin_list)
                 try:
-                    if hasattr(self, "_asin_combo_top"):
-                        self._asin_combo_top.configure(values=values)
+                    if hasattr(self, "_asin_combo_left"):
+                        self._asin_combo_left.configure(values=values)
                 except Exception:
                     pass
                 if select_value is not None:
@@ -1102,360 +945,283 @@ class NStickerCanvasScreen(Screen):
         _asin_refresh_values(select_value=self.asin_combo_var.get())
         _apply_count_from_selection()
 
-        # sticker_wrap (Count moved above; keep sticker toggle state)
         self.sticker_var = tk.BooleanVar(value=False)
-        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=(0, 6))
+        self.backside = tk.BooleanVar(value=False)
+        self.backside.trace_add("write", self._on_backside_toggle)
 
-        # Backside toggle will be re-inserted below the Object controls further down
-
-        # Feature flag to enable/disable the experimental top menu without changing original layout
         self._use_top_menu = True
 
-        # --- Top Menu (Basic / Scene / Amazon) ---
-        # Create a fixed 3-column layout: Basic | Scene | Amazon
-        top_menu = tk.Frame(self, bg="black")
-        top_menu.pack(side="top", fill="x", padx=10, pady=(6, 8))
+        # --- Top Menu (Modern 3-row layout with visual separation) ---
+        top_menu = tk.Frame(self, bg=TOP_MENU_BG)
+        top_menu.pack(side="top", fill="x", padx=0, pady=0)
 
-        columns = tk.Frame(top_menu, bg="black")
-        columns.pack(side="top", fill="x", expand=True)
+        # Helper: create styled input group with label and entry
+        def _create_input_group(parent, label_text, var, width=8, entry_bg=TOP_MENU_CONTAINER_BG, label_width=None):
+            frame = tk.Frame(parent, bg=TOP_MENU_BG)
+            lbl = tk.Label(frame, text=label_text, bg=TOP_MENU_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9))
+            if label_width:
+                lbl.configure(width=label_width, anchor="e")
+            lbl.pack(side="left", padx=(0, 4))
+            entry = tk.Entry(frame, textvariable=var, width=width, bg=entry_bg, fg=TOP_MENU_TEXT_FG,
+                            insertbackground="white", relief="flat", bd=0, highlightthickness=1,
+                            highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightcolor=TOP_MENU_ACCENT_BLUE,
+                            font=("Segoe UI", 10), justify="center")
+            entry.pack(side="left")
+            return frame, entry
 
-        # Panels
-        panel_basic = tk.Frame(columns, bg="black")
-        panel_scene = tk.Frame(columns, bg="black")
-        panel_amazon = tk.Frame(columns, bg="black")
+        def _create_validated_input(parent, label_text, var, width=6):
+            frame = tk.Frame(parent, bg=TOP_MENU_BG)
+            tk.Label(frame, text=label_text, bg=TOP_MENU_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9)).pack(side="left", padx=(0, 2))
+            entry = tk.Entry(frame, textvariable=var, width=width, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                            insertbackground="white", relief="flat", bd=0, highlightthickness=1,
+                            highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightcolor=TOP_MENU_ACCENT_BLUE,
+                            font=("Segoe UI", 10), justify="center",
+                            validate="key", validatecommand=(vcmd_float(self), "%P"))
+            entry.pack(side="left")
+            return frame, entry
 
-        # Grid three columns side by side
-        panel_basic.grid(row=0, column=0, sticky="nsew", padx=(6, 24), pady=(0, 6))
-        panel_scene.grid(row=0, column=1, sticky="nsew", padx=(0, 24))
-        panel_amazon.grid(row=0, column=2, sticky="nsew")
-        try:
-            panel_basic.grid_columnconfigure(0, weight=1)
-            panel_scene.grid_columnconfigure(0, weight=1)
-            panel_amazon.grid_columnconfigure(0, weight=1)
-        except Exception:
-            pass
+        # ===== ROW 1: Product Name | Export format + DPI | CMYK colors =====
+        row1 = tk.Frame(top_menu, bg=TOP_MENU_BG)
+        row1.pack(side="top", fill="x", pady=(4, 6))
 
-        # ---- BASIC PANEL ----
-        tk.Label(panel_basic, text="Basic", bg="black", fg=COLOR_TEXT, font=("Myriad Pro", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(0, 6))
-        # Product name (chip label + light input for contrast)
-        _b_row1 = tk.Frame(panel_basic, bg="black")
-        _b_row1.grid(row=1, column=0, sticky="ew")
-        _prod_chip = tk.Frame(_b_row1, bg="#6f6f6f"); _prod_chip.pack(side="left")
-        tk.Label(_prod_chip, text="Product name:", bg="#6f6f6f", fg="white").pack(side="left")
-        tk.Entry(_b_row1, textvariable=self.sku_name_var, width=33,
-                 bg="#d9d9d9", fg="#000000", insertbackground="#000000",
-                 relief="flat", bd=0, highlightthickness=0,
-                 font=("Myriad Pro", 11), justify="center").pack(side="left", padx=(0, 0))
-        # Formats + DPI row (like order_range)
-        _fmt_row = tk.Frame(panel_basic, bg="black"); _fmt_row.grid(row=2, column=0, sticky="ew")
-        # Formats
+        # Product Name with styled container
+        prod_container = tk.Frame(row1, bg=TOP_MENU_CONTAINER_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        prod_container.pack(side="left", padx=(0, 12))
+        tk.Label(prod_container, text="Product Name", bg=TOP_MENU_CONTAINER_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 8)).pack(side="top", anchor="w", padx=6, pady=(4, 0))
+        tk.Entry(prod_container, textvariable=self.sku_name_var, width=22, bg=TOP_MENU_CONTAINER_BG, fg=TOP_MENU_TEXT_FG,
+                 insertbackground="white", relief="flat", bd=0, font=("Segoe UI", 11), justify="left").pack(side="top", padx=6, pady=(0, 6))
+
+        # Vertical separator
+        tk.Frame(row1, bg=TOP_MENU_SEPARATOR, width=1).pack(side="left", fill="y", padx=(0, 10), pady=4)
+
+        # Export format toggle buttons
+        export_container = tk.Frame(row1, bg=TOP_MENU_CONTAINER_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        export_container.pack(side="left", padx=(0, 8))
+        tk.Label(export_container, text="Export Format", bg=TOP_MENU_CONTAINER_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 8)).pack(side="top", anchor="w", padx=6, pady=(4, 2))
+        
+        fmt_btns_row = tk.Frame(export_container, bg=TOP_MENU_CONTAINER_BG)
+        fmt_btns_row.pack(side="top", padx=6, pady=(0, 6))
+        
         if not hasattr(self, "format_var"):
             self.format_var = tk.StringVar(value="pdf")
-        _fmt_chip = tk.Frame(_fmt_row, bg="#6f6f6f"); _fmt_chip.pack(side="left")
-        tk.Label(_fmt_chip, text="Export:", bg="#6f6f6f", fg="white", width=11).pack(side="left", padx=0)
-        tk.Entry(_fmt_row, textvariable=self.format_var, width=24, bg="#d9d9d9", justify="center").pack(side="left")
-        # DPI
+        if not hasattr(self, "_format_buttons"):
+            self._format_buttons = {}
+        
+        def _toggle_format(fmt):
+            current = self.format_var.get().lower().split(",")
+            current = [f.strip() for f in current if f.strip()]
+            if fmt in current:
+                current.remove(fmt)
+            else:
+                current.append(fmt)
+            self.format_var.set(",".join(current) if current else "pdf")
+            _update_format_buttons()
+        
+        def _update_format_buttons():
+            current = self.format_var.get().lower().split(",")
+            current = [f.strip() for f in current if f.strip()]
+            for fmt, btn in self._format_buttons.items():
+                if fmt in current:
+                    btn.configure(bg=TOP_MENU_ACCENT_BLUE, fg=TOP_MENU_TEXT_FG, relief="flat")
+                else:
+                    btn.configure(bg=TOP_MENU_BUTTON_INACTIVE, fg=TOP_MENU_LABEL_FG, relief="flat")
+        
+        for fmt in ["PDF", "JPG", "PNG", "BMP"]:
+            btn = tk.Button(fmt_btns_row, text=fmt, width=4, relief="flat", bd=0,
+                           bg=TOP_MENU_BUTTON_INACTIVE, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9, "bold"),
+                           activebackground="#5a5a5a", activeforeground="white", cursor="hand2",
+                           command=lambda f=fmt.lower(): _toggle_format(f))
+            btn.pack(side="left", padx=1)
+            self._format_buttons[fmt.lower()] = btn
+        _update_format_buttons()
+
+        # DPI input
+        dpi_container = tk.Frame(row1, bg=TOP_MENU_CONTAINER_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        dpi_container.pack(side="left", padx=(0, 8))
+        tk.Label(dpi_container, text="DPI", bg=TOP_MENU_CONTAINER_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 8)).pack(side="top", anchor="w", padx=6, pady=(4, 0))
         if not hasattr(self, "dpi_var"):
             self.dpi_var = tk.StringVar(value="1200")
-        _dpi_chip = tk.Frame(_fmt_row, bg="#6f6f6f"); _dpi_chip.pack(side="left", padx=(16, 0))
-        tk.Label(_dpi_chip, text="DPI:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        tk.Entry(_fmt_row, textvariable=self.dpi_var, width=10, bg="#d9d9d9", justify="center").pack(side="left")
+        tk.Entry(dpi_container, textvariable=self.dpi_var, width=6, bg=TOP_MENU_CONTAINER_BG, fg=TOP_MENU_TEXT_FG,
+                 insertbackground="white", relief="flat", bd=0, font=("Segoe UI", 11), justify="center").pack(side="top", padx=6, pady=(0, 6))
+
+        # Vertical separator
+        tk.Frame(row1, bg=TOP_MENU_SEPARATOR, width=1).pack(side="left", fill="y", padx=(2, 10), pady=4)
+
+        # JIG CMYK with color preview
         if not hasattr(self, "jig_cmyk"):
             self.jig_cmyk = tk.StringVar(value="75,0,75,0")
-        if not hasattr(self, "obj_cmyk"):
-            self.obj_cmyk = tk.StringVar(value="0,100,0,0")
-        # Track per-field invalid state (do not auto-correct user input on restore)
         self._jig_cmyk_invalid = False
-        self._obj_cmyk_invalid = False
-        _fmt_row2 = tk.Frame(panel_basic, bg="black"); _fmt_row2.grid(row=3, column=0, sticky="ew", pady=(6, 6))
-        _jig_chip = tk.Frame(_fmt_row2, bg="#6f6f6f"); _jig_chip.pack(side="left", padx=(0, 0))
-        tk.Label(_jig_chip, text="Jig CMYK:", bg="#6f6f6f", fg="white").pack(side="left")
-        self._jig_cmyk_entry = tk.Entry(_fmt_row2, textvariable=self.jig_cmyk, width=16, bg="#d9d9d9", justify="center")
+        
+        jig_cmyk_container = tk.Frame(row1, bg=TOP_MENU_CONTAINER_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        jig_cmyk_container.pack(side="left", padx=(0, 8))
+        tk.Label(jig_cmyk_container, text="JIG CMYK", bg=TOP_MENU_CONTAINER_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 8)).pack(side="top", anchor="w", padx=6, pady=(4, 0))
+        jig_inner = tk.Frame(jig_cmyk_container, bg=TOP_MENU_CONTAINER_BG)
+        jig_inner.pack(side="top", padx=6, pady=(0, 6))
+        self._jig_cmyk_entry = tk.Entry(jig_inner, textvariable=self.jig_cmyk, width=12, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                                         insertbackground="white", relief="flat", bd=0, font=("Segoe UI", 10), justify="center")
         self._jig_cmyk_entry.pack(side="left")
-        # Enforce exactly 4 comma-separated values (no numeric check)
+        
         def _on_jig_cmyk_focus_in(event=None):
-            try:
-                self._prev_jig_cmyk = self.jig_cmyk.get()
-            except Exception:
-                self._prev_jig_cmyk = "75,0,75,0"
-
+            self._prev_jig_cmyk = self.jig_cmyk.get()
         def _on_jig_cmyk_focus_out(event=None):
-            # Do NOT show messagebox here to avoid duplicate dialogs.
-            # If invalid, mark field invalid and refocus; user will be prompted on proceed.
-            try:
-                orig = str(self.jig_cmyk.get() or "")
-                parts = orig.split(",")
-                if len(parts) != 4:
-                    # Do NOT change the user's typed value; mark invalid so proceed will prompt the user.
-                    self._jig_cmyk_invalid = True
-                    try:
-                        self._jig_cmyk_entry.focus_set()
-                    except Exception:
-                        pass
-                    return
-                # If valid, trim spaces and accept the value (no numeric coercion)
-                parts = [p.strip() for p in parts]
-                self.jig_cmyk.set(",".join(parts))
-                self._jig_cmyk_invalid = False
-            except Exception:
-                logger.exception("Failed to validate jig CMYK")
+            orig = str(self.jig_cmyk.get() or "")
+            parts = orig.split(",")
+            if len(parts) != 4:
                 self._jig_cmyk_invalid = True
+                return
+            parts = [p.strip() for p in parts]
+            self.jig_cmyk.set(",".join(parts))
+            self._jig_cmyk_invalid = False
         self._jig_cmyk_entry.bind("<FocusIn>", _on_jig_cmyk_focus_in)
         self._jig_cmyk_entry.bind("<FocusOut>", _on_jig_cmyk_focus_out)
-        _obj_chip = tk.Frame(_fmt_row2, bg="#6f6f6f"); _obj_chip.pack(side="left", padx=(12, 0))
-        tk.Label(_obj_chip, text="Object CMYK:", bg="#6f6f6f", fg="white").pack(side="left")
-        self._obj_cmyk_entry = tk.Entry(_fmt_row2, textvariable=self.obj_cmyk, width=16, bg="#d9d9d9", justify="center")
-        self._obj_cmyk_entry.pack(side="left")
-        def _on_obj_cmyk_focus_in(event=None):
-            try:
-                self._prev_obj_cmyk = self.obj_cmyk.get()
-            except Exception:
-                self._prev_obj_cmyk = "0,100,0,0"
 
+        # Object CMYK with color preview
+        if not hasattr(self, "obj_cmyk"):
+            self.obj_cmyk = tk.StringVar(value="0,100,0,0")
+        self._obj_cmyk_invalid = False
+        
+        obj_cmyk_container = tk.Frame(row1, bg=TOP_MENU_CONTAINER_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        obj_cmyk_container.pack(side="left", padx=(0, 4))
+        tk.Label(obj_cmyk_container, text="Object CMYK", bg=TOP_MENU_CONTAINER_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 8)).pack(side="top", anchor="w", padx=6, pady=(4, 0))
+        obj_inner = tk.Frame(obj_cmyk_container, bg=TOP_MENU_CONTAINER_BG)
+        obj_inner.pack(side="top", padx=6, pady=(0, 6))
+        self._obj_cmyk_entry = tk.Entry(obj_inner, textvariable=self.obj_cmyk, width=12, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                                         insertbackground="white", relief="flat", bd=0, font=("Segoe UI", 10), justify="center")
+        self._obj_cmyk_entry.pack(side="left")
+        
+        def _on_obj_cmyk_focus_in(event=None):
+            self._prev_obj_cmyk = self.obj_cmyk.get()
         def _on_obj_cmyk_focus_out(event=None):
-            # Do NOT show messagebox here to avoid duplicate dialogs.
-            try:
-                orig = str(self.obj_cmyk.get() or "")
-                parts = orig.split(",")
-                if len(parts) != 4:
-                    # Do NOT change the user's typed value; mark invalid and refocus so user corrects it.
-                    self._obj_cmyk_invalid = True
-                    try:
-                        self._obj_cmyk_entry.focus_set()
-                    except Exception:
-                        pass
-                    return
-                parts = [p.strip() for p in parts]
-                self.obj_cmyk.set(",".join(parts))
-                self._obj_cmyk_invalid = False
-            except Exception:
-                logger.exception("Failed to validate object CMYK")
+            orig = str(self.obj_cmyk.get() or "")
+            parts = orig.split(",")
+            if len(parts) != 4:
                 self._obj_cmyk_invalid = True
+                return
+            parts = [p.strip() for p in parts]
+            self.obj_cmyk.set(",".join(parts))
+            self._obj_cmyk_invalid = False
         self._obj_cmyk_entry.bind("<FocusIn>", _on_obj_cmyk_focus_in)
         self._obj_cmyk_entry.bind("<FocusOut>", _on_obj_cmyk_focus_out)
-        # horizontal separator (moved down)
-        tk.Frame(panel_basic, bg="white", height=2).grid(row=4, column=0, sticky="ew", pady=(6, 6))
 
-        # Major size (Preset + fields + Add/Remove)
-        _b_row3 = tk.Frame(panel_basic, bg="black"); _b_row3.grid(row=5, column=0, sticky="ew", pady=(6, 0))
-        tk.Label(_b_row3, text="Major size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold")).pack(side="left", padx=(0, 8))
+        # Horizontal separator line
+        tk.Frame(top_menu, bg=TOP_MENU_SEPARATOR, height=1).pack(side="top", fill="x", padx=4, pady=(0, 2))
 
-        # Preset + buttons stacked (buttons under combobox)
-        ms_preset_col = tk.Frame(_b_row3, bg="black"); ms_preset_col.pack(side="left", padx=(0, 8))
-        _ms_wrap = tk.Frame(ms_preset_col, bg="#6f6f6f"); _ms_wrap.pack(side="top")
-        self._major_combo_basic = ttk.Combobox(_ms_wrap, textvariable=self.major_name, state="readonly",
-                                               values=list(self._major_sizes.keys()), justify="center", width=13)
-        self._major_combo_basic.pack(side="left")
-        ms_btns2 = tk.Frame(ms_preset_col, bg="black"); ms_btns2.pack(side="top", pady=(2, 0), anchor="w")
-        ttk.Button(ms_btns2, text="Add", style="Small.TButton",
-                   command=lambda: None if not hasattr(self, "_ms_btn_add") else self._ms_btn_add.invoke(), width=5).pack(side="left")
-        ttk.Button(ms_btns2, text="Remove", style="Small.TButton",
-                   command=lambda: None if not hasattr(self, "_ms_btn_remove") else self._ms_btn_remove.invoke(), width=7).pack(side="left", padx=(5, 0))
+        # ===== ROW 2: Jig Size | Major Area | Add/Delete | Select Area =====
+        row2_top = tk.Frame(top_menu, bg=TOP_MENU_BG)
+        row2_top.pack(side="top", fill="x", pady=(4, 4))
 
-        # X/Y column (Y below X)
-        ms_xy = tk.Frame(_b_row3, bg="black"); ms_xy.pack(side="left", padx=(2, 6))
-        _mxbox = tk.Frame(ms_xy, bg="#6f6f6f"); _mxbox.pack(side="top")
-        tk.Label(_mxbox, text="X:", bg="#6f6f6f", fg="white").pack(side="left")
-        tk.Entry(_mxbox, textvariable=self.major_x, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        _mybox = tk.Frame(ms_xy, bg="#6f6f6f"); _mybox.pack(side="top", pady=(4, 0))
-        tk.Label(_mybox, text="Y:", bg="#6f6f6f", fg="white").pack(side="left")
-        tk.Entry(_mybox, textvariable=self.major_y, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        # Jig Size container
+        jig_size_box = tk.Frame(row2_top, bg=TOP_MENU_BOX_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        jig_size_box.pack(side="left", padx=(0, 8))
+        tk.Label(jig_size_box, text="Jig Size", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_ACCENT_BLUE, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(8, 6))
+        tk.Label(jig_size_box, text="W:", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9)).pack(side="left")
+        tk.Entry(jig_size_box, textvariable=self.jig_x, width=7, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                 insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left", padx=2, pady=4)
+        tk.Label(jig_size_box, text="H:", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9)).pack(side="left", padx=(4, 0))
+        tk.Entry(jig_size_box, textvariable=self.jig_y, width=7, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                 insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left", padx=2, pady=4)
+        tk.Label(jig_size_box, text="", bg=TOP_MENU_BOX_BG, width=1).pack(side="left")
 
-        # W/H column (H below W)
-        ms_wh = tk.Frame(_b_row3, bg="black"); ms_wh.pack(side="left", padx=(8, 0))
-        _mwbox = tk.Frame(ms_wh, bg="#6f6f6f"); _mwbox.pack(side="top")
-        tk.Label(_mwbox, text="W:", bg="#6f6f6f", fg="white").pack(side="left")
-        tk.Entry(_mwbox, textvariable=self.major_w, width=9, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        _mhbox = tk.Frame(ms_wh, bg="#6f6f6f"); _mhbox.pack(side="top", pady=(4, 0))
-        tk.Label(_mhbox, text="H:", bg="#6f6f6f", fg="white").pack(side="left")
-        tk.Entry(_mhbox, textvariable=self.major_h, width=9, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
+        # Major Area container
+        major_box = tk.Frame(row2_top, bg=TOP_MENU_BOX_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        major_box.pack(side="left", padx=(0, 8))
+        tk.Label(major_box, text="Major Area", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_ACCENT_BLUE, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(8, 6))
+        self._major_combo_basic = ttk.Combobox(major_box, textvariable=self.major_name, state="readonly",
+                                               values=list(self._major_sizes.keys()), justify="center", width=14)
+        self._major_combo_basic.pack(side="left", padx=(0, 6), pady=4)
+        for lbl, var in [("X:", self.major_x), ("Y:", self.major_y), ("W:", self.major_w), ("H:", self.major_h)]:
+            tk.Label(major_box, text=lbl, bg=TOP_MENU_BOX_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9)).pack(side="left", padx=(4 if lbl != "X:" else 0, 0))
+            tk.Entry(major_box, textvariable=var, width=5, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                     insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center",
+                     validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left", padx=2, pady=4)
+        tk.Label(major_box, text="", bg=TOP_MENU_BOX_BG, width=1).pack(side="left")
 
-        # ---- SCENE PANEL ----
-        tk.Label(panel_scene, text="Scene", bg="black", fg=COLOR_TEXT, font=("Myriad Pro", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(0, 6))
-
-        # Jig size row (inserted at row=1)
-        _j_row = tk.Frame(panel_scene, bg="black"); _j_row.grid(row=1, column=0, sticky="ew", pady=(6, 0))
-        tk.Label(_j_row, text="Jig size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
-        _j_w = tk.Frame(_j_row, bg="#6f6f6f"); _j_w.pack(side="left", padx=(0, 6))
-        tk.Label(_j_w, text="W:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_j_w, textvariable=self.jig_x, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        _j_h = tk.Frame(_j_row, bg="#6f6f6f"); _j_h.pack(side="left")
-        tk.Label(_j_h, text="H:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_j_h, textvariable=self.jig_y, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-
-        # Slot size row (moved to row=2)
-        _s_row1 = tk.Frame(panel_scene, bg="black"); _s_row1.grid(row=2, column=0, sticky="ew", pady=(2, 6))
-        tk.Label(_s_row1, text="Slot size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
-        _sw = tk.Frame(_s_row1, bg="#6f6f6f"); _sw.pack(side="left", padx=(0, 6))
-        tk.Label(_sw, text="W:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_sw, textvariable=self.slot_w, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        _sh = tk.Frame(_s_row1, bg="#6f6f6f"); _sh.pack(side="left")
-        tk.Label(_sh, text="H:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_sh, textvariable=self.slot_h, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-
-        # Origin pos row
-        _s_row2 = tk.Frame(panel_scene, bg="black"); _s_row2.grid(row=3, column=0, sticky="ew")
-        tk.Label(_s_row2, text="Origin Pos", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
-        _ox = tk.Frame(_s_row2, bg="#6f6f6f"); _ox.pack(side="left", padx=(0, 6))
-        tk.Label(_ox, text="X:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_ox, textvariable=self.origin_x, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        _oy = tk.Frame(_s_row2, bg="#6f6f6f"); _oy.pack(side="left")
-        tk.Label(_oy, text="Y:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_oy, textvariable=self.origin_y, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-
-        # Step size row
-        _s_row3 = tk.Frame(panel_scene, bg="black"); _s_row3.grid(row=4, column=0, sticky="ew", pady=(6, 0))
-        tk.Label(_s_row3, text="Step size", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
-        _sx = tk.Frame(_s_row3, bg="#6f6f6f"); _sx.pack(side="left", padx=(0, 6))
-        tk.Label(_sx, text="X:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_sx, textvariable=self.step_x, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-        _sy = tk.Frame(_s_row3, bg="#6f6f6f"); _sy.pack(side="left")
-        tk.Label(_sy, text="Y:", bg="#6f6f6f", fg="white", width=2).pack(side="left")
-        tk.Entry(_sy, textvariable=self.step_y, width=8, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left")
-
-        # Export Files row (selector)
-        _s_row4 = tk.Frame(panel_scene, bg="black"); _s_row4.grid(row=5, column=0, sticky="ew", pady=(6, 0))
-        tk.Label(_s_row4, text="Export File", bg="#6f6f6f", fg="white", font=("Myriad Pro", 10, "bold"), width=9).pack(side="left", padx=(0, 8))
-        _ef_wrap = tk.Frame(_s_row4, bg="#6f6f6f"); _ef_wrap.pack(side="left", fill="x", expand=True)
-        self._export_file_combo = ttk.Combobox(
-            _ef_wrap,
-            textvariable=self.export_file_var,
-            state="readonly",
-            values=self._export_files_list,
-            justify="center",
-            width=16,
-        )
-        self._export_file_combo.pack(side="left", fill="x", expand=True)
+        # Action buttons container
+        action_box = tk.Frame(row2_top, bg=TOP_MENU_BG)
+        action_box.pack(side="left", padx=(0, 12))
         
-        # Export Files buttons row (Add/Remove buttons below selector)
-        _s_row4b = tk.Frame(panel_scene, bg="black"); _s_row4b.grid(row=6, column=0, sticky="w", pady=(4, 0))
-        _ef_btns = tk.Frame(_s_row4b, bg="black"); _ef_btns.pack(side="left")
+        btn_frame = tk.Frame(action_box, bg=TOP_MENU_BG)
+        btn_frame.pack(side="left")
         
-        def _add_export_file():
-            try:
-                # Find the next available file number
-                existing_nums = []
-                for fname in self._export_files_list:
-                    try:
-                        # Extract number from "File N" format
-                        if fname.startswith("File "):
-                            num = int(fname.split()[1])
-                            existing_nums.append(num)
-                    except (IndexError, ValueError):
-                        pass
-                
-                # Find the next available number
-                next_num = 1
-                while next_num in existing_nums:
-                    next_num += 1
-                
-                new_file = f"File {next_num}"
-                self._export_files_list.append(new_file)
-                self._export_file_combo.configure(values=self._export_files_list)
-                if hasattr(self, "_export_file_selector_left"):
-                    self._export_file_selector_left.configure(values=self._export_files_list)
-                self.export_file_var.set(new_file)
-            except Exception as e:
-                logger.exception(f"Failed to add export file: {e}")
+        self._ms_btn_add = tk.Button(btn_frame, text="Add", bg=TOP_MENU_ACCENT_GREEN, fg=TOP_MENU_TEXT_FG,
+                                      font=("Segoe UI", 9, "bold"), relief="flat", width=6, height=1,
+                                      activebackground="#2ecc71", activeforeground="white", cursor="hand2",
+                                      command=_ms_add)
+        self._ms_btn_add.pack(side="left", padx=(0, 4))
+        self._ms_btn_add.bind("<Enter>", lambda e: self._ms_btn_add.config(bg="#2ecc71"))
+        self._ms_btn_add.bind("<Leave>", lambda e: self._ms_btn_add.config(bg=TOP_MENU_ACCENT_GREEN))
         
-        def _remove_export_file():
-            try:
-                if len(self._export_files_list) <= 1:
-                    messagebox.showwarning("Cannot Remove", "You must have at least one export file.")
-                    return
-                current = self.export_file_var.get()
-                if current in self._export_files_list:
-                    self._export_files_list.remove(current)
-                    # Reassign all objects from removed file to "File 1"
-                    for cid, meta in self._items.items():
-                        if meta.get("type") not in ("slot", "major") and meta.get("export_file") == current:
-                            meta["export_file"] = self._export_files_list[0]
-                    self._export_file_combo.configure(values=self._export_files_list)
-                    if hasattr(self, "_export_file_selector_left"):
-                        self._export_file_selector_left.configure(values=self._export_files_list)
-                    self.export_file_var.set(self._export_files_list[0])
-            except Exception as e:
-                logger.exception(f"Failed to remove export file: {e}")
-        
-        ttk.Button(_ef_btns, text="Add", width=8, command=_add_export_file).pack(side="left")
-        self._export_file_remove_btn = ttk.Button(_ef_btns, text="Remove", width=10, command=_remove_export_file)
-        self._export_file_remove_btn.pack(side="left", padx=(10, 0))
+        self._ms_btn_remove = tk.Button(btn_frame, text="Remove", bg=TOP_MENU_ACCENT_RED, fg=TOP_MENU_TEXT_FG,
+                                         font=("Segoe UI", 9, "bold"), relief="flat", width=8, height=1,
+                                         activebackground="#e74c3c", activeforeground="white", cursor="hand2",
+                                         command=_ms_remove)
+        self._ms_btn_remove.pack(side="left")
+        self._ms_btn_remove.bind("<Enter>", lambda e: self._ms_btn_remove.config(bg="#e74c3c"))
+        self._ms_btn_remove.bind("<Leave>", lambda e: self._ms_btn_remove.config(bg=TOP_MENU_ACCENT_RED))
 
-        # ---- AMAZON PANEL ----
-        # Ensure label var exists before binding to Entry
+        # Horizontal separator line
+        tk.Frame(top_menu, bg=TOP_MENU_SEPARATOR, height=1).pack(side="top", fill="x", padx=4, pady=2)
+
+        # ===== ROW 3: Slot Size | Origin Offset | Step Size =====
+        row3_top = tk.Frame(top_menu, bg=TOP_MENU_BG)
+        row3_top.pack(side="top", fill="x", pady=(4, 4))
+
+        # Slot Size container
+        slot_size_box = tk.Frame(row3_top, bg=TOP_MENU_BOX_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        slot_size_box.pack(side="left", padx=(0, 8))
+        tk.Label(slot_size_box, text="Slot Size", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_ACCENT_ORANGE, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(8, 6))
+        tk.Label(slot_size_box, text="W:", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9)).pack(side="left")
+        tk.Entry(slot_size_box, textvariable=self.slot_w, width=6, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                 insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left", padx=2, pady=4)
+        tk.Label(slot_size_box, text="H:", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9)).pack(side="left", padx=(4, 0))
+        tk.Entry(slot_size_box, textvariable=self.slot_h, width=6, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                 insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left", padx=2, pady=4)
+        tk.Label(slot_size_box, text="", bg=TOP_MENU_BOX_BG, width=1).pack(side="left")
+
+        # Origin Offset container
+        origin_box = tk.Frame(row3_top, bg=TOP_MENU_BOX_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        origin_box.pack(side="left", padx=(0, 8))
+        tk.Label(origin_box, text="Origin Offset", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_ACCENT_ORANGE, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(8, 6))
+        tk.Label(origin_box, text="X:", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9)).pack(side="left")
+        tk.Entry(origin_box, textvariable=self.origin_x, width=6, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                 insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left", padx=2, pady=4)
+        tk.Label(origin_box, text="Y:", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9)).pack(side="left", padx=(4, 0))
+        tk.Entry(origin_box, textvariable=self.origin_y, width=6, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                 insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left", padx=2, pady=4)
+        tk.Label(origin_box, text="", bg=TOP_MENU_BOX_BG, width=1).pack(side="left")
+
+        # Step Size container
+        step_box = tk.Frame(row3_top, bg=TOP_MENU_BOX_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        step_box.pack(side="left", padx=(0, 8))
+        tk.Label(step_box, text="Step Size", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_ACCENT_ORANGE, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(8, 6))
+        tk.Label(step_box, text="X:", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9)).pack(side="left")
+        tk.Entry(step_box, textvariable=self.step_x, width=6, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                 insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left", padx=2, pady=4)
+        tk.Label(step_box, text="Y:", bg=TOP_MENU_BOX_BG, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9)).pack(side="left", padx=(4, 0))
+        tk.Entry(step_box, textvariable=self.step_y, width=6, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG,
+                 insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center",
+                 validate="key", validatecommand=(vcmd_float(self), "%P")).pack(side="left", padx=2, pady=4)
+        tk.Label(step_box, text="", bg=TOP_MENU_BOX_BG, width=1).pack(side="left")
+
+        # Backside checkbox container
+        backside_box = tk.Frame(row3_top, bg=TOP_MENU_BOX_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        backside_box.pack(side="left", padx=(0, 4))
+        tk.Checkbutton(backside_box, text="Backside", variable=self.backside, bg=TOP_MENU_BOX_BG, fg=TOP_MENU_TEXT_FG,
+                       selectcolor=TOP_MENU_INPUT_BG, activebackground=TOP_MENU_BOX_BG, activeforeground=TOP_MENU_TEXT_FG,
+                       font=("Segoe UI", 9), relief="flat", borderwidth=0, highlightthickness=0).pack(side="left", padx=8, pady=4)
+
         if not hasattr(self, "sel_amazon_label"):
             self.sel_amazon_label = tk.StringVar(value="")
-        tk.Label(panel_amazon, text="Amazon", bg="black", fg=COLOR_TEXT, font=("Myriad Pro", 16, "bold")).grid(row=1, column=0, sticky="w", pady=(0, 6))
-        # Row 1: ASIN selector (no label)
-        _a_row1 = tk.Frame(panel_amazon, bg="black"); _a_row1.grid(row=1, column=0, sticky="ew")
-        _asin_wrap = tk.Frame(_a_row1, bg="#6f6f6f"); _asin_wrap.pack(side="left", fill="x", expand=True)
-        # Keep reference to top-menu ASIN combobox so we can refresh its values
-        self._asin_combo_top = ttk.Combobox(
-            _asin_wrap,
-            textvariable=self.asin_combo_var,
-            state="readonly",
-            values=self._asin_list,
-            justify="center",
-            width=16,
-        )
-        self._asin_combo_top.pack(side="left", fill="x", expand=True)
-        # Bind event to top combobox
-        self._asin_combo_top.bind("<<ComboboxSelected>>", lambda e: (logger.debug("[ASIN_EVENT] Top ComboboxSelected event triggered"), _on_asin_combo(e)))
 
-        # Row 2: ASIN entry + Add/Remove buttons
-        _a_row2 = tk.Frame(panel_amazon, bg="black"); _a_row2.grid(row=2, column=0, sticky="ew")
-        _asin_edit = tk.Frame(_a_row2, bg="#6f6f6f"); _asin_edit.pack(side="left")
-        tk.Label(_asin_edit, text="ASIN:", bg="#6f6f6f", fg="white").pack(side="left")
-        tk.Entry(_asin_edit, textvariable=self.sku_var, width=18, bg="#d9d9d9", justify="center").pack(side="left")
-        # Buttons under the ASIN entry, like in Major size combobox
-        _a_row2b = tk.Frame(panel_amazon, bg="black"); _a_row2b.grid(row=3, column=0, sticky="w", pady=(4, 0))
-        _btns_row = tk.Frame(_a_row2b, bg="black"); _btns_row.pack(side="left")
-        ttk.Button(_btns_row, text="Add", width=8, style="Asin.TButton", command=lambda: _asin_add()).pack(side="left")
-        ttk.Button(_btns_row, text="Remove", width=10, style="Asin.TButton", command=lambda: _asin_remove()).pack(side="left", padx=(10, 0))
-
-        # Row 3: Count (moved below buttons)
-        _a_row3 = tk.Frame(panel_amazon, bg="black"); _a_row3.grid(row=4, column=0, sticky="ew", pady=(6, 0))
-        _cnt = tk.Frame(_a_row3, bg="#6f6f6f"); _cnt.pack(side="left")
-        tk.Label(_cnt, text="Count:", bg="#6f6f6f", fg="white").pack(side="left")
-        tk.Entry(_cnt, textvariable=self.count_in_order, width=13, bg="#d9d9d9", justify="center",
-                 validate="key", validatecommand=(validate_min1(self), "%P")).pack(side="left")
-        tk.Label(_cnt, text="pcs", bg="#6f6f6f", fg="white").pack(side="left")
-        
-        # Row 4: Mirror checkbox per-ASIN (new row below Count)
-        _a_row4 = tk.Frame(panel_amazon, bg="black"); _a_row4.grid(row=5, column=0, sticky="ew", pady=(6, 0))
-        _mirror = tk.Frame(_a_row4, bg="#6f6f6f"); _mirror.pack(side="left")
-        self.asin_mirror_var = tk.BooleanVar(value=False)
-        def _on_mirror_changed(*_):
-            try:
-                sel = (self.asin_combo_var.get() or "").strip()
-                self._asin_mirror[sel] = bool(self.asin_mirror_var.get())
-            except Exception:
-                pass
-        self.asin_mirror_var.trace_add("write", _on_mirror_changed)
-        tk.Checkbutton(_mirror, text="Mirror", variable=self.asin_mirror_var, bg="#6f6f6f", fg="white", activebackground="#6f6f6f", activeforeground="white", selectcolor="black").pack(side="left", padx=6)
-
-        
-
-        # No menu buttons; all three panels are visible simultaneously
-
-        # If top menu is disabled, destroy it and keep original layout and placements intact
         if not getattr(self, "_use_top_menu", False):
-            try:
-                top_menu.destroy()
-            except Exception:
-                pass
+            top_menu.destroy()
         else:
             try:
                 bar.pack_forget()
@@ -1504,157 +1270,909 @@ class NStickerCanvasScreen(Screen):
                 self._update_all_majors()
         except Exception:
             pass
-
-        # 5) Tools moved to the left sidebar under the latest element
-        tools = tk.Frame(left_bar, bg="black")
-        tools.pack(side="top", padx=8, pady=8, anchor="center")
-        # Keep a reference for other components (e.g., Fonts) to insert before/after
-        self.tools_panel = tools
-
-        # Load tool icons (keep references on self to avoid GC)
-        self._img_cursor = None
-        self._img_stick = None
-        self._img_image = None
-        try:
-            self._img_cursor = tk.PhotoImage(file=str(IMAGES_PATH / "cursor.png"))
-        except Exception:
-            self._img_cursor = None
-        try:
-            self._img_stick = tk.PhotoImage(file=str(IMAGES_PATH / "stick.png"))
-        except Exception:
-            self._img_stick = None
-        try:
-            self._img_image = tk.PhotoImage(file=str(IMAGES_PATH / "image.png"))
-        except Exception:
-            self._img_image = None
-
-        # Tool tiles grouped into two rows: row1 (Image, Text), row2 (Arrange)
-        tools_row1 = tk.Frame(tools, bg="black")
-        tools_row1.pack(side="top", anchor="center")
-        tools_row2 = tk.Frame(tools, bg="black")
-        tools_row2.pack(side="top", anchor="center")
         
-        # New Image import tool tile
-        self._create_tool_tile(
-            tools_row1,
-            icon_image=self._img_image,
-            icon_text=None,
-            label_text="Image",
-            command=self._import_image,
-        )
-        # Slots are auto-created from inputs; no manual button needed
-        self._create_tool_tile(
-            tools_row1,
-            icon_image=None,
-            icon_text="T",
-            label_text="Text",
-            command=self._drop_text,
-        )
-        self._create_tool_tile(
-            tools_row1,
-            icon_image=None,
-            icon_text="|||",
-            label_text="Barcode",
-            command=self._drop_barcode,
-        )
-        self._create_tool_tile(
-            tools_row2,
-            icon_image=self._img_stick,
-            icon_text=None,
-            label_text="Arrange\nobjects",
-            command=self._ai_arrange_objects,
-        )
-        self._create_tool_tile(
-            tools_row2,
-            icon_image=self._img_stick,
-            icon_text=None,
-            label_text="Arrange\nmajors",
-            command=self._arrange_majors,
-        )
-        # Help/shortcuts on the right end of the first line
-        # Shortcuts on the right end of the top bar
-        shortcuts = tk.Frame(bar, bg="black")
-        shortcuts.pack(side="right", padx=8, pady=8)
-        # 2 columns x 3 rows grid of shortcuts
-        shortcuts.grid_columnconfigure(0, weight=0)
-        shortcuts.grid_columnconfigure(1, weight=0)
+        self._transformation_expanded = True
+        self._transformation_animation_id = None
+        
+        transformation_header_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        transformation_header_outer.pack(side="top", fill="x", padx=10, pady=(5, 0))
+        
+        transformation_header = tk.Frame(transformation_header_outer, bg=TOP_MENU_CONTAINER_BG, highlightbackground=BORDER_COLOR, highlightthickness=1, cursor="hand2")
+        transformation_header.pack(side="top", fill="x", padx=5, pady=2)
+        
+        transformation_header_content = tk.Frame(transformation_header, bg=TOP_MENU_CONTAINER_BG, cursor="hand2")
+        transformation_header_content.pack(side="top", fill="x", padx=8, pady=6)
+        
+        transformation_header_lbl = tk.Label(transformation_header_content, text="▼ Transformation", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
+        transformation_header_lbl.pack(side="left")
+        
+        transformation_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        transformation_outer.pack(side="top", fill="x", padx=10, pady=(0, 0))
+        
+        transformation_outer_inner = tk.Frame(transformation_outer, bg=TOP_MENU_BG)
+        transformation_outer_inner.pack(side="top", fill="x", padx=5)
+        
+        transformation_wrapper = tk.Frame(transformation_outer_inner, bg=TOP_MENU_BG)
+        transformation_wrapper.pack(side="top", fill="x")
+        transformation_wrapper.pack_propagate(False)
+        
+        transformation_container = tk.Frame(transformation_wrapper, bg=TOP_MENU_BG, highlightbackground=BORDER_COLOR, highlightthickness=1)
+        transformation_container.pack(side="top", fill="both", expand=True)
 
-        # Object controls moved to the left sidebar (above backside checkbox), vertically stacked
-        row2 = tk.Frame(left_bar, bg="black")
-        row2.pack(side="top", fill="x", padx=0, pady=(6, 6), anchor="w")
-        # Section label
-        tk.Label(row2, text="  Object:", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="top", anchor="w", padx=(45, 8))
-        # Position fields (X, Y) in mm (each on its own line)
+        row2 = tk.Frame(transformation_container, bg=TOP_MENU_BG)
+        row2.pack(side="top", fill="x", padx=8, pady=6)
+
         self.sel_x = tk.StringVar(value="0")
         self.sel_y = tk.StringVar(value="0")
-        _xline = tk.Frame(row2, bg="black"); _xline.pack(side="top", anchor="w")
-        _xb = self._chip(_xline, "X:", self.sel_x, width=11, label_padx=20, pady=(8, 0))
-        tk.Label(_xb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        _yline = tk.Frame(row2, bg="black"); _yline.pack(side="top", anchor="w")
-        _yb = self._chip(_yline, "Y:", self.sel_y, width=11, label_padx=20, pady=(8, 0))
-        tk.Label(_yb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        # Width/Height controls
         self.sel_w = tk.StringVar(value=state.pkg_x or "296.0")
         self.sel_h = tk.StringVar(value=state.pkg_y or "394.5831")
-        _wline = tk.Frame(row2, bg="black"); _wline.pack(side="top", anchor="w")
-        _wb = self._chip(_wline, "Width:", self.sel_w, width=11, label_padx=8, pady=(8, 0))
-        tk.Label(_wb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        _hline = tk.Frame(row2, bg="black"); _hline.pack(side="top", anchor="w")
-        _hb = self._chip(_hline, "Height:", self.sel_h, width=11, pady=(8, 0))
-        tk.Label(_hb, text="mm", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
-        # Angle control (degrees)
         self.sel_angle = tk.StringVar(value="0")
-        _aline = tk.Frame(row2, bg="black"); _aline.pack(side="top", anchor="w")
-        _ab = self._chip(_aline, "Angle:", self.sel_angle, label_padx=9, width=11, pady=(8, 0))
-        tk.Label(_ab, text="deg", bg="#6f6f6f", fg="white").pack(side="left", padx=0)
 
-        # Amazon label entry (moved from Amazon panel) directly under angle
-        _amazon_line = tk.Frame(row2, bg="black"); _amazon_line.pack(side="top", anchor="w")
-        _amazon_box = tk.Frame(_amazon_line, bg="#6f6f6f")
-        _amazon_box.pack(side="left", padx=6, pady=(8, 0))
-        tk.Label(_amazon_box, text="Label:", bg="#6f6f6f", fg="white").pack(side="left", padx=10)
-        tk.Entry(_amazon_box, textvariable=self.sel_amazon_label, width=15, bg="#d9d9d9", justify="center").pack(side="left")
+        for label_text, var in [("X:", self.sel_x), ("Y:", self.sel_y), ("W:", self.sel_w), ("H:", self.sel_h)]:
+            row = tk.Frame(row2, bg=TOP_MENU_BG)
+            row.pack(side="top", fill="x", pady=2)
+            tk.Label(row, text=label_text, fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=5, anchor="w").pack(side="left")
+            tk.Entry(row, textvariable=var, width=13, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center").pack(side="left", fill="x", expand=True, padx=(4, 0))
 
-        # Export file selector for selected object (below label)
-        _export_file_line = tk.Frame(row2, bg="black"); _export_file_line.pack(side="top", anchor="w")
-        _export_file_box = tk.Frame(_export_file_line, bg="#6f6f6f")
-        _export_file_box.pack(side="left", padx=6, pady=(8, 0))
-        tk.Label(_export_file_box, text="File:", bg="#6f6f6f", fg="white").pack(side="left", padx=10)
+        angle_row = tk.Frame(row2, bg=TOP_MENU_BG)
+        angle_row.pack(side="top", fill="x", pady=2)
+        tk.Label(angle_row, text="Angle:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=5, anchor="w").pack(side="left")
+        angle_container = tk.Frame(angle_row, bg=TOP_MENU_INPUT_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        angle_container.pack(side="left", fill="x", expand=True, padx=(4, 0))
+        tk.Entry(angle_container, textvariable=self.sel_angle, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", bd=0, width=12, font=("Segoe UI", 10), justify="center").pack(side="left", fill="x", expand=True)
+        tk.Label(angle_container, text="°", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_INPUT_BG, font=("Segoe UI", 10)).pack(side="right", padx=2)
+
+        self.row2 = row2
+        
+        transformation_container.update_idletasks()
+        transformation_wrapper.config(height=transformation_container.winfo_reqheight())
+
+        self._text_expanded = False
+        self._text_animation_id = None
+        
+        text_header_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        text_header_outer.pack(side="top", fill="x", padx=10, pady=(5, 0))
+        
+        text_header = tk.Frame(text_header_outer, bg=TOP_MENU_CONTAINER_BG, highlightbackground=BORDER_COLOR, highlightthickness=1, cursor="hand2")
+        text_header.pack(side="top", fill="x", padx=5, pady=2)
+        
+        text_header_content = tk.Frame(text_header, bg=TOP_MENU_CONTAINER_BG, cursor="hand2")
+        text_header_content.pack(side="top", fill="x", padx=8, pady=6)
+        
+        text_header_lbl = tk.Label(text_header_content, text="▼ Text", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
+        text_header_lbl.pack(side="left")
+        
+        text_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        text_outer.pack(side="top", fill="x", padx=10, pady=(0, 0))
+        
+        text_outer_inner = tk.Frame(text_outer, bg=TOP_MENU_BG)
+        text_outer_inner.pack(side="top", fill="x", padx=5)
+        
+        text_wrapper = tk.Frame(text_outer_inner, bg=TOP_MENU_BG)
+        text_wrapper.pack(side="top", fill="x")
+        text_wrapper.pack_propagate(False)
+        
+        text_container = tk.Frame(text_wrapper, bg=TOP_MENU_BG, highlightbackground=BORDER_COLOR, highlightthickness=1)
+        text_container.pack(side="top", fill="both", expand=True)
+
+        text_content = tk.Frame(text_container, bg=TOP_MENU_BG)
+        text_content.pack(side="top", fill="x", padx=8, pady=6)
+
+        self.text_size = tk.StringVar(value="12")
+        self.text_color = tk.StringVar(value="#17a24b")
+        self.text_family = tk.StringVar(value="Myriad Pro")
+
+        size_row = tk.Frame(text_content, bg=TOP_MENU_BG)
+        size_row.pack(side="top", fill="x", pady=2)
+        tk.Label(size_row, text="Size:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=7, anchor="w", font=("Segoe UI", 10)).pack(side="left")
+        size_entry = tk.Entry(size_row, textvariable=self.text_size, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", bd=0, width=8, font=("Segoe UI", 10), justify="center")
+        size_entry.pack(side="left", fill="x", expand=True)
+        tk.Label(size_row, text="pt", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, font=("Segoe UI", 9)).pack(side="left", padx=(4, 0))
+
+        color_row = tk.Frame(text_content, bg=TOP_MENU_BG)
+        color_row.pack(side="top", fill="x", pady=2)
+        tk.Label(color_row, text="Color:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=7, anchor="w", font=("Segoe UI", 10)).pack(side="left")
+        color_entry = tk.Entry(color_row, textvariable=self.text_color, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", bd=0, width=12, font=("Segoe UI", 10), justify="center")
+        color_entry.pack(side="left", fill="x", expand=True)
+
+        def _open_color_picker(e=None):
+            try:
+                initial = (self.text_color.get() or "#17a24b").strip()
+            except Exception:
+                initial = "#17a24b"
+            try:
+                from tkinter import colorchooser
+                _rgb, hx = colorchooser.askcolor(color=initial, title="Select color")
+            except Exception:
+                hx = None
+            if hx:
+                try:
+                    self.text_color.set(hx)
+                except Exception:
+                    pass
+            return "break"
+        color_entry.bind("<Button-1>", _open_color_picker)
+
+        family_row = tk.Frame(text_content, bg=TOP_MENU_BG)
+        family_row.pack(side="top", fill="x", pady=2)
+        tk.Label(family_row, text="Family:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=7, anchor="w", font=("Segoe UI", 10)).pack(side="left")
+        self._family_combo = ttk.Combobox(
+            family_row,
+            textvariable=self.text_family,
+            state="readonly",
+            values=["Myriad Pro"],
+            justify="center",
+            width=14,
+        )
+        self._family_combo.pack(side="left", fill="x", expand=True)
+
+        text_buttons_row = tk.Frame(text_content, bg=TOP_MENU_BG)
+        text_buttons_row.pack(side="top", fill="x", pady=(4, 0))
+        
+        def _create_text_button(parent, text, command):
+            bg_color = TOP_MENU_ACCENT_GREEN if text == "Import" else TOP_MENU_ACCENT_RED
+            hover_color = "#2ecc71" if text == "Import" else "#e74c3c"
+            btn_frame = tk.Frame(parent, bg=bg_color, cursor="hand2")
+            btn_frame.pack(side="left", fill="x", expand=True, pady=1, padx=(0 if text == "Import" else 2, 2 if text == "Import" else 0))
+            lbl = tk.Label(btn_frame, text=text, fg="white", bg=bg_color, font=("Segoe UI", 10, "bold"), pady=4)
+            lbl.pack(fill="x")
+            def on_click(e=None):
+                command()
+            def on_enter(e=None):
+                btn_frame.configure(bg=hover_color)
+                lbl.configure(bg=hover_color)
+            def on_leave(e=None):
+                btn_frame.configure(bg=bg_color)
+                lbl.configure(bg=bg_color)
+            btn_frame.bind("<Button-1>", on_click)
+            lbl.bind("<Button-1>", on_click)
+            btn_frame.bind("<Enter>", on_enter)
+            btn_frame.bind("<Leave>", on_leave)
+            lbl.bind("<Enter>", on_enter)
+            lbl.bind("<Leave>", on_leave)
+            return btn_frame
+
+        self._text_import_btn = _create_text_button(text_buttons_row, "Import", lambda: self.fonts._on_import_font() if hasattr(self, 'fonts') else None)
+        self._text_remove_btn = _create_text_button(text_buttons_row, "Remove", lambda: self.fonts._on_remove_font() if hasattr(self, 'fonts') else None)
+
+        def _animate_text_section(target_height, current_height, step):
+            if self._text_animation_id:
+                self.after_cancel(self._text_animation_id)
+            
+            if abs(current_height - target_height) < step:
+                text_wrapper.config(height=target_height)
+                if target_height == 0:
+                    text_container.pack_forget()
+                    text_wrapper.pack_forget()
+                self._text_animation_id = None
+                return
+            
+            if current_height < target_height:
+                new_height = min(current_height + step, target_height)
+            else:
+                new_height = max(current_height - step, target_height)
+            
+            text_wrapper.config(height=new_height)
+            self._text_animation_id = self.after(10, lambda: _animate_text_section(target_height, new_height, step))
+
+        def _toggle_text_section():
+            if self._text_expanded:
+                self._text_expanded = False
+                text_header_lbl.config(text="▶ Text")
+                _animate_text_section(0, text_wrapper.winfo_height(), 8)
+            else:
+                self._text_expanded = True
+                text_header_lbl.config(text="▼ Text")
+                text_wrapper.pack(side="top", fill="x")
+                text_container.pack(side="top", fill="both", expand=True)
+                text_container.update_idletasks()
+                target_height = text_container.winfo_reqheight()
+                _animate_text_section(target_height, 0, 8)
+
+        def _on_text_header_enter(e=None):
+            text_header.config(highlightbackground="#777777")
+        def _on_text_header_leave(e=None):
+            text_header.config(highlightbackground=BORDER_COLOR)
+
+        text_header.bind("<Button-1>", lambda e: _toggle_text_section())
+        text_header_content.bind("<Button-1>", lambda e: _toggle_text_section())
+        text_header_lbl.bind("<Button-1>", lambda e: _toggle_text_section())
+        text_header.bind("<Enter>", _on_text_header_enter)
+        text_header.bind("<Leave>", _on_text_header_leave)
+        text_header_content.bind("<Enter>", _on_text_header_enter)
+        text_header_content.bind("<Leave>", _on_text_header_leave)
+        text_header_lbl.bind("<Enter>", _on_text_header_enter)
+        text_header_lbl.bind("<Leave>", _on_text_header_leave)
+
+        text_container.update_idletasks()
+        text_wrapper.config(height=0)
+        text_wrapper.pack_forget()
+        text_header_outer.pack_forget()
+        text_outer.pack_forget()
+
+        self.text_section = {
+            'header_outer': text_header_outer,
+            'header': text_header,
+            'header_lbl': text_header_lbl,
+            'wrapper': text_wrapper,
+            'container': text_container,
+            'outer': text_outer,
+            'amazon_anchor': None
+        }
+
+        self._amazon_expanded = True
+        self._amazon_animation_id = None
+        
+        amazon_header_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        amazon_header_outer.pack(side="top", fill="x", padx=10, pady=(5, 0))
+        
+        self.text_section['amazon_anchor'] = amazon_header_outer
+        
+        amazon_header = tk.Frame(amazon_header_outer, bg=TOP_MENU_CONTAINER_BG, highlightbackground=BORDER_COLOR, highlightthickness=1, cursor="hand2")
+        amazon_header.pack(side="top", fill="x", padx=5, pady=2)
+        
+        amazon_header_content = tk.Frame(amazon_header, bg=TOP_MENU_CONTAINER_BG, cursor="hand2")
+        amazon_header_content.pack(side="top", fill="x", padx=8, pady=6)
+        
+        amazon_header_lbl = tk.Label(amazon_header_content, text="▼ Amazon-spec", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
+        amazon_header_lbl.pack(side="left")
+        
+        fields_outer2 = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        fields_outer2.pack(side="top", fill="x", padx=10, pady=(0, 0))
+        
+        fields_outer2_inner = tk.Frame(fields_outer2, bg=TOP_MENU_BG)
+        fields_outer2_inner.pack(side="top", fill="x", padx=5)
+        
+        amazon_wrapper = tk.Frame(fields_outer2_inner, bg=TOP_MENU_BG)
+        amazon_wrapper.pack(side="top", fill="x")
+        amazon_wrapper.pack_propagate(False)
+        
+        fields_container2 = tk.Frame(amazon_wrapper, bg=TOP_MENU_BG, highlightbackground=BORDER_COLOR, highlightthickness=1)
+        fields_container2.pack(side="top", fill="both", expand=True)
+
+        row3 = tk.Frame(fields_container2, bg=TOP_MENU_BG)
+        row3.pack(side="top", fill="x", padx=8, pady=6)
+
+        label_row = tk.Frame(row3, bg=TOP_MENU_BG)
+        label_row.pack(side="top", fill="x", pady=2)
+        tk.Label(label_row, text="Label:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=5, anchor="w", font=("Segoe UI", 10)).pack(side="left")
+        tk.Entry(label_row, textvariable=self.sel_amazon_label, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", bd=0, width=12, font=("Segoe UI", 10), justify="center").pack(side="left", fill="x", expand=True, padx=(4, 0))
+
+        file_row = tk.Frame(row3, bg=TOP_MENU_BG)
+        file_row.pack(side="top", fill="x", pady=2)
+        tk.Label(file_row, text="File:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=5, anchor="w", font=("Segoe UI", 10)).pack(side="left")
         self.sel_export_file = tk.StringVar(value="File 1")
-        self._export_file_selector_left = ttk.Combobox(
-            _export_file_box,
+        self._file_selector_left = ttk.Combobox(
+            file_row,
             textvariable=self.sel_export_file,
             state="readonly",
             values=self._export_files_list,
-            justify="center",
-            width=13
+            width=16
         )
-        self._export_file_selector_left.pack(side="left")
+        self._file_selector_left.pack(side="left", fill="x", expand=True, padx=(4, 0))
+
+        static_row = tk.Frame(row3, bg=TOP_MENU_BG)
+        static_row.pack(side="top", anchor="w", pady=(8, 2))
+        self._suppress_flag_traces = False
+        self.sel_is_options = tk.BooleanVar(value=False)
+        self.sel_is_static = tk.BooleanVar(value=False)
+        static_btn_frame = tk.Frame(static_row, bg=TOP_MENU_CONTAINER_BG, highlightbackground=TOP_MENU_CONTAINER_BORDER, highlightthickness=1)
+        static_btn_frame.pack(side="left")
+        tk.Checkbutton(
+            static_btn_frame,
+            text="Static",
+            variable=self.sel_is_static,
+            bg=TOP_MENU_CONTAINER_BG,
+            fg=TOP_MENU_TEXT_FG,
+            selectcolor=TOP_MENU_INPUT_BG,
+            activebackground=TOP_MENU_CONTAINER_BG,
+            activeforeground=TOP_MENU_TEXT_FG,
+            font=("Segoe UI", 9),
+            relief="flat",
+            borderwidth=0,
+            highlightthickness=0
+        ).pack(side="left", padx=8, pady=4)
+
+        fields_container2.update_idletasks()
+        amazon_wrapper.config(height=fields_container2.winfo_reqheight())
+
+        self._actions_expanded = True
+        self._actions_animation_id = None
         
-        # Update selected object's export file when changed
+        actions_header_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        actions_header_outer.pack(side="top", fill="x", padx=10, pady=(5, 0))
+        
+        actions_header = tk.Frame(actions_header_outer, bg=TOP_MENU_CONTAINER_BG, highlightbackground=BORDER_COLOR, highlightthickness=1, cursor="hand2")
+        actions_header.pack(side="top", fill="x", padx=5, pady=2)
+        
+        actions_header_content = tk.Frame(actions_header, bg=TOP_MENU_CONTAINER_BG, cursor="hand2")
+        actions_header_content.pack(side="top", fill="x", padx=8, pady=6)
+        
+        actions_header_lbl = tk.Label(actions_header_content, text="▼ Actions", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
+        actions_header_lbl.pack(side="left")
+        
+        actions_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        actions_outer.pack(side="top", fill="x", padx=10, pady=(0, 0))
+        
+        actions_outer_inner = tk.Frame(actions_outer, bg=TOP_MENU_BG)
+        actions_outer_inner.pack(side="top", fill="x", padx=5)
+        
+        actions_wrapper = tk.Frame(actions_outer_inner, bg=TOP_MENU_BG)
+        actions_wrapper.pack(side="top", fill="x")
+        actions_wrapper.pack_propagate(False)
+        
+        actions_container = tk.Frame(actions_wrapper, bg=TOP_MENU_BG, highlightbackground=BORDER_COLOR, highlightthickness=1)
+        actions_container.pack(side="top", fill="both", expand=True)
+
+        tools = tk.Frame(actions_container, bg=TOP_MENU_BG)
+        tools.pack(side="top", fill="x", padx=8, pady=6)
+        self.tools_panel = tools
+
+        self._img_cursor = None
+        self._img_stick = None
+        self._img_image = None
+
+        def _create_action_button(parent, text, command):
+            btn_frame = tk.Frame(parent, bg=BUTTON_COLOR, cursor="hand2")
+            btn_frame.pack(side="top", fill="x", pady=1)
+            lbl = tk.Label(btn_frame, text=text, fg="white", bg=BUTTON_COLOR, font=("Segoe UI", 10, "bold"), pady=4)
+            lbl.pack(fill="x")
+            def on_click(e=None):
+                command()
+            def on_enter(e=None):
+                btn_frame.configure(bg=BUTTON_HOVER_COLOR)
+                lbl.configure(bg=BUTTON_HOVER_COLOR)
+            def on_leave(e=None):
+                btn_frame.configure(bg=BUTTON_COLOR)
+                lbl.configure(bg=BUTTON_COLOR)
+            btn_frame.bind("<Button-1>", on_click)
+            lbl.bind("<Button-1>", on_click)
+            btn_frame.bind("<Enter>", on_enter)
+            btn_frame.bind("<Leave>", on_leave)
+            lbl.bind("<Enter>", on_enter)
+            lbl.bind("<Leave>", on_leave)
+            return btn_frame
+
+        _create_action_button(tools, "Add Image", self._import_image)
+        _create_action_button(tools, "Add Text", self._drop_text)
+        _create_action_button(tools, "Add Barcode", self._drop_barcode)
+        _create_action_button(tools, "Arrange Objects", self._ai_arrange_objects)
+        _create_action_button(tools, "Arrange Majors", self._arrange_majors)
+
+        actions_container.update_idletasks()
+        actions_wrapper.config(height=actions_container.winfo_reqheight())
+
+        def _animate_section(wrapper, container, header_lbl, expanded_attr, animation_id_attr, target_height, current_height, step):
+            if getattr(self, animation_id_attr):
+                self.after_cancel(getattr(self, animation_id_attr))
+            
+            if abs(current_height - target_height) < step:
+                wrapper.config(height=target_height)
+                if target_height == 0:
+                    container.pack_forget()
+                setattr(self, animation_id_attr, None)
+                return
+            
+            if current_height < target_height:
+                new_height = min(current_height + step, target_height)
+            else:
+                new_height = max(current_height - step, target_height)
+            
+            wrapper.config(height=new_height)
+            aid = self.after(10, lambda: _animate_section(wrapper, container, header_lbl, expanded_attr, animation_id_attr, target_height, new_height, step))
+            setattr(self, animation_id_attr, aid)
+
+        def _toggle_transformation():
+            if self._transformation_expanded:
+                self._transformation_expanded = False
+                transformation_header_lbl.config(text="▶ Transformation")
+                _animate_section(transformation_wrapper, transformation_container, transformation_header_lbl, '_transformation_expanded', '_transformation_animation_id', 0, transformation_wrapper.winfo_height(), 8)
+            else:
+                self._transformation_expanded = True
+                transformation_header_lbl.config(text="▼ Transformation")
+                transformation_container.pack(side="top", fill="both", expand=True)
+                transformation_container.update_idletasks()
+                target_height = transformation_container.winfo_reqheight()
+                _animate_section(transformation_wrapper, transformation_container, transformation_header_lbl, '_transformation_expanded', '_transformation_animation_id', target_height, 0, 8)
+        
+        def _on_transformation_enter(e=None):
+            transformation_header.config(highlightbackground="#777777")
+        def _on_transformation_leave(e=None):
+            transformation_header.config(highlightbackground=BORDER_COLOR)
+        
+        transformation_header.bind("<Button-1>", lambda e: _toggle_transformation())
+        transformation_header_content.bind("<Button-1>", lambda e: _toggle_transformation())
+        transformation_header_lbl.bind("<Button-1>", lambda e: _toggle_transformation())
+        transformation_header.bind("<Enter>", _on_transformation_enter)
+        transformation_header.bind("<Leave>", _on_transformation_leave)
+        transformation_header_content.bind("<Enter>", _on_transformation_enter)
+        transformation_header_content.bind("<Leave>", _on_transformation_leave)
+        transformation_header_lbl.bind("<Enter>", _on_transformation_enter)
+        transformation_header_lbl.bind("<Leave>", _on_transformation_leave)
+
+        def _toggle_amazon():
+            if self._amazon_expanded:
+                self._amazon_expanded = False
+                amazon_header_lbl.config(text="▶ Amazon-spec")
+                _animate_section(amazon_wrapper, fields_container2, amazon_header_lbl, '_amazon_expanded', '_amazon_animation_id', 0, amazon_wrapper.winfo_height(), 8)
+            else:
+                self._amazon_expanded = True
+                amazon_header_lbl.config(text="▼ Amazon-spec")
+                fields_container2.pack(side="top", fill="both", expand=True)
+                fields_container2.update_idletasks()
+                target_height = fields_container2.winfo_reqheight()
+                _animate_section(amazon_wrapper, fields_container2, amazon_header_lbl, '_amazon_expanded', '_amazon_animation_id', target_height, 0, 8)
+        
+        def _on_amazon_enter(e=None):
+            amazon_header.config(highlightbackground="#777777")
+        def _on_amazon_leave(e=None):
+            amazon_header.config(highlightbackground=BORDER_COLOR)
+        
+        amazon_header.bind("<Button-1>", lambda e: _toggle_amazon())
+        amazon_header_content.bind("<Button-1>", lambda e: _toggle_amazon())
+        amazon_header_lbl.bind("<Button-1>", lambda e: _toggle_amazon())
+        amazon_header.bind("<Enter>", _on_amazon_enter)
+        amazon_header.bind("<Leave>", _on_amazon_leave)
+        amazon_header_content.bind("<Enter>", _on_amazon_enter)
+        amazon_header_content.bind("<Leave>", _on_amazon_leave)
+        amazon_header_lbl.bind("<Enter>", _on_amazon_enter)
+        amazon_header_lbl.bind("<Leave>", _on_amazon_leave)
+
+        def _toggle_actions():
+            if self._actions_expanded:
+                self._actions_expanded = False
+                actions_header_lbl.config(text="▶ Actions")
+                _animate_section(actions_wrapper, actions_container, actions_header_lbl, '_actions_expanded', '_actions_animation_id', 0, actions_wrapper.winfo_height(), 8)
+            else:
+                self._actions_expanded = True
+                actions_header_lbl.config(text="▼ Actions")
+                actions_container.pack(side="top", fill="both", expand=True)
+                actions_container.update_idletasks()
+                target_height = actions_container.winfo_reqheight()
+                _animate_section(actions_wrapper, actions_container, actions_header_lbl, '_actions_expanded', '_actions_animation_id', target_height, 0, 8)
+        
+        def _on_actions_enter(e=None):
+            actions_header.config(highlightbackground="#777777")
+        def _on_actions_leave(e=None):
+            actions_header.config(highlightbackground=BORDER_COLOR)
+        
+        actions_header.bind("<Button-1>", lambda e: _toggle_actions())
+        actions_header_content.bind("<Button-1>", lambda e: _toggle_actions())
+        actions_header_lbl.bind("<Button-1>", lambda e: _toggle_actions())
+        actions_header.bind("<Enter>", _on_actions_enter)
+        actions_header.bind("<Leave>", _on_actions_leave)
+        actions_header_content.bind("<Enter>", _on_actions_enter)
+        actions_header_content.bind("<Leave>", _on_actions_leave)
+        actions_header_lbl.bind("<Enter>", _on_actions_enter)
+        actions_header_lbl.bind("<Leave>", _on_actions_leave)
+
+        self._export_file_expanded = True
+        self._export_file_animation_id = None
+        
+        export_file_header_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        export_file_header_outer.pack(side="top", fill="x", padx=10, pady=(5, 0))
+        
+        export_file_header = tk.Frame(export_file_header_outer, bg=TOP_MENU_CONTAINER_BG, highlightbackground=BORDER_COLOR, highlightthickness=1, cursor="hand2")
+        export_file_header.pack(side="top", fill="x", padx=5, pady=2)
+        
+        export_file_header_content = tk.Frame(export_file_header, bg=TOP_MENU_CONTAINER_BG, cursor="hand2")
+        export_file_header_content.pack(side="top", fill="x", padx=8, pady=6)
+        
+        export_file_header_lbl = tk.Label(export_file_header_content, text="▼ Export Files", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
+        export_file_header_lbl.pack(side="left")
+        
+        export_file_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        export_file_outer.pack(side="top", fill="x", padx=10, pady=(0, 0))
+        
+        export_file_outer_inner = tk.Frame(export_file_outer, bg=TOP_MENU_BG)
+        export_file_outer_inner.pack(side="top", fill="x", padx=5)
+        
+        export_file_wrapper = tk.Frame(export_file_outer_inner, bg=TOP_MENU_BG)
+        export_file_wrapper.pack(side="top", fill="x")
+        export_file_wrapper.pack_propagate(False)
+        
+        export_file_container = tk.Frame(export_file_wrapper, bg=TOP_MENU_BG, highlightbackground=BORDER_COLOR, highlightthickness=1)
+        export_file_container.pack(side="top", fill="both", expand=True)
+
+        export_file_content = tk.Frame(export_file_container, bg=TOP_MENU_BG)
+        export_file_content.pack(side="top", fill="x", padx=8, pady=6)
+
+        export_file_selector_row = tk.Frame(export_file_content, bg=TOP_MENU_BG)
+        export_file_selector_row.pack(side="top", fill="x", pady=2)
+        self._export_file_selector_left = ttk.Combobox(
+            export_file_selector_row,
+            textvariable=self.export_file_var,
+            state="readonly",
+            values=self._export_files_list,
+            justify="center",
+            width=16,
+        )
+        self._export_file_selector_left.pack(side="left", fill="x", expand=True)
+
+        export_file_buttons_row = tk.Frame(export_file_content, bg=TOP_MENU_BG)
+        export_file_buttons_row.pack(side="top", fill="x", pady=(4, 0))
+        
+        def _add_export_file():
+            try:
+                existing_nums = []
+                for fname in self._export_files_list:
+                    try:
+                        if fname.startswith("File "):
+                            num = int(fname.split()[1])
+                            existing_nums.append(num)
+                    except (IndexError, ValueError):
+                        pass
+                
+                next_num = 1
+                while next_num in existing_nums:
+                    next_num += 1
+                
+                new_file = f"File {next_num}"
+                self._export_files_list.append(new_file)
+                if hasattr(self, "_export_file_selector_left"):
+                    self._export_file_selector_left.configure(values=self._export_files_list)
+                if hasattr(self, "_file_selector_left"):
+                    self._file_selector_left.configure(values=self._export_files_list)
+                self.export_file_var.set(new_file)
+            except Exception as e:
+                logger.exception(f"Failed to add export file: {e}")
+        
+        def _remove_export_file():
+            try:
+                if len(self._export_files_list) <= 1:
+                    messagebox.showwarning("Cannot Remove", "You must have at least one export file.")
+                    return
+                current = self.export_file_var.get()
+                if current in self._export_files_list:
+                    self._export_files_list.remove(current)
+                    for cid, meta in self._items.items():
+                        if meta.get("type") not in ("slot", "major") and meta.get("export_file") == current:
+                            meta["export_file"] = self._export_files_list[0]
+                    if hasattr(self, "_export_file_selector_left"):
+                        self._export_file_selector_left.configure(values=self._export_files_list)
+                    if hasattr(self, "_file_selector_left"):
+                        self._file_selector_left.configure(values=self._export_files_list)
+                    self.export_file_var.set(self._export_files_list[0])
+            except Exception as e:
+                logger.exception(f"Failed to remove export file: {e}")
+
+        def _create_export_button(parent, text, command):
+            bg_color = TOP_MENU_ACCENT_GREEN if text == "Add" else TOP_MENU_ACCENT_RED
+            hover_color = "#2ecc71" if text == "Add" else "#e74c3c"
+            btn_frame = tk.Frame(parent, bg=bg_color, cursor="hand2")
+            btn_frame.pack(side="left", fill="x", expand=True, pady=1, padx=(0 if text == "Add" else 2, 2 if text == "Add" else 0))
+            lbl = tk.Label(btn_frame, text=text, fg="white", bg=bg_color, font=("Segoe UI", 10, "bold"), pady=4)
+            lbl.pack(fill="x")
+            def on_click(e=None):
+                command()
+            def on_enter(e=None):
+                btn_frame.configure(bg=hover_color)
+                lbl.configure(bg=hover_color)
+            def on_leave(e=None):
+                btn_frame.configure(bg=bg_color)
+                lbl.configure(bg=bg_color)
+            btn_frame.bind("<Button-1>", on_click)
+            lbl.bind("<Button-1>", on_click)
+            btn_frame.bind("<Enter>", on_enter)
+            btn_frame.bind("<Leave>", on_leave)
+            lbl.bind("<Enter>", on_enter)
+            lbl.bind("<Leave>", on_leave)
+            return btn_frame
+
+        _create_export_button(export_file_buttons_row, "Add", _add_export_file)
+        _create_export_button(export_file_buttons_row, "Remove", _remove_export_file)
+
+        export_file_container.update_idletasks()
+        export_file_wrapper.config(height=export_file_container.winfo_reqheight())
+
+        def _toggle_export_file():
+            if self._export_file_expanded:
+                self._export_file_expanded = False
+                export_file_header_lbl.config(text="▶ Export Files")
+                _animate_section(export_file_wrapper, export_file_container, export_file_header_lbl, '_export_file_expanded', '_export_file_animation_id', 0, export_file_wrapper.winfo_height(), 8)
+            else:
+                self._export_file_expanded = True
+                export_file_header_lbl.config(text="▼ Export Files")
+                export_file_container.pack(side="top", fill="both", expand=True)
+                export_file_container.update_idletasks()
+                target_height = export_file_container.winfo_reqheight()
+                _animate_section(export_file_wrapper, export_file_container, export_file_header_lbl, '_export_file_expanded', '_export_file_animation_id', target_height, 0, 8)
+        
+        def _on_export_file_header_enter(e=None):
+            export_file_header.config(highlightbackground="#777777")
+        def _on_export_file_header_leave(e=None):
+            export_file_header.config(highlightbackground=BORDER_COLOR)
+        
+        export_file_header.bind("<Button-1>", lambda e: _toggle_export_file())
+        export_file_header_content.bind("<Button-1>", lambda e: _toggle_export_file())
+        export_file_header_lbl.bind("<Button-1>", lambda e: _toggle_export_file())
+        export_file_header.bind("<Enter>", _on_export_file_header_enter)
+        export_file_header.bind("<Leave>", _on_export_file_header_leave)
+        export_file_header_content.bind("<Enter>", _on_export_file_header_enter)
+        export_file_header_content.bind("<Leave>", _on_export_file_header_leave)
+        export_file_header_lbl.bind("<Enter>", _on_export_file_header_enter)
+        export_file_header_lbl.bind("<Leave>", _on_export_file_header_leave)
+
+        self._asin_expanded = True
+        self._asin_animation_id = None
+        
+        asin_header_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        asin_header_outer.pack(side="top", fill="x", padx=10, pady=(5, 0))
+        
+        asin_header = tk.Frame(asin_header_outer, bg=TOP_MENU_CONTAINER_BG, highlightbackground=BORDER_COLOR, highlightthickness=1, cursor="hand2")
+        asin_header.pack(side="top", fill="x", padx=5, pady=2)
+        
+        asin_header_content = tk.Frame(asin_header, bg=TOP_MENU_CONTAINER_BG, cursor="hand2")
+        asin_header_content.pack(side="top", fill="x", padx=8, pady=6)
+        
+        asin_header_lbl = tk.Label(asin_header_content, text="▼ ASIN", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
+        asin_header_lbl.pack(side="left")
+        
+        asin_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        asin_outer.pack(side="top", fill="x", padx=10, pady=(0, 0))
+        
+        asin_outer_inner = tk.Frame(asin_outer, bg=TOP_MENU_BG)
+        asin_outer_inner.pack(side="top", fill="x", padx=5)
+        
+        asin_wrapper = tk.Frame(asin_outer_inner, bg=TOP_MENU_BG)
+        asin_wrapper.pack(side="top", fill="x")
+        asin_wrapper.pack_propagate(False)
+        
+        asin_container = tk.Frame(asin_wrapper, bg=TOP_MENU_BG, highlightbackground=BORDER_COLOR, highlightthickness=1)
+        asin_container.pack(side="top", fill="both", expand=True)
+
+        asin_content = tk.Frame(asin_container, bg=TOP_MENU_BG)
+        asin_content.pack(side="top", fill="x", padx=8, pady=6)
+
+        asin_selector_row = tk.Frame(asin_content, bg=TOP_MENU_BG)
+        asin_selector_row.pack(side="top", fill="x", pady=2)
+        self._asin_combo_left = ttk.Combobox(
+            asin_selector_row,
+            textvariable=self.asin_combo_var,
+            state="readonly",
+            values=self._asin_list,
+            justify="center",
+            width=16,
+        )
+        self._asin_combo_left.pack(side="left", fill="x", expand=True)
+
+        asin_entry_row = tk.Frame(asin_content, bg=TOP_MENU_BG)
+        asin_entry_row.pack(side="top", fill="x", pady=2)
+        tk.Label(asin_entry_row, text="ASIN:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=5, anchor="w").pack(side="left")
+        tk.Entry(asin_entry_row, textvariable=self.sku_var, width=18, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center").pack(side="left", fill="x", expand=True, padx=(4, 0))
+
+        asin_count_row = tk.Frame(asin_content, bg=TOP_MENU_BG)
+        asin_count_row.pack(side="top", fill="x", pady=2)
+        tk.Label(asin_count_row, text="Count:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG).pack(side="left")
+        tk.Entry(asin_count_row, textvariable=self.count_in_order, width=10, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", font=("Segoe UI", 10), justify="center",
+                 validate="key", validatecommand=(validate_min1(self), "%P")).pack(side="left", padx=(4, 4))
+        
+        self.asin_mirror_var = tk.BooleanVar(value=False)
+        def _on_mirror_changed(*_):
+            try:
+                sel = (self.asin_combo_var.get() or "").strip()
+                self._asin_mirror[sel] = bool(self.asin_mirror_var.get())
+            except Exception:
+                pass
+        self.asin_mirror_var.trace_add("write", _on_mirror_changed)
+        
+        asin_mirror_frame = tk.Frame(asin_count_row, bg=TOP_MENU_BG)
+        asin_mirror_frame.pack(side="left", padx=(4, 0))
+        tk.Checkbutton(
+            asin_mirror_frame,
+            text="Mirror",
+            variable=self.asin_mirror_var,
+            bg=TOP_MENU_BG,
+            fg=TOP_MENU_TEXT_FG,
+            selectcolor=TOP_MENU_INPUT_BG,
+            activebackground=TOP_MENU_CONTAINER_BG,
+            activeforeground=TOP_MENU_TEXT_FG,
+            font=("Segoe UI", 9),
+            relief="flat",
+            borderwidth=0,
+            highlightthickness=0
+        ).pack(side="left", padx=8, pady=4)
+
+        asin_buttons_row = tk.Frame(asin_content, bg=TOP_MENU_BG)
+        asin_buttons_row.pack(side="top", fill="x", pady=(4, 0))
+
+        def _create_asin_button(parent, text, command):
+            bg_color = TOP_MENU_ACCENT_GREEN if text == "Add" else TOP_MENU_ACCENT_RED
+            hover_color = "#2ecc71" if text == "Add" else "#e74c3c"
+            btn_frame = tk.Frame(parent, bg=bg_color, cursor="hand2")
+            btn_frame.pack(side="left", fill="x", expand=True, pady=1, padx=(0 if text == "Add" else 2, 2 if text == "Add" else 0))
+            lbl = tk.Label(btn_frame, text=text, fg="white", bg=bg_color, font=("Segoe UI", 10, "bold"), pady=4)
+            lbl.pack(fill="x")
+            def on_click(e=None):
+                command()
+            def on_enter(e=None):
+                btn_frame.configure(bg=hover_color)
+                lbl.configure(bg=hover_color)
+            def on_leave(e=None):
+                btn_frame.configure(bg=bg_color)
+                lbl.configure(bg=bg_color)
+            btn_frame.bind("<Button-1>", on_click)
+            lbl.bind("<Button-1>", on_click)
+            btn_frame.bind("<Enter>", on_enter)
+            btn_frame.bind("<Leave>", on_leave)
+            lbl.bind("<Enter>", on_enter)
+            lbl.bind("<Leave>", on_leave)
+            return btn_frame
+
+        _create_asin_button(asin_buttons_row, "Add", _asin_add)
+        _create_asin_button(asin_buttons_row, "Remove", _asin_remove)
+
+        asin_container.update_idletasks()
+        asin_wrapper.config(height=asin_container.winfo_reqheight())
+
+        def _toggle_asin():
+            if self._asin_expanded:
+                self._asin_expanded = False
+                asin_header_lbl.config(text="▶ ASIN")
+                _animate_section(asin_wrapper, asin_container, asin_header_lbl, '_asin_expanded', '_asin_animation_id', 0, asin_wrapper.winfo_height(), 8)
+            else:
+                self._asin_expanded = True
+                asin_header_lbl.config(text="▼ ASIN")
+                asin_container.pack(side="top", fill="both", expand=True)
+                asin_container.update_idletasks()
+                target_height = asin_container.winfo_reqheight()
+                _animate_section(asin_wrapper, asin_container, asin_header_lbl, '_asin_expanded', '_asin_animation_id', target_height, 0, 8)
+        
+        def _on_asin_header_enter(e=None):
+            asin_header.config(highlightbackground="#777777")
+        def _on_asin_header_leave(e=None):
+            asin_header.config(highlightbackground=BORDER_COLOR)
+        
+        asin_header.bind("<Button-1>", lambda e: _toggle_asin())
+        asin_header_content.bind("<Button-1>", lambda e: _toggle_asin())
+        asin_header_lbl.bind("<Button-1>", lambda e: _toggle_asin())
+        asin_header.bind("<Enter>", _on_asin_header_enter)
+        asin_header.bind("<Leave>", _on_asin_header_leave)
+        asin_header_content.bind("<Enter>", _on_asin_header_enter)
+        asin_header_content.bind("<Leave>", _on_asin_header_leave)
+        asin_header_lbl.bind("<Enter>", _on_asin_header_enter)
+        asin_header_lbl.bind("<Leave>", _on_asin_header_leave)
+
+        self._asin_combo_left.bind("<<ComboboxSelected>>", lambda e: (logger.debug("[ASIN_EVENT] Left ComboboxSelected event triggered"), _on_asin_combo(e)))
+
+        self._pens_expanded = False
+        self._pens_animation_id = None
+        
+        pens_header_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        pens_header_outer.pack(side="top", fill="x", padx=10, pady=(5, 0))
+        
+        pens_header = tk.Frame(pens_header_outer, bg=TOP_MENU_CONTAINER_BG, highlightbackground=BORDER_COLOR, highlightthickness=1, cursor="hand2")
+        pens_header.pack(side="top", fill="x", padx=5, pady=2)
+        
+        pens_header_content = tk.Frame(pens_header, bg=TOP_MENU_CONTAINER_BG, cursor="hand2")
+        pens_header_content.pack(side="top", fill="x", padx=8, pady=6)
+        
+        pens_header_lbl = tk.Label(pens_header_content, text="▶ Pens", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
+        pens_header_lbl.pack(side="left")
+        
+        pens_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
+        pens_outer.pack(side="top", fill="x", padx=10, pady=(0, 10))
+        
+        pens_outer_inner = tk.Frame(pens_outer, bg=TOP_MENU_BG)
+        pens_outer_inner.pack(side="top", fill="x", padx=5)
+        
+        pens_wrapper = tk.Frame(pens_outer_inner, bg=TOP_MENU_BG, height=0)
+        pens_wrapper.pack(side="top", fill="x")
+        pens_wrapper.pack_propagate(False)
+        
+        pens_container = tk.Frame(pens_wrapper, bg=TOP_MENU_BG, highlightbackground=BORDER_COLOR, highlightthickness=1)
+        
+        pens_frame = tk.Frame(pens_container, bg=TOP_MENU_BG)
+        pens_frame.pack(side="top", fill="x", padx=8, pady=6)
+
+        def _animate_pens(target_height, current_height, step):
+            if self._pens_animation_id:
+                self.after_cancel(self._pens_animation_id)
+            
+            if abs(current_height - target_height) < step:
+                pens_wrapper.config(height=target_height)
+                if target_height == 0:
+                    pens_container.pack_forget()
+                self._pens_animation_id = None
+                return
+            
+            if current_height < target_height:
+                new_height = min(current_height + step, target_height)
+            else:
+                new_height = max(current_height - step, target_height)
+            
+            pens_wrapper.config(height=new_height)
+            self._pens_animation_id = self.after(10, lambda: _animate_pens(target_height, new_height, step))
+
+        def _toggle_pens():
+            if self._pens_expanded:
+                self._pens_expanded = False
+                pens_header_lbl.config(text="▶ Pens")
+                _animate_pens(0, pens_wrapper.winfo_height(), 8)
+            else:
+                self._pens_expanded = True
+                pens_header_lbl.config(text="▼ Pens")
+                pens_container.pack(side="top", fill="both", expand=True)
+                pens_container.update_idletasks()
+                target_height = pens_container.winfo_reqheight()
+                _animate_pens(target_height, 0, 8)
+        
+        def _on_header_enter(e=None):
+            pens_header.config(highlightbackground="#777777")
+        
+        def _on_header_leave(e=None):
+            pens_header.config(highlightbackground=BORDER_COLOR)
+        
+        pens_header.bind("<Button-1>", lambda e: _toggle_pens())
+        pens_header_content.bind("<Button-1>", lambda e: _toggle_pens())
+        pens_header_lbl.bind("<Button-1>", lambda e: _toggle_pens())
+        pens_header.bind("<Enter>", _on_header_enter)
+        pens_header.bind("<Leave>", _on_header_leave)
+        pens_header_content.bind("<Enter>", _on_header_enter)
+        pens_header_content.bind("<Leave>", _on_header_leave)
+        pens_header_lbl.bind("<Enter>", _on_header_enter)
+        pens_header_lbl.bind("<Leave>", _on_header_leave)
+
+
+        def _create_pens_button(parent, text, command, is_settings=False):
+            if is_settings:
+                btn_frame = tk.Frame(parent, bg="white", cursor="hand2")
+                fg_color = "black"
+                bg_color = "white"
+                hover_bg = "#e0e0e0"
+            else:
+                btn_frame = tk.Frame(parent, bg=BUTTON_COLOR, cursor="hand2")
+                fg_color = "white"
+                bg_color = BUTTON_COLOR
+                hover_bg = BUTTON_HOVER_COLOR
+            btn_frame.pack(side="top", fill="x", pady=1)
+            lbl = tk.Label(btn_frame, text=text, fg=fg_color, bg=bg_color, font=("Segoe UI", 10, "bold"), pady=4)
+            lbl.pack(fill="x")
+            def on_click(e=None):
+                command()
+            def on_enter(e=None):
+                btn_frame.configure(bg=hover_bg)
+                lbl.configure(bg=hover_bg)
+            def on_leave(e=None):
+                btn_frame.configure(bg=bg_color)
+                lbl.configure(bg=bg_color)
+            btn_frame.bind("<Button-1>", on_click)
+            lbl.bind("<Button-1>", on_click)
+            btn_frame.bind("<Enter>", on_enter)
+            btn_frame.bind("<Leave>", on_leave)
+            lbl.bind("<Enter>", on_enter)
+            lbl.bind("<Leave>", on_leave)
+            return btn_frame
+
+        _create_pens_button(pens_frame, "Settings", lambda: None, is_settings=True)
+        _create_pens_button(pens_frame, "Create Pen", lambda: None)
+        _create_pens_button(pens_frame, "Delete Pen", lambda: None)
+
+
+        shortcuts = tk.Frame(bar, bg="black")
+        shortcuts.pack(side="right", padx=8, pady=8)
+        shortcuts.grid_columnconfigure(0, weight=0)
+        shortcuts.grid_columnconfigure(1, weight=0)
+
         def _on_export_file_change(*_):
             sel = getattr(self.selection, "_selected", None)
             if not sel or sel not in self._items:
                 return
             obj = self._items[sel]
-            # Ignore slots and majors
             if obj.get("type") in ("slot", "major"):
                 return
             obj["export_file"] = str(self.sel_export_file.get() or "File 1").strip()
         self.sel_export_file.trace_add("write", _on_export_file_change)
-        
-        # Initialize custom images manager BEFORE creating UI that uses it
+
         self.custom_images = CustomImagesManager(self)
-        
-        # Custom image selector for selected image object (only shown for image type)
+
         self.sel_custom_image_line = tk.Frame(row2, bg="black")
         _custom_img_line = tk.Frame(self.sel_custom_image_line, bg="black")
         _custom_img_line.pack(side="top", anchor="w")
         _custom_img_wrap = tk.Frame(_custom_img_line, bg="#6f6f6f")
         _custom_img_wrap.pack(side="left", padx=6, pady=8)
         tk.Label(_custom_img_wrap, text="Custom:", bg="#6f6f6f", fg="white").pack(side="left", padx=6)
-        
-        # Combobox to select custom image
+
         self.sel_custom_image = tk.StringVar(value="")
         self._suppress_custom_image_trace = False
         self._sel_custom_image_combo = ttk.Combobox(
@@ -1666,8 +2184,7 @@ class NStickerCanvasScreen(Screen):
             width=10
         )
         self._sel_custom_image_combo.pack(side="left")
-        
-        # Update selected object when combobox changes
+
         def _on_custom_image_change(*_):
             if getattr(self, "_suppress_custom_image_trace", False):
                 return
@@ -1736,30 +2253,17 @@ class NStickerCanvasScreen(Screen):
         # Initially hide custom image selector
         self.sel_custom_image_line.pack_forget()
 
-        # Separator and Amazon label
-        # Options checkboxes placed after Amazon label
-        _flags = tk.Frame(row2, bg="black")
-        _flags.pack(side="top", anchor="w", padx=8)
-        self.row2 = row2
-        # Suppress trace callbacks while programmatically updating checkboxes
-        self._suppress_flag_traces = False
-        self.sel_is_options = tk.BooleanVar(value=False)
-        self.sel_is_static = tk.BooleanVar(value=False)
-        ttk.Checkbutton(_flags, variable=self.sel_is_static, text="Static").pack(side="left", pady=6)
-        # Persist flags into selected object
         def _on_flags_change(*_):
-            # Ignore programmatic updates
             if getattr(self, "_suppress_flag_traces", False):
                 return
             sel = getattr(self.selection, "_selected", None)
             if not sel or sel not in self._items:
                 return
-        
             self._items[sel]["is_options"] = bool(self.sel_is_options.get())
             self._items[sel]["is_static"] = bool(self.sel_is_static.get())
         self.sel_is_options.trace_add("write", _on_flags_change)
         self.sel_is_static.trace_add("write", _on_flags_change)
-        # Persist name into selected object's metadata
+
         def _on_name_change(*_):
             sel = getattr(self.selection, "_selected", None)
             if not sel or sel not in self._items:
@@ -1767,42 +2271,19 @@ class NStickerCanvasScreen(Screen):
             self._items[sel]["amazon_label"] = str(self.sel_amazon_label.get() or "").strip()
         self.sel_amazon_label.trace_add("write", _on_name_change)
 
-        # ------- Text styling controls on the last black line -------
-        # Moved to FontsManager (UI + logic + storage)
         self.fonts = FontsManager(self)
 
-        # Selection controller (must be created before traces/bindings)
         self._zoom: float = 1.5
         self.selection = CanvasSelection(self)
 
-        # live updates when size/position change
         self.sel_x.trace_add("write", self.selection.on_pos_change)
         self.sel_y.trace_add("write", self.selection.on_pos_change)
         self.sel_w.trace_add("write", self.selection.on_size_change)
         self.sel_h.trace_add("write", self.selection.on_size_change)
         self.sel_angle.trace_add("write", self.selection.on_angle_change)
 
-        # Insert backside toggle below Object controls and above the tools panel
-        tk.Frame(left_bar, bg="white", height=2).pack(side="top", fill="x", padx=8, pady=(0, 6))
-        self.backside_wrap = tk.Frame(left_bar, bg="black")
-        self.backside_wrap.pack(side="top", padx=8, pady=(2, 0), anchor="center")
-        tk.Label(self.backside_wrap, text="Backside", fg="white", bg="black", font=("Myriad Pro", 12, "bold")).pack(side="left", padx=(0, 6))
-        self.backside = tk.BooleanVar(value=False)
-        ttk.Checkbutton(self.backside_wrap, variable=self.backside).pack(side="left", pady=4)
-        self.backside.trace_add("write", self._on_backside_toggle)
-
-        # Ensure tools (Image, Text, Arrange) are placed under the backside checkbox
-        try:
-            if hasattr(self, "tools_panel"):
-                if self.tools_panel.winfo_ismapped():
-                    self.tools_panel.pack_forget()
-                # Explicitly pack after backside checkbox
-                self.tools_panel.pack(in_=left_bar, side="top", padx=8, pady=8, anchor="center", after=self.backside_wrap)
-        except Exception:
-            pass
-
         self.board = tk.Frame(self, bg="black")
-        self.board.pack(expand=True, fill="both", padx=10, pady=10)
+        self.board.pack(expand=True, fill="both", padx=0, pady=0)
         # canvas without visible scrollbars
         self.canvas = tk.Canvas(self.board, bg="#5a5a5a", highlightthickness=0, takefocus=1)
         self.canvas.pack(expand=True, fill="both")
@@ -2181,7 +2662,7 @@ class NStickerCanvasScreen(Screen):
             icon_lbl = tk.Label(tile, text=(icon_text or ""), bg="#c7c7c7", fg="#000000", font=("Myriad Pro", 20, "bold"))
             icon_lbl.pack(expand=True)
 
-        lbl = tk.Label(wrap, text=label_text, fg="white", bg="black", font=("Myriad Pro", 8))
+        lbl = tk.Label(wrap, text=label_text, fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_BG, font=("Segoe UI", 8))
         lbl.pack(pady=(0, 0))
 
         # Click behavior on tile and its children
@@ -5102,6 +5583,8 @@ class NStickerCanvasScreen(Screen):
                     self._export_file_combo.configure(values=self._export_files_list)
                 if hasattr(self, "_export_file_selector_left"):
                     self._export_file_selector_left.configure(values=self._export_files_list)
+                if hasattr(self, "_file_selector_left"):
+                    self._file_selector_left.configure(values=self._export_files_list)
         except Exception:
             logger.exception("Failed to restore export files list")
 

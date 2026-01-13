@@ -162,6 +162,11 @@ class App(tk.Tk):
         self.attributes("-fullscreen", not self.is_fullscreen)
         self.is_fullscreen = not self.is_fullscreen
 
+    def set_small_size(self):
+        self.geometry("1366x768")
+        self.is_fullscreen = False
+        self.attributes("-fullscreen", False)
+
 
 class Screen(ttk.Frame):
     def __init__(self, master: tk.Tk, app: App):
