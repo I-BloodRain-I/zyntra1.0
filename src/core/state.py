@@ -28,6 +28,21 @@ CACHE_PATH = INTERNAL_PATH / "cache.json"
 
 ALL_PRODUCTS = [f.stem for f in INTERNAL_PATH.glob("products/*.json") if f.is_file()]
 
+_sdk_client = None
+
+def get_sdk_client():
+    global _sdk_client
+    if _sdk_client is None:
+        from src.sdk import SDKClient
+        _sdk_client = SDKClient()
+    return _sdk_client
+
+def close_sdk_client():
+    global _sdk_client
+    if _sdk_client is not None:
+        _sdk_client.close()
+        _sdk_client = None
+
 
 @dataclass
 class AppState:

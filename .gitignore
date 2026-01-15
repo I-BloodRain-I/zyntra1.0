@@ -1,10 +1,11 @@
 .venv/
-data/
+/_internal/
 __pycache__/
-dist/
-build/
-logs/
-outputs/
+/dist/
+/build/
+/logs/
+/outputs/
+/sdk/
 _internal/u2net.onnx
 readme.md
 *.spec

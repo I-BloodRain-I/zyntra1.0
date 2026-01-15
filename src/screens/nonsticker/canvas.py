@@ -15,7 +15,18 @@ from src.core import Screen, vcmd_float, COLOR_TEXT, COLOR_BG_DARK, COLOR_PILL, 
 from src.core.app import COLOR_BG_SCREEN, validate_min1, vcmd_int
 from src.utils import *
 from src.core.state import ALL_PRODUCTS, FONTS_PATH, OUTPUT_PATH, PRODUCTS_PATH, state
-from src.canvas import CanvasObject, CanvasSelection, MajorManager, JigController, SlotManager, ImageManager, PdfExporter, FontsManager, CustomImagesManager
+from src.canvas import (
+    CanvasObject, 
+    CanvasSelection, 
+    MajorManager, 
+    JigController, 
+    SlotManager, 
+    ImageManager, 
+    PdfExporter, 
+    FontsManager, 
+    CustomImagesManager, 
+    EzdExporter
+)
 from .results_download import NStickerResultsDownloadScreen
 
 logger = logging.getLogger(__name__)
@@ -67,6 +78,7 @@ class NStickerCanvasScreen(Screen):
         self.majors = MajorManager(self)
         self.images = ImageManager(self)
         self.exporter = PdfExporter(self)
+        self.ezd_exporter = EzdExporter()
         # Delegate helpers to keep existing call sites
         self._scaled_pt = self.jig.scaled_pt
         self._update_all_text_fonts = self.jig.update_all_text_fonts
@@ -94,6 +106,7 @@ class NStickerCanvasScreen(Screen):
         self._render_scene_to_pdf = self.exporter.render_scene_to_pdf
         self._render_jig_to_svg = self.exporter.render_jig_to_svg
         self._render_single_pattern_svg = self.exporter.render_single_pattern_svg
+        self._export_scene_to_ezd = self.ezd_exporter.export_scene
 
         # Core state maps used across handlers (must exist before any traces/callbacks run)
         self._items: dict[int, CanvasObject] = {}
@@ -1010,11 +1023,23 @@ class NStickerCanvasScreen(Screen):
         def _toggle_format(fmt):
             current = self.format_var.get().lower().split(",")
             current = [f.strip() for f in current if f.strip()]
-            if fmt in current:
-                current.remove(fmt)
+            if fmt == "ezd":
+                if "ezd" in current:
+                    current.remove("ezd")
+                    if not current:
+                        current = ["pdf"]
+                else:
+                    current = ["ezd"]
             else:
-                current.append(fmt)
-            self.format_var.set(",".join(current) if current else "pdf")
+                if "ezd" in current:
+                    current = [fmt]
+                elif fmt in current:
+                    current.remove(fmt)
+                    if not current:
+                        current = ["pdf"]
+                else:
+                    current.append(fmt)
+            self.format_var.set(",".join(current))
             _update_format_buttons()
         
         def _update_format_buttons():
@@ -1026,7 +1051,7 @@ class NStickerCanvasScreen(Screen):
                 else:
                     btn.configure(bg=TOP_MENU_BUTTON_INACTIVE, fg=TOP_MENU_LABEL_FG, relief="flat")
         
-        for fmt in ["PDF", "JPG", "PNG", "BMP"]:
+        for fmt in ["PDF", "JPG", "PNG", "EZD"]:
             btn = tk.Button(fmt_btns_row, text=fmt, width=4, relief="flat", bd=0,
                            bg=TOP_MENU_BUTTON_INACTIVE, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9, "bold"),
                            activebackground="#5a5a5a", activeforeground="white", cursor="hand2",
@@ -1514,7 +1539,7 @@ class NStickerCanvasScreen(Screen):
         amazon_header_content = tk.Frame(amazon_header, bg=TOP_MENU_CONTAINER_BG, cursor="hand2")
         amazon_header_content.pack(side="top", fill="x", padx=8, pady=6)
         
-        amazon_header_lbl = tk.Label(amazon_header_content, text="▼ Amazon-spec", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
+        amazon_header_lbl = tk.Label(amazon_header_content, text="▼ Amazon Specific", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
         amazon_header_lbl.pack(side="left")
         
         fields_outer2 = tk.Frame(left_bar, bg=TOP_MENU_BG)
@@ -1693,11 +1718,11 @@ class NStickerCanvasScreen(Screen):
         def _toggle_amazon():
             if self._amazon_expanded:
                 self._amazon_expanded = False
-                amazon_header_lbl.config(text="▶ Amazon-spec")
+                amazon_header_lbl.config(text="▶ Amazon Specific")
                 _animate_section(amazon_wrapper, fields_container2, amazon_header_lbl, '_amazon_expanded', '_amazon_animation_id', 0, amazon_wrapper.winfo_height(), 8)
             else:
                 self._amazon_expanded = True
-                amazon_header_lbl.config(text="▼ Amazon-spec")
+                amazon_header_lbl.config(text="▼ Amazon Specific")
                 fields_container2.pack(side="top", fill="both", expand=True)
                 fields_container2.update_idletasks()
                 target_height = fields_container2.winfo_reqheight()
@@ -4698,10 +4723,11 @@ class NStickerCanvasScreen(Screen):
         fmts = [f.strip().lower() for f in fmt_s.split(",") if f.strip()]
         export_formats: list[str] = []
         seen = set()
+        is_ezd_export = "ezd" in fmts
         for f in fmts:
             if f == "jpeg":
                 f = "jpg"
-            if f in ("pdf", "png", "jpg") and f not in seen:
+            if f in ("pdf", "png", "jpg", "ezd") and f not in seen:
                 seen.add(f)
                 export_formats.append(f)
         if not export_formats:
@@ -4715,6 +4741,7 @@ class NStickerCanvasScreen(Screen):
             export_dpi = 1200
         self._export_formats = export_formats
         self._export_dpi = int(export_dpi)
+        self._is_ezd_export = is_ezd_export
 
         # Mark processing and launch worker thread
         state.is_processing = True
@@ -4762,6 +4789,26 @@ class NStickerCanvasScreen(Screen):
                     
                     # Generate file names for this export file
                     file_suffix = export_file_name.split(' ')[-1]  # e.g., "File 1" -> "1"
+                    
+                    # Handle EZD export separately
+                    is_ezd = getattr(self, "_is_ezd_export", False)
+                    if is_ezd:
+                        if front_objects:
+                            logger.debug(f"Exporting EZD frontside for {export_file_name}...")
+                            state.processing_message = f"Exporting EZD frontside for {export_file_name}..."
+                            if state.is_cancelled:
+                                return
+                            ezd_front_path = os.path.join(OUTPUT_PATH, f"{state.sku_name}_frontside_{file_suffix}.ezd")
+                            self.ezd_exporter.export_scene(front_items_for_file, ezd_front_path, jx, jy, clear_before=True)
+                        
+                        if back_objects:
+                            logger.debug(f"Exporting EZD backside for {export_file_name}...")
+                            state.processing_message = f"Exporting EZD backside for {export_file_name}..."
+                            if state.is_cancelled:
+                                return
+                            ezd_back_path = os.path.join(OUTPUT_PATH, f"{state.sku_name}_backside_{file_suffix}.ezd")
+                            self.ezd_exporter.export_scene(back_items_for_file, ezd_back_path, jx, jy, clear_before=True)
+                        continue
                     
                     # Render frontside for this export file
                     if front_objects:

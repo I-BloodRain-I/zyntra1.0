@@ -16,3 +16,5 @@ dotenv==0.9.9
 rembg==2.0.67
 python-barcode==0.15.1
 pytest-xdist==3.8.0
+pytest>=9.0.2
+pytest-cov>=7.0.0

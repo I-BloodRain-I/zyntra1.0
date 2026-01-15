@@ -9,3 +9,4 @@ from .export import PdfExporter
 from .fonts import FontsManager
 from .custom_images import CustomImagesManager
 from .pdf_combiner import PDFCombiner, PDFInfo
+from .ezd_export import EzdExporter
