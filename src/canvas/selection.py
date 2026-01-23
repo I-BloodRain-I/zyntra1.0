@@ -1419,7 +1419,6 @@ class CanvasSelection:
         # Re-apply stacking so overlays/labels stay above backgrounds and slots
         self._reorder_by_z()
         logger.debug("select: applied z-order after selection of cid=%s", cid)
-        # Notify screen to refresh text controls (if available)
         if hasattr(self.s, "_refresh_text_controls"):
             self.s._refresh_text_controls()
 

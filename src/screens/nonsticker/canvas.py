@@ -1041,6 +1041,8 @@ class NStickerCanvasScreen(Screen):
                     current.append(fmt)
             self.format_var.set(",".join(current))
             _update_format_buttons()
+            self._update_text_size_ui()
+            self._refresh_all_text_labels()
         
         def _update_format_buttons():
             current = self.format_var.get().lower().split(",")
@@ -1376,28 +1378,45 @@ class NStickerCanvasScreen(Screen):
         text_wrapper = tk.Frame(text_outer_inner, bg=TOP_MENU_BG)
         text_wrapper.pack(side="top", fill="x")
         text_wrapper.pack_propagate(False)
+        self._text_wrapper_ref = text_wrapper
         
         text_container = tk.Frame(text_wrapper, bg=TOP_MENU_BG, highlightbackground=BORDER_COLOR, highlightthickness=1)
         text_container.pack(side="top", fill="both", expand=True)
+        self._text_container_ref = text_container
 
         text_content = tk.Frame(text_container, bg=TOP_MENU_BG)
         text_content.pack(side="top", fill="x", padx=8, pady=6)
 
         self.text_size = tk.StringVar(value="12")
+        self.text_width_mm = tk.StringVar(value="5.0")
+        self.text_height_mm = tk.StringVar(value="5.0")
         self.text_color = tk.StringVar(value="#17a24b")
         self.text_family = tk.StringVar(value="Myriad Pro")
 
-        size_row = tk.Frame(text_content, bg=TOP_MENU_BG)
-        size_row.pack(side="top", fill="x", pady=2)
-        tk.Label(size_row, text="Size:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=7, anchor="w", font=("Segoe UI", 10)).pack(side="left")
-        size_entry = tk.Entry(size_row, textvariable=self.text_size, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", bd=0, width=8, font=("Segoe UI", 10), justify="center")
+        self.size_row_pt = tk.Frame(text_content, bg=TOP_MENU_BG)
+        tk.Label(self.size_row_pt, text="Size:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=7, anchor="w", font=("Segoe UI", 10)).pack(side="left")
+        size_entry = tk.Entry(self.size_row_pt, textvariable=self.text_size, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", bd=0, width=8, font=("Segoe UI", 10), justify="center")
         size_entry.pack(side="left", fill="x", expand=True)
-        tk.Label(size_row, text="pt", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, font=("Segoe UI", 9)).pack(side="left", padx=(4, 0))
+        tk.Label(self.size_row_pt, text="pt", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, font=("Segoe UI", 9)).pack(side="left", padx=(4, 0))
 
-        color_row = tk.Frame(text_content, bg=TOP_MENU_BG)
-        color_row.pack(side="top", fill="x", pady=2)
-        tk.Label(color_row, text="Color:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=7, anchor="w", font=("Segoe UI", 10)).pack(side="left")
-        color_entry = tk.Entry(color_row, textvariable=self.text_color, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", bd=0, width=12, font=("Segoe UI", 10), justify="center")
+        self.size_row_ezd = tk.Frame(text_content, bg=TOP_MENU_BG)
+        
+        width_row = tk.Frame(self.size_row_ezd, bg=TOP_MENU_BG)
+        width_row.pack(side="top", fill="x", pady=(0, 2))
+        tk.Label(width_row, text="Width:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=7, anchor="w", font=("Segoe UI", 10)).pack(side="left")
+        width_entry = tk.Entry(width_row, textvariable=self.text_width_mm, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", bd=0, width=8, font=("Segoe UI", 10), justify="center")
+        width_entry.pack(side="left", fill="x", expand=True)
+        
+        height_row = tk.Frame(self.size_row_ezd, bg=TOP_MENU_BG)
+        height_row.pack(side="top", fill="x")
+        tk.Label(height_row, text="Height:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=7, anchor="w", font=("Segoe UI", 10)).pack(side="left")
+        height_entry = tk.Entry(height_row, textvariable=self.text_height_mm, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", bd=0, width=8, font=("Segoe UI", 10), justify="center")
+        height_entry.pack(side="left", fill="x", expand=True)
+
+        self.text_color_row = tk.Frame(text_content, bg=TOP_MENU_BG)
+        self.text_color_row.pack(side="top", fill="x", pady=2)
+        tk.Label(self.text_color_row, text="Color:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=7, anchor="w", font=("Segoe UI", 10)).pack(side="left")
+        color_entry = tk.Entry(self.text_color_row, textvariable=self.text_color, bg=TOP_MENU_INPUT_BG, fg=TOP_MENU_TEXT_FG, insertbackground="white", relief="flat", bd=0, width=12, font=("Segoe UI", 10), justify="center")
         color_entry.pack(side="left", fill="x", expand=True)
 
         def _open_color_picker(e=None):
@@ -2405,12 +2424,40 @@ class NStickerCanvasScreen(Screen):
                 except Exception:
                     raise
         self.after(15, _after_jig_ready)
+        
+        self._update_text_size_ui()
 
         # Show popup on right-click only when an object is under cursor
         self.canvas.bind("<Button-3>", self.selection.maybe_show_context_menu)
 
         # Key bindings moved to canvas-level to require focus
         
+    def _update_text_size_ui(self):
+        fmt_str = self.format_var.get().lower() if hasattr(self, "format_var") else "pdf"
+        is_ezd = "ezd" in fmt_str
+        
+        if is_ezd:
+            self.size_row_pt.pack_forget()
+            self.size_row_ezd.pack(side="top", fill="x", pady=2, before=self.text_color_row)
+        else:
+            self.size_row_ezd.pack_forget()
+            self.size_row_pt.pack(side="top", fill="x", pady=2, before=self.text_color_row)
+        
+        if hasattr(self, '_text_expanded') and self._text_expanded and hasattr(self, '_text_wrapper_ref'):
+            self._text_wrapper_ref.update_idletasks()
+            if hasattr(self, '_text_container_ref'):
+                self._text_container_ref.update_idletasks()
+                new_height = self._text_container_ref.winfo_reqheight()
+                self._text_wrapper_ref.config(height=new_height)
+        
+    def _refresh_all_text_labels(self):
+        for cid, meta in self._items.items():
+            item_type = meta.get("type")
+            if item_type in ("rect", "barcode"):
+                try:
+                    self._update_rect_label_image(cid)
+                except Exception:
+                    pass
         
     def _refresh_major_visibility(self) -> None:
         """Keep all majors and all owned items visible; do not hide by active major.
@@ -2560,7 +2607,16 @@ class NStickerCanvasScreen(Screen):
                 base_pt = int(round(float(meta.get("label_font_size", 10))))
             except Exception:
                 base_pt = 10
-            size_px = self._scaled_pt(base_pt)
+            
+            fmt_str = self.format_var.get().lower() if hasattr(self, "format_var") else "pdf"
+            is_ezd_format = "ezd" in fmt_str
+            if is_ezd_format:
+                width_mm = float(meta.get("text_width_mm", 5.0))
+                height_mm = float(meta.get("text_height_mm", 5.0))
+                size_px = int(max(width_mm, height_mm) * MM_TO_PX * self._zoom)
+            else:
+                size_px = self._scaled_pt(base_pt)
+            
             fill = str(meta.get("label_fill", "#ffffff"))
             family = str(meta.get("label_font_family", "Myriad Pro"))
             try:
@@ -2619,6 +2675,15 @@ class NStickerCanvasScreen(Screen):
             except Exception:
                 color_rgba = (255, 255, 255, 255)
             d2.text((pad + off_x, pad + off_y), label_text, font=font, fill=color_rgba)
+            
+            if is_ezd_format:
+                target_width_px = int(width_mm * MM_TO_PX * self._zoom)
+                target_height_px = int(height_mm * MM_TO_PX * self._zoom)
+                if img_w > 0 and img_h > 0 and target_width_px > 0 and target_height_px > 0:
+                    new_w = target_width_px
+                    new_h = target_height_px
+                    img = img.resize((max(1, new_w), max(1, new_h)), Image.BICUBIC)
+            
             try:
                 # Rotate label image in the same (clockwise) direction as overlay math
                 rotated = img.rotate(angle, expand=True, resample=Image.BICUBIC)
@@ -2907,6 +2972,8 @@ class NStickerCanvasScreen(Screen):
             canvas_id=rect,
             z=int(max_z + 1),
             export_file=self._export_files_list[0],
+            text_width_mm=5.0,
+            text_height_mm=5.0,
         )
         # Tag ownership: prioritize the selected major; fallback to major under initial placement
         try:
@@ -4394,12 +4461,16 @@ class NStickerCanvasScreen(Screen):
                             "font_size_pt": int(round(float(it.get("font_size_pt", 12)))),
                             "x_mm": float(it.get("x_mm", 0.0)),
                             "y_mm": float(it.get("y_mm", 0.0)),
+                            "angle": float(it.get("angle", 0.0) or 0.0),
                             "z": int(it.get("z", 0)),
                             "amazon_label": it.get("amazon_label", ""),
                             "is_options": bool(it.get("is_options", False)),
                             "is_static": bool(it.get("is_static", False)),
                             # Export file assignment
                             "export_file": str(it.get("export_file", "File 1")),
+                            # EZD text dimensions
+                            "text_width_mm": float(it.get("text_width_mm", 5.0)),
+                            "text_height_mm": float(it.get("text_height_mm", 5.0)),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process text for slot: {e}")
@@ -4448,6 +4519,9 @@ class NStickerCanvasScreen(Screen):
                             "is_static": bool(it.get("is_static", False)),
                             # Export file assignment
                             "export_file": str(it.get("export_file", "File 1")),
+                            # EZD text dimensions
+                            "text_width_mm": float(it.get("text_width_mm", 5.0)),
+                            "text_height_mm": float(it.get("text_height_mm", 5.0)),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process sized text for slot: {e}")
@@ -4492,6 +4566,9 @@ class NStickerCanvasScreen(Screen):
                             "is_static": bool(it.get("is_static", False)),
                             # Export file assignment
                             "export_file": str(it.get("export_file", "File 1")),
+                            # EZD text dimensions
+                            "text_width_mm": float(it.get("text_width_mm", 5.0)),
+                            "text_height_mm": float(it.get("text_height_mm", 5.0)),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process rect for slot: {e}")
@@ -4979,7 +5056,9 @@ class NStickerCanvasScreen(Screen):
         y_mm: float,
         outline: str = "#d0d0d0",
         text_fill: str = "white",
-        angle: float = 0.0
+        angle: float = 0.0,
+        text_width_mm: float = 5.0,
+        text_height_mm: float = 5.0
     ):
         x0, y0, x1, y1 = self._jig_inner_rect_px()
         ox = self._item_outline_half_px()
@@ -5030,6 +5109,8 @@ class NStickerCanvasScreen(Screen):
             z=int(max_z + 1),
             angle=float(ang),
             export_file=self._export_files_list[0],
+            text_width_mm=float(text_width_mm),
+            text_height_mm=float(text_height_mm),
         )
         try:
             self._items[rect]["label"] = str(label)
@@ -5069,6 +5150,8 @@ class NStickerCanvasScreen(Screen):
             label_id=tid,
             canvas_id=tid,
             export_file=self._export_files_list[0],
+            text_width_mm=5.0,
+            text_height_mm=5.0,
         )
         
         # Auto-save to current ASIN after adding new object
@@ -5132,6 +5215,9 @@ class NStickerCanvasScreen(Screen):
                         "owner_major": str(meta.get("owner_major", "")),
                         # Export file assignment
                         "export_file": str(meta.get("export_file", "File 1")),
+                        # EZD text dimensions
+                        "text_width_mm": float(meta.get("text_width_mm", 5.0)),
+                        "text_height_mm": float(meta.get("text_height_mm", 5.0)),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize rect item {cid}: {e}")
@@ -5198,12 +5284,16 @@ class NStickerCanvasScreen(Screen):
                         "y_mm": y_mm,
                         "fill": fill,
                         "z": int(meta.get("z", 0)),
+                        "angle": float(meta.get("angle", 0.0) or 0.0),
                         # Persist text styling for plain text items
                         "font_size_pt": int(round(float(meta.get("font_size_pt", 12)))),
                         "font_family": str(meta.get("font_family", "Myriad Pro")),
                         "owner_major": str(meta.get("owner_major", "")),
                         # Export file assignment
                         "export_file": str(meta.get("export_file", "File 1")),
+                        # EZD text dimensions
+                        "text_width_mm": float(meta.get("text_width_mm", 5.0)),
+                        "text_height_mm": float(meta.get("text_height_mm", 5.0)),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize text item {cid}: {e}")
@@ -5231,6 +5321,9 @@ class NStickerCanvasScreen(Screen):
                         "owner_major": str(meta.get("owner_major", "")),
                         # Export file assignment
                         "export_file": str(meta.get("export_file", "File 1")),
+                        # EZD text dimensions
+                        "text_width_mm": float(meta.get("text_width_mm", 5.0)),
+                        "text_height_mm": float(meta.get("text_height_mm", 5.0)),
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize barcode item {cid}: {e}")
@@ -5309,6 +5402,10 @@ class NStickerCanvasScreen(Screen):
                                 self._items[rid]["label_font_size"] = int(round(float(it.get("label_font_size", 10))))
                             if "label_font_family" in it:
                                 self._items[rid]["label_font_family"] = str(it.get("label_font_family", "Myriad Pro"))
+                            restored_width = float(it.get("text_width_mm", 5.0))
+                            restored_height = float(it.get("text_height_mm", 5.0))
+                            self._items[rid].text_width_mm = restored_width
+                            self._items[rid].text_height_mm = restored_height
                             self._update_rect_label_image(rid)
                         except Exception:
                             logger.exception("Failed to apply restored rect label styling")
@@ -5459,12 +5556,13 @@ class NStickerCanvasScreen(Screen):
                                 self._items[tid]["font_family"] = fam
                                 self._items[tid]["font_size_pt"] = int(base_pt)
                                 self.canvas.itemconfig(tid, font=(fam, self._scaled_pt(base_pt), "bold"))
+                                self._items[tid].text_width_mm = float(it.get("text_width_mm", 5.0))
+                                self._items[tid].text_height_mm = float(it.get("text_height_mm", 5.0))
                             except Exception:
                                 logger.exception("Failed to apply restored text styling")
                     except Exception as e:
                         logger.exception(f"Failed to apply text z from JSON: {e}")
                 else:
-                    # Restore as the same rectangle block that was saved, using required fields
                     rid = self._create_rect_at_mm(
                         "Text",
                         float(it["w_mm"]),
@@ -5474,6 +5572,8 @@ class NStickerCanvasScreen(Screen):
                         outline="#17a24b",
                         text_fill=str(it.get("label_fill", "#17a24b")),
                         angle=float(it.get("angle", 0.0) or 0.0),
+                        text_width_mm=float(it.get("text_width_mm", 5.0)),
+                        text_height_mm=float(it.get("text_height_mm", 5.0)),
                     )
                     try:
                         if rid in self._items:
@@ -5562,6 +5662,8 @@ class NStickerCanvasScreen(Screen):
                                 self._items[rid]["label_font_size"] = int(round(float(it.get("label_font_size", 10))))
                             if "label_font_family" in it:
                                 self._items[rid]["label_font_family"] = str(it.get("label_font_family", "Myriad Pro"))
+                            self._items[rid].text_width_mm = float(it.get("text_width_mm", 5.0))
+                            self._items[rid].text_height_mm = float(it.get("text_height_mm", 5.0))
                             self._update_rect_label_image(rid)
                         except Exception:
                             logger.exception("Failed to apply restored barcode label styling")
@@ -5997,6 +6099,7 @@ class NStickerCanvasScreen(Screen):
                     logger.exception(f"Failed to apply saved slot z from JSON: {e}")
             # Restore front items on canvas; stash back items for toggling
             if front_items:
+                logger.info(f"[RESTORE] Restoring {len(front_items)} front items...")
                 self._restore_scene(front_items)
             self._scene_store["front"] = list(front_items)
             self._scene_store["back"] = list(back_items)

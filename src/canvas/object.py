@@ -49,6 +49,10 @@ class CanvasObject:
     is_options: bool = False
     is_static: bool = False
     
+    # Text dimensions for EZD export (in mm)
+    text_width_mm: float = 5.0
+    text_height_mm: float = 5.0
+    
     # Export file assignment (default "File 1", ignored for slots and majors)
     export_file: str = "File 1"
     

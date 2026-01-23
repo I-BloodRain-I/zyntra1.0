@@ -23,12 +23,14 @@ def exporter():
 def test_text_coordinates(exporter, sdk, tmp_path):
     jig_w_mm = 200.0
     jig_h_mm = 100.0
+    text_x_mm = 10.0
+    text_y_mm = 20.0
     items = [
         {
             "type": "text",
             "text": "TestText",
-            "x_mm": 10.0,
-            "y_mm": 20.0,
+            "x_mm": text_x_mm,
+            "y_mm": text_y_mm,
             "font_family": "Arial",
             "font_size_pt": 12,
             "angle": 0.0
@@ -45,13 +47,16 @@ def test_text_coordinates(exporter, sdk, tmp_path):
     error, size = sdk.get_entity_size(name=name)
     assert error == 0
     
-    expected_x = jig_w_mm - 10.0
-    expected_y = jig_h_mm - 20.0
-    print(f"\nText: expected x={expected_x}, y={expected_y}")
-    print(f"Text: actual x={size['min_x']:.4f}, y={size['min_y']:.4f}")
+    expected_center_x = text_x_mm - jig_w_mm / 2
+    expected_center_y = jig_h_mm / 2 - text_y_mm
+    actual_center_x = (size["min_x"] + size["max_x"]) / 2
+    actual_center_y = (size["min_y"] + size["max_y"]) / 2
     
-    assert abs(size["min_x"] - expected_x) < 0.5
-    assert abs(size["min_y"] - expected_y) < 0.5
+    print(f"\nText: expected center=({expected_center_x}, {expected_center_y})")
+    print(f"Text: actual center=({actual_center_x:.4f}, {actual_center_y:.4f})")
+    
+    assert abs(actual_center_x - expected_center_x) < 0.5
+    assert abs(actual_center_y - expected_center_y) < 0.5
 
 
 def test_image_coordinates_and_size(exporter, sdk, tmp_path):
@@ -89,14 +94,19 @@ def test_image_coordinates_and_size(exporter, sdk, tmp_path):
     if not image_path.exists():
         pytest.skip(f"Image file not found: {image_path}")
     
+    img_x_mm = 11.0
+    img_y_mm = 13.6666
+    img_w_mm = 38.0
+    img_h_mm = 38.0
+    
     items = [
         {
             "type": "image",
             "path": str(image_path),
-            "x_mm": 11.0,
-            "y_mm": 13.6666,
-            "w_mm": 38.0,
-            "h_mm": 38.0,
+            "x_mm": img_x_mm,
+            "y_mm": img_y_mm,
+            "w_mm": img_w_mm,
+            "h_mm": img_h_mm,
             "angle": 0.0
         }
     ]
@@ -111,31 +121,39 @@ def test_image_coordinates_and_size(exporter, sdk, tmp_path):
     error, size = sdk.get_entity_size(name=name)
     assert error == 0
     
-    actual_x = size["min_x"]
-    actual_y = size["min_y"]
+    actual_center_x = (size["min_x"] + size["max_x"]) / 2
+    actual_center_y = (size["min_y"] + size["max_y"]) / 2
     actual_w = size["max_x"] - size["min_x"]
     actual_h = size["max_y"] - size["min_y"]
     
-    expected_x = jig_w_mm - 11.0 - 38.0
-    expected_y = jig_h_mm - 13.6666 - 38.0
-    print(f"\nExpected: x={expected_x}, y={expected_y}, w={38.0}, h={38.0}")
-    print(f"Actual:   x={actual_x:.4f}, y={actual_y:.4f}, w={actual_w:.4f}, h={actual_h:.4f}")
+    center_x_orig = img_x_mm + img_w_mm / 2
+    center_y_orig = img_y_mm + img_h_mm / 2
+    expected_center_x = center_x_orig - jig_w_mm / 2
+    expected_center_y = jig_h_mm / 2 - center_y_orig
     
-    assert abs(actual_x - expected_x) < 0.5, f"X coordinate mismatch: expected {expected_x}, got {actual_x}"
-    assert abs(actual_y - expected_y) < 0.5, f"Y coordinate mismatch: expected {expected_y}, got {actual_y}"
-    assert abs(actual_w - 38.0) < 0.5, f"Width mismatch: expected 38.0, got {actual_w}"
-    assert abs(actual_h - 38.0) < 0.5, f"Height mismatch: expected 38.0, got {actual_h}"
+    print(f"\nExpected center: ({expected_center_x:.4f}, {expected_center_y:.4f}), w={img_w_mm}, h={img_h_mm}")
+    print(f"Actual center:   ({actual_center_x:.4f}, {actual_center_y:.4f}), w={actual_w:.4f}, h={actual_h:.4f}")
+    
+    assert abs(actual_center_x - expected_center_x) < 0.5, f"X center mismatch: expected {expected_center_x}, got {actual_center_x}"
+    assert abs(actual_center_y - expected_center_y) < 0.5, f"Y center mismatch: expected {expected_center_y}, got {actual_center_y}"
+    assert abs(actual_w - img_w_mm) < 0.5, f"Width mismatch: expected {img_w_mm}, got {actual_w}"
+    assert abs(actual_h - img_h_mm) < 0.5, f"Height mismatch: expected {img_h_mm}, got {actual_h}"
 
 
 def test_multiple_entities(exporter, sdk, tmp_path):
     jig_w_mm = 200.0
     jig_h_mm = 100.0
+    text1_x = 5.0
+    text1_y = 5.0
+    text2_x = 15.0
+    text2_y = 25.0
+    
     items = [
         {
             "type": "text",
             "text": "Text1",
-            "x_mm": 5.0,
-            "y_mm": 5.0,
+            "x_mm": text1_x,
+            "y_mm": text1_y,
             "font_family": "Arial",
             "font_size_pt": 10,
             "angle": 0.0
@@ -143,8 +161,8 @@ def test_multiple_entities(exporter, sdk, tmp_path):
         {
             "type": "text",
             "text": "Text2",
-            "x_mm": 15.0,
-            "y_mm": 25.0,
+            "x_mm": text2_x,
+            "y_mm": text2_y,
             "font_family": "Arial",
             "font_size_pt": 10,
             "angle": 0.0
@@ -162,16 +180,20 @@ def test_multiple_entities(exporter, sdk, tmp_path):
     assert error == 0
     error, size1 = sdk.get_entity_size(name=name1)
     assert error == 0
-    expected_x1 = jig_w_mm - 5.0
-    expected_y1 = jig_h_mm - 5.0
-    assert abs(size1["min_x"] - expected_x1) < 0.5
-    assert abs(size1["min_y"] - expected_y1) < 0.5
+    expected_center_x1 = text1_x - jig_w_mm / 2
+    expected_center_y1 = jig_h_mm / 2 - text1_y
+    actual_center_x1 = (size1["min_x"] + size1["max_x"]) / 2
+    actual_center_y1 = (size1["min_y"] + size1["max_y"]) / 2
+    assert abs(actual_center_x1 - expected_center_x1) < 0.5
+    assert abs(actual_center_y1 - expected_center_y1) < 0.5
     
     error, name2 = sdk.get_entity_name(index=1)
     assert error == 0
     error, size2 = sdk.get_entity_size(name=name2)
     assert error == 0
-    expected_x2 = jig_w_mm - 15.0
-    expected_y2 = jig_h_mm - 25.0
-    assert abs(size2["min_x"] - expected_x2) < 0.5
-    assert abs(size2["min_y"] - expected_y2) < 0.5
+    expected_center_x2 = text2_x - jig_w_mm / 2
+    expected_center_y2 = jig_h_mm / 2 - text2_y
+    actual_center_x2 = (size2["min_x"] + size2["max_x"]) / 2
+    actual_center_y2 = (size2["min_y"] + size2["max_y"]) / 2
+    assert abs(actual_center_x2 - expected_center_x2) < 0.5
+    assert abs(actual_center_y2 - expected_center_y2) < 0.5

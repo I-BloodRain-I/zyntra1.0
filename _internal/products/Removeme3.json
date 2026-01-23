@@ -13,10 +13,10 @@
       "height_mm": 100.0,
       "cmyk": "75,0,75,0"
     },
-    "slot_count": 1,
+    "slot_count": 2,
     "objects_count": {
-      "images": 2,
-      "text": 0
+      "images": 1,
+      "text": 1
     },
     "export_files": [
       "File 1"
@@ -26,23 +26,23 @@
       {
         "rect": {
           "x_mm": 0.0,
-          "y_mm": 70.0,
-          "width_mm": 64.0,
-          "height_mm": 30.0
+          "y_mm": 0.0,
+          "width_mm": 30.0,
+          "height_mm": 100.0
         },
         "origin": {
-          "x_mm": 11.76,
-          "y_mm": 12.52
+          "x_mm": 15.0,
+          "y_mm": 0.0
         },
         "slot_size": {
-          "width_mm": 40.66,
-          "height_mm": 28.9
+          "width_mm": 25.0,
+          "height_mm": 25.0
         },
         "step_size": {
-          "x_mm": 72.55,
-          "y_mm": 47.85
+          "x_mm": 50.0,
+          "y_mm": 50.0
         },
-        "slot_count": 1
+        "slot_count": 2
       }
     ]
   },
@@ -54,40 +54,21 @@
           "slots": [
             {
               "label": "Slot 1",
-              "x_mm": 11.580000000000005,
-              "y_mm": 70.0,
-              "w_mm": 40.66,
-              "h_mm": 28.9,
-              "z": -9,
+              "x_mm": 0.0,
+              "y_mm": 75.0,
+              "w_mm": 25.0,
+              "h_mm": 25.0,
+              "z": -18,
               "objects": [
                 {
                   "type": "image",
-                  "path": "Removeme3/empty2.jpg",
-                  "x_mm": 0.0,
-                  "y_mm": 69.95,
-                  "w_mm": 38.0,
-                  "h_mm": 30.0,
+                  "path": "Removeme3/images.jpg",
+                  "x_mm": 0.325,
+                  "y_mm": 75.625,
+                  "w_mm": 20.0,
+                  "h_mm": 20.0,
                   "angle": 0.0,
                   "z": 0,
-                  "amazon_label": "4555",
-                  "is_options": false,
-                  "is_static": false,
-                  "mask_path": "",
-                  "export_file": "File 1",
-                  "custom_images": {
-                    "Layer1": "C:\\Users\\vboxuser\\Desktop\\zyntra1_copy\\_internal\\products\\Removeme3\\Layer1.png"
-                  },
-                  "custom_image": "Layer1"
-                },
-                {
-                  "type": "image",
-                  "path": "Removeme3/images.jpg",
-                  "x_mm": 38.575,
-                  "y_mm": 69.925,
-                  "w_mm": 10.0,
-                  "h_mm": 10.0,
-                  "angle": 0.0,
-                  "z": 1,
                   "amazon_label": "4566",
                   "is_options": false,
                   "is_static": false,
@@ -95,8 +76,36 @@
                   "export_file": "File 1",
                   "custom_images": {},
                   "custom_image": ""
+                },
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "1111",
+                  "x_mm": 0.275,
+                  "y_mm": 75.525,
+                  "w_mm": 20.0,
+                  "h_mm": 20.0,
+                  "angle": 0.0,
+                  "z": 1,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 10,
+                  "label_font_family": "Arial",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1",
+                  "text_width_mm": 25.0,
+                  "text_height_mm": 15.0
                 }
               ]
+            },
+            {
+              "label": "Slot 2",
+              "x_mm": 0.0,
+              "y_mm": 25.0,
+              "w_mm": 25.0,
+              "h_mm": 25.0,
+              "z": -19,
+              "objects": []
             }
           ]
         }
@@ -107,11 +116,20 @@
           "slots": [
             {
               "label": "Slot 1",
-              "x_mm": 11.580000000000005,
-              "y_mm": 70.0,
-              "w_mm": 40.66,
-              "h_mm": 28.9,
-              "z": -9,
+              "x_mm": 0.0,
+              "y_mm": 75.0,
+              "w_mm": 25.0,
+              "h_mm": 25.0,
+              "z": -18,
+              "objects": []
+            },
+            {
+              "label": "Slot 2",
+              "x_mm": 0.0,
+              "y_mm": 25.0,
+              "w_mm": 25.0,
+              "h_mm": 25.0,
+              "z": -19,
               "objects": []
             }
           ]

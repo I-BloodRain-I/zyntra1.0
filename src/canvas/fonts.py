@@ -161,6 +161,10 @@ class FontsManager:
             self.s.text_size.trace_add("write", self._apply_text_changes)
         if hasattr(self.s, 'text_color'):
             self.s.text_color.trace_add("write", self._apply_text_changes)
+        if hasattr(self.s, 'text_width_mm'):
+            self.s.text_width_mm.trace_add("write", self._apply_text_changes)
+        if hasattr(self.s, 'text_height_mm'):
+            self.s.text_height_mm.trace_add("write", self._apply_text_changes)
         if hasattr(self.s, '_family_combo'):
             self.s._family_combo.bind("<<ComboboxSelected>>", lambda _e: self._apply_text_changes())
 
@@ -243,6 +247,7 @@ class FontsManager:
             except Exception:
                 logger.exception("Failed to show text controls for text selection")
         tid = meta.get("label_id") if t == "rect" else (meta.get("label_id") or sel)
+        self.s._suppress_text_traces = True
         try:
             if t == "rect":
                 sz = int(round(float(meta.get("label_font_size", 10))))
@@ -272,6 +277,10 @@ class FontsManager:
             self.s.text_family.set(fam)
             if col:
                 self.s.text_color.set(col)
+            width_mm = meta.text_width_mm
+            height_mm = meta.text_height_mm
+            self.s.text_width_mm.set(f"{width_mm:.2f}")
+            self.s.text_height_mm.set(f"{height_mm:.2f}")
         except Exception:
             logger.exception("Failed to refresh text control values")
         finally:
@@ -379,6 +388,20 @@ class FontsManager:
                     meta["font_size_pt"] = int(sz)
         except Exception:
             logger.exception("Failed to set text size metadata")
+        try:
+            raw_width = (self.s.text_width_mm.get() or "").strip()
+            raw_height = (self.s.text_height_mm.get() or "").strip()
+            if raw_width != "":
+                width_mm = float(raw_width)
+                meta.text_width_mm = float(width_mm)
+            if raw_height != "":
+                height_mm = float(raw_height)
+                meta.text_height_mm = float(height_mm)
+                if t == "text":
+                    approx_pt = int(height_mm / 0.3528)
+                    meta["font_size_pt"] = max(2, approx_pt)
+        except Exception:
+            logger.exception("Failed to set text width/height metadata")
         # Family
         try:
             fam = (self.s.text_family.get() or "Myriad Pro").strip()
@@ -401,6 +424,12 @@ class FontsManager:
             self.s._raise_all_labels()
         except Exception:
             logger.exception("Failed to raise labels after text changes")
+        # Auto-save to current ASIN after text changes
+        try:
+            if hasattr(self.s, '_save_current_asin_objects'):
+                self.s._save_current_asin_objects()
+        except Exception:
+            logger.exception("Failed to auto-save after text changes")
 
     def _on_import_font(self):
         """Import a TTF/OTF file into the app's fonts directory and add it to
