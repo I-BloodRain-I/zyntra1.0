@@ -5,6 +5,8 @@ import shutil
 import struct
 import logging
 import threading
+import ctypes
+from ctypes import wintypes
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -30,6 +32,60 @@ from src.canvas import (
 from .results_download import NStickerResultsDownloadScreen
 
 logger = logging.getLogger(__name__)
+
+LF_FACESIZE = 32
+
+class LOGFONTW(ctypes.Structure):
+    _fields_ = [
+        ("lfHeight", wintypes.LONG),
+        ("lfWidth", wintypes.LONG),
+        ("lfEscapement", wintypes.LONG),
+        ("lfOrientation", wintypes.LONG),
+        ("lfWeight", wintypes.LONG),
+        ("lfItalic", wintypes.BYTE),
+        ("lfUnderline", wintypes.BYTE),
+        ("lfStrikeOut", wintypes.BYTE),
+        ("lfCharSet", wintypes.BYTE),
+        ("lfOutPrecision", wintypes.BYTE),
+        ("lfClipPrecision", wintypes.BYTE),
+        ("lfQuality", wintypes.BYTE),
+        ("lfPitchAndFamily", wintypes.BYTE),
+        ("lfFaceName", wintypes.WCHAR * LF_FACESIZE),
+    ]
+
+def _get_windows_fonts():
+    gdi32 = ctypes.WinDLL("gdi32")
+    user32 = ctypes.WinDLL("user32")
+    
+    EnumFontFamExProc = ctypes.WINFUNCTYPE(
+        wintypes.INT,
+        ctypes.POINTER(LOGFONTW),
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.LPARAM,
+    )
+    
+    fonts = set()
+    
+    def enum_proc(lpelfe, _, __, ___):
+        fonts.add(lpelfe.contents.lfFaceName)
+        return 1
+    
+    hdc = user32.GetDC(None)
+    lf = LOGFONTW()
+    lf.lfCharSet = 1
+    
+    gdi32.EnumFontFamiliesExW(
+        hdc,
+        ctypes.byref(lf),
+        EnumFontFamExProc(enum_proc),
+        0,
+        0
+    )
+    
+    user32.ReleaseDC(None, hdc)
+    
+    return set(filter(lambda name: not name.startswith("@"), fonts))
 
 DEFAULT_JIG_SIZE   = (296.0, 394.5831)
 DEFAULT_SLOT_SIZE  = (40.66, 28.9)
@@ -1053,7 +1109,7 @@ class NStickerCanvasScreen(Screen):
                 else:
                     btn.configure(bg=TOP_MENU_BUTTON_INACTIVE, fg=TOP_MENU_LABEL_FG, relief="flat")
         
-        for fmt in ["PDF", "JPG", "PNG", "EZD"]:
+        for fmt in ["PDF", "JPG", "PNG", "BMP", "EZD"]:
             btn = tk.Button(fmt_btns_row, text=fmt, width=4, relief="flat", bd=0,
                            bg=TOP_MENU_BUTTON_INACTIVE, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9, "bold"),
                            activebackground="#5a5a5a", activeforeground="white", cursor="hand2",
@@ -2610,7 +2666,7 @@ class NStickerCanvasScreen(Screen):
             
             fmt_str = self.format_var.get().lower() if hasattr(self, "format_var") else "pdf"
             is_ezd_format = "ezd" in fmt_str
-            if is_ezd_format:
+            if is_ezd_format and item_type != "barcode":
                 width_mm = float(meta.get("text_width_mm", 5.0))
                 height_mm = float(meta.get("text_height_mm", 5.0))
                 size_px = int(max(width_mm, height_mm) * MM_TO_PX * self._zoom)
@@ -2676,7 +2732,7 @@ class NStickerCanvasScreen(Screen):
                 color_rgba = (255, 255, 255, 255)
             d2.text((pad + off_x, pad + off_y), label_text, font=font, fill=color_rgba)
             
-            if is_ezd_format:
+            if is_ezd_format and item_type != "barcode":
                 target_width_px = int(width_mm * MM_TO_PX * self._zoom)
                 target_height_px = int(height_mm * MM_TO_PX * self._zoom)
                 if img_w > 0 and img_h > 0 and target_width_px > 0 and target_height_px > 0:
@@ -2790,7 +2846,7 @@ class NStickerCanvasScreen(Screen):
         paths = filedialog.askopenfilenames(
             title="Import Images",
             filetypes=[
-                ("Image Files", "*.jpg *.jpeg *.png *.svg")
+                ("Image Files", "*.jpg *.jpeg *.png *.bmp *.svg")
             ],
         )
         if not paths:
@@ -4049,6 +4105,57 @@ class NStickerCanvasScreen(Screen):
                 return
         except Exception:
             logger.exception("Failed to validate CMYK before proceeding")
+        
+        fmt_s = (self.format_var.get() if hasattr(self, "format_var") else "pdf").strip()
+        fmts = [f.strip().lower() for f in fmt_s.split(",") if f.strip()]
+        is_ezd_export = "ezd" in fmts
+        
+        logger.debug(f"Format string: '{fmt_s}', parsed formats: {fmts}, is_ezd_export: {is_ezd_export}")
+        
+        if is_ezd_export:
+            logger.info("EZD format selected, validating fonts...")
+            windows_fonts = _get_windows_fonts()
+            logger.debug(f"Found {len(windows_fonts)} Windows fonts")
+            missing_fonts = set()
+            
+            self._save_current_asin_objects()
+            
+            all_objects = []
+            
+            if hasattr(self, "_asin_objects") and self._asin_objects:
+                for asin, sides in self._asin_objects.items():
+                    for side_name, objects in sides.items():
+                        if objects:
+                            all_objects.extend(objects)
+            else:
+                all_objects.extend(self._serialize_scene())
+                for side_items in self._scene_store.values():
+                    if side_items:
+                        all_objects.extend(side_items)
+            
+            logger.debug(f"Checking {len(all_objects)} objects for font validation")
+            
+            for obj in all_objects:
+                if not isinstance(obj, dict):
+                    continue
+                obj_type = str(obj.get("type", ""))
+                if obj_type in ("rect", "text"):
+                    font_name = str(obj.get("font", "") or obj.get("label_font_family", "")).strip()
+                    if font_name:
+                        logger.debug(f"Checking font '{font_name}' for {obj_type} object")
+                        if font_name not in windows_fonts:
+                            logger.warning(f"Font '{font_name}' not found in Windows fonts")
+                            missing_fonts.add(font_name)
+            
+            if missing_fonts:
+                logger.error(f"Missing fonts detected: {missing_fonts}")
+                messagebox.showerror(
+                    "Missing Fonts",
+                    f"The following fonts are not installed in Windows:\n\n{', '.join(sorted(missing_fonts))}\n\nPlease install these fonts or change them before exporting to EZD format."
+                )
+                return
+            logger.info("Font validation passed - all fonts are installed")
+        
         state.pkg_x = self.jig_x.get().strip()
         state.pkg_y = self.jig_y.get().strip()
         # Count only image items. Text items are stored with type 'text'
@@ -4063,9 +4170,11 @@ class NStickerCanvasScreen(Screen):
         p_front = os.path.join(OUTPUT_PATH, "Test_file_frontside.pdf")
         p_front_png = os.path.join(OUTPUT_PATH, "Test_file_frontside.png")
         p_front_jpg = os.path.join(OUTPUT_PATH, "Test_file_frontside.jpg")
+        p_front_bmp = os.path.join(OUTPUT_PATH, "Test_file_frontside.bmp")
         p_back = os.path.join(OUTPUT_PATH, "Test_file_backside.pdf")
         p_back_png = os.path.join(OUTPUT_PATH, "Test_file_backside.png")
         p_back_jpg = os.path.join(OUTPUT_PATH, "Test_file_backside.jpg")
+        p_back_bmp = os.path.join(OUTPUT_PATH, "Test_file_backside.bmp")
         try:
             jx = float(self.jig_x.get() or 0.0)
             jy = float(self.jig_y.get() or 0.0)
@@ -4804,7 +4913,7 @@ class NStickerCanvasScreen(Screen):
         for f in fmts:
             if f == "jpeg":
                 f = "jpg"
-            if f in ("pdf", "png", "jpg", "ezd") and f not in seen:
+            if f in ("pdf", "png", "jpg", "bmp", "ezd") and f not in seen:
                 seen.add(f)
                 export_formats.append(f)
         if not export_formats:
@@ -4898,12 +5007,13 @@ class NStickerCanvasScreen(Screen):
                         p_front_file = os.path.join(OUTPUT_PATH, f"Test_file_frontside_{file_suffix}.pdf")
                         p_front_png_file = os.path.join(OUTPUT_PATH, f"Test_file_frontside_{file_suffix}.png")
                         p_front_jpg_file = os.path.join(OUTPUT_PATH, f"Test_file_frontside_{file_suffix}.jpg")
+                        p_front_bmp_file = os.path.join(OUTPUT_PATH, f"Test_file_frontside_{file_suffix}.bmp")
                         
                         did_pdf = False
                         if "pdf" in fmts:
                             self._render_scene_to_pdf(p_front_file, front_items_for_file, jx, jy, dpi=dpi_v)
                             did_pdf = True
-                        elif ("png" in fmts) or ("jpg" in fmts):
+                        elif ("png" in fmts) or ("jpg" in fmts) or ("bmp" in fmts):
                             tmp_pdf = os.path.join(TEMP_FOLDER, f"__tmp_front_{file_suffix}.pdf")
                             try:
                                 self._render_scene_to_pdf(tmp_pdf, front_items_for_file, jx, jy, dpi=dpi_v)
@@ -4923,6 +5033,11 @@ class NStickerCanvasScreen(Screen):
                                 self.exporter.save_last_render_as_jpg(p_front_jpg_file)
                             except Exception:
                                 logger.exception(f"Failed to save front JPG for {export_file_name}; continuing")
+                        if "bmp" in fmts:
+                            try:
+                                self.exporter.save_last_render_as_bmp(p_front_bmp_file)
+                            except Exception:
+                                logger.exception(f"Failed to save front BMP for {export_file_name}; continuing")
                     
                     # Render backside for this export file
                     if back_objects:
@@ -4935,12 +5050,13 @@ class NStickerCanvasScreen(Screen):
                         p_back_file = os.path.join(OUTPUT_PATH, f"Test_file_backside_{file_suffix}.pdf")
                         p_back_png_file = os.path.join(OUTPUT_PATH, f"Test_file_backside_{file_suffix}.png")
                         p_back_jpg_file = os.path.join(OUTPUT_PATH, f"Test_file_backside_{file_suffix}.jpg")
+                        p_back_bmp_file = os.path.join(OUTPUT_PATH, f"Test_file_backside_{file_suffix}.bmp")
                         
                         did_pdf = False
                         if "pdf" in fmts:
                             self._render_scene_to_pdf(p_back_file, back_items_for_file, jx, jy, dpi=dpi_v)
                             did_pdf = True
-                        elif ("png" in fmts) or ("jpg" in fmts):
+                        elif ("png" in fmts) or ("jpg" in fmts) or ("bmp" in fmts):
                             tmp_pdf_b = os.path.join(TEMP_FOLDER, f"__tmp_back_{file_suffix}.pdf")
                             try:
                                 self._render_scene_to_pdf(tmp_pdf_b, back_items_for_file, jx, jy, dpi=dpi_v)
@@ -4960,6 +5076,11 @@ class NStickerCanvasScreen(Screen):
                                 self.exporter.save_last_render_as_jpg(p_back_jpg_file)
                             except Exception:
                                 logger.exception(f"Failed to save back JPG for {export_file_name}; continuing")
+                        if "bmp" in fmts:
+                            try:
+                                self.exporter.save_last_render_as_bmp(p_back_bmp_file)
+                            except Exception:
+                                logger.exception(f"Failed to save back BMP for {export_file_name}; continuing")
                 # Write JSON
                 try:
                     logger.debug(f"Writing JSON file...")

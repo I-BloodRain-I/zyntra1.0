@@ -15,6 +15,54 @@ def convert_to_ezd_coords(x_mm: float, y_mm: float, jig_w_mm: float, jig_h_mm: f
     return ezd_x, ezd_y
 
 
+def adjust_text_size_iterative(
+    client, 
+    text: str, 
+    name: str, 
+    target_width_mm: float, 
+    target_height_mm: float,                            
+    font_family: str, 
+    initial_width: float, 
+    initial_height: float, 
+    x: float, 
+    y: float, 
+    z: float, 
+    angle: float, 
+    max_iterations: int = 5
+) -> tuple[float, float]:
+    width_sdk = initial_width
+    height_sdk = initial_height
+    
+    for i in range(max_iterations):
+        client.set_font(font_name=font_family, height=height_sdk, width=width_sdk, equal_char_width=False)
+        client.add_text(text=text, name=name, x=x, y=y, z=z, align=8, angle=0.0, pen=0, hatch=False)
+        
+        error, size = client.get_entity_size(name=name)
+        if error != 0:
+            logger.warning(f"Failed to get entity size on iteration {i}")
+            break
+            
+        actual_width = size["max_x"] - size["min_x"]
+        actual_height = size["max_y"] - size["min_y"]
+        
+        width_error = abs(actual_width - target_width_mm)
+        height_error = abs(actual_height - target_height_mm)
+        
+        if width_error < 0.1 and height_error < 0.1:
+            logger.debug(f"Converged after {i+1} iterations: w={actual_width:.2f}, h={actual_height:.2f}")
+            return width_sdk, height_sdk
+        
+        if actual_width > 0:
+            width_sdk *= (target_width_mm / actual_width)
+        if actual_height > 0:
+            height_sdk *= (target_height_mm / actual_height)
+        
+        client.delete_entity(name=name)
+        logger.debug(f"Iteration {i+1}: actual w={actual_width:.2f}, h={actual_height:.2f}, adjusting sdk w={width_sdk:.3f}, h={height_sdk:.3f}")
+    
+    return width_sdk, height_sdk
+
+
 class EzdExporter:
 
     def __init__(self):
@@ -94,27 +142,22 @@ class EzdExporter:
 
         logger.debug(f"Adding text '{text}': z={z}, width_mm={width_mm}, height_mm={height_mm}, font={font_family}")
 
-        width_sdk = width_mm * 0.230942
-        height_sdk = height_mm * 1.379310
-        
-        self.client.set_font(
-            font_name=font_family,
-            height=height_sdk,
-            width=width_sdk,
-            equal_char_width=False
-        )
-
-        self.client.add_text(
+        width_sdk, height_sdk = adjust_text_size_iterative(
+            client=self.client,
             text=text,
             name=name,
+            target_width_mm=width_mm,
+            target_height_mm=height_mm,
+            font_family=font_family,
+            initial_width=width_mm,
+            initial_height=height_mm,
             x=x_mm + TEXT_X_OFFSET,
             y=y_mm + TEXT_Y_OFFSET,
             z=z,
-            align=8,
-            angle=0.0,
-            pen=0,
-            hatch=False,
+            angle=angle
         )
+        
+        logger.debug(f"Final SDK params: width={width_sdk:.3f}, height={height_sdk:.3f}")
 
         if angle != 0.0:
             error, size = self.client.get_entity_size(name=name)
@@ -151,27 +194,22 @@ class EzdExporter:
         logger.debug("Original coords (top-left): x_mm={:.3f}, y_mm={:.3f}, w_mm={:.3f}, h_mm={:.3f}".format(x_mm_orig, y_mm_orig, w_mm, h_mm))
         logger.debug("EZD center coords: x_mm={:.3f}, y_mm={:.3f}".format(x_mm, y_mm))
 
-        width_sdk = width_mm * 0.230942
-        height_sdk = height_mm * 1.379310
-        
-        self.client.set_font(
-            font_name=font_family,
-            height=height_sdk,
-            width=width_sdk,
-            equal_char_width=False
-        )
-
-        self.client.add_text(
+        width_sdk, height_sdk = adjust_text_size_iterative(
+            client=self.client,
             text=label,
             name=name,
+            target_width_mm=width_mm,
+            target_height_mm=height_mm,
+            font_family=font_family,
+            initial_width=width_mm,
+            initial_height=height_mm,
             x=x_mm,
             y=y_mm,
             z=z,
-            align=8,
-            angle=0.0,
-            pen=0,
-            hatch=False,
+            angle=angle
         )
+        
+        logger.debug(f"Final SDK params: width={width_sdk:.3f}, height={height_sdk:.3f}")
 
         if angle != 0.0:
             error, size = self.client.get_entity_size(name=name)
@@ -266,25 +304,25 @@ class EzdExporter:
         font_family = str(item.get("label_font_family", "Arial"))
         font_size_pt = float(item.get("label_font_size", 10))
         
-        width_mm = float(item.get("text_width_mm", 5.0))
-        height_mm = float(item.get("text_height_mm", 5.0))
-        
         z = float(item.get("z", 0.0))
 
-        logger.debug(f"Adding barcode '{label}': z={z}, angle={angle}")
+        logger.debug(f"Adding barcode '{label}': z={z}, angle={angle}, font_size={font_size_pt}pt")
+
+        barcode_text_height = font_size_pt * 0.3528
+        barcode_text_width = font_size_pt * 0.3528
 
         self.client.add_barcode(
             text=label,
             name=name,
-            x=x_mm,
-            y=y_mm,
+            x=0,
+            y=0,
             z=z,
             align=8,
             pen=0,
             hatch=False,
-            barcode_type=17,
+            barcode_type=5,
             attrib=0,
-            height=h_mm,
+            height=10.0,
             narrow_width=0.5,
             bar_width_scale=[1.0, 2.0, 3.0, 4.0],
             space_width_scale=[1.0, 2.0, 3.0, 4.0],
@@ -298,13 +336,42 @@ class EzdExporter:
             col=0,
             check_level=0,
             size_mode=0,
-            text_height=height_mm,
-            text_width=width_mm,
+            text_height=barcode_text_height,
+            text_width=barcode_text_width,
             text_offset_x=0.0,
             text_offset_y=0.0,
             text_space=0.0,
             text_font=font_family,
         )
+
+        error, size = self.client.get_entity_size(name=name)
+        if error == 0:
+            current_w = size["max_x"] - size["min_x"]
+            current_h = size["max_y"] - size["min_y"]
+            actual_center_x = (size["min_x"] + size["max_x"]) / 2
+            actual_center_y = (size["min_y"] + size["max_y"]) / 2
+            
+            logger.debug(f"Barcode initial size: w={current_w:.2f}, h={current_h:.2f}, target: w={w_mm:.2f}, h={h_mm:.2f}")
+            
+            if current_w > 0 and current_h > 0:
+                scale_x = w_mm / current_w
+                scale_y = h_mm / current_h
+                self.client.scale_entity(
+                    name=name,
+                    center_x=actual_center_x,
+                    center_y=actual_center_y,
+                    scale_x=scale_x,
+                    scale_y=scale_y
+                )
+        
+        error, size = self.client.get_entity_size(name=name)
+        if error == 0:
+            actual_center_x = (size["min_x"] + size["max_x"]) / 2
+            actual_center_y = (size["min_y"] + size["max_y"]) / 2
+            dx = x_mm - actual_center_x
+            dy = y_mm - actual_center_y
+            if abs(dx) > 0.001 or abs(dy) > 0.001:
+                self.client.move_entity(name=name, dx=dx, dy=dy)
 
         if angle != 0.0:
             error, size = self.client.get_entity_size(name=name)

@@ -266,6 +266,10 @@ class NStickerResultsDownloadScreen(Screen):
             ext = ".jpg"
             dialog_title = "Save JPG File"
             filetypes = [("JPEG images", "*.jpg;*.jpeg")]
+        elif fmt_lower == "bmp":
+            ext = ".bmp"
+            dialog_title = "Save BMP File"
+            filetypes = [("BMP images", "*.bmp")]
         else:
             # Default to PDF for now
             ext = ".pdf"

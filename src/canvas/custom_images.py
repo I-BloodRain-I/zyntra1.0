@@ -43,7 +43,7 @@ class CustomImagesManager:
         path = filedialog.askopenfilename(
             title="Select Custom Image", 
             filetypes=[
-                ("Image Files", "*.png *.jpg *.jpeg *.svg"),
+                ("Image Files", "*.png *.jpg *.jpeg *.bmp *.svg"),
             ]
         )
         if not path:

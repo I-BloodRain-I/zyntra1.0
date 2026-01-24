@@ -1335,6 +1335,27 @@ class PdfExporter:
         except Exception as e:
             logger.exception(f"Failed to save JPG: {e}")
             raise
+
+    def save_last_render_as_bmp(self, path: str) -> None:
+        try:
+            if getattr(self, "_last_render_image", None) is None:
+                raise RuntimeError("No last render image available for BMP export")
+            img = self._last_render_image
+            if img.mode != "RGB":
+                if img.mode == "RGBA":
+                    bg = Image.new("RGB", img.size, (255, 255, 255))
+                    bg.paste(img, mask=img.split()[-1])
+                    img = bg
+                else:
+                    img = img.convert("RGB")
+            try:
+                dpi = int(getattr(self, "_last_render_dpi", 300) or 300)
+            except Exception:
+                dpi = 300
+            img.save(path, format="BMP", dpi=(dpi, dpi))
+        except Exception as e:
+            logger.exception(f"Failed to save BMP: {e}")
+            raise
         
         # out_rgb.save(path, "PDF", resolution=dpi)
         

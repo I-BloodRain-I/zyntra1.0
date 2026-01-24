@@ -216,3 +216,81 @@ def test_proceed_without_sticker_var():
         with patch.object(canvas, '_serialize_scene', return_value=[]):
             canvas._proceed()
     canvas.destroy()
+
+def test_proceed_ezd_format_validates_fonts():
+    app, canvas = get_canvas()
+    canvas._asin_list = ["ASIN1"]
+    canvas.sku_name_var.set("ValidSKU")
+    canvas.format_var = Mock()
+    canvas.format_var.get = Mock(return_value="ezd")
+    canvas._asin_objects = {
+        "ASIN1": {
+            "front": [{"type": "text", "font": "AnotherMissingFont456"}],
+            "back": []
+        }
+    }
+    
+    with patch.object(canvas, '_serialize_scene', return_value=[
+        {"type": "text", "font": "NonExistentFont123"},
+        {"type": "rect", "font": "AnotherMissingFont456"}
+    ]):
+        with patch('src.screens.nonsticker.canvas._get_windows_fonts', return_value={"Arial", "Calibri", "Times New Roman"}):
+            with patch.object(messagebox, 'showerror') as mock_err:
+                canvas._proceed()
+                mock_err.assert_called_once()
+                args = mock_err.call_args[0]
+                assert "Missing Fonts" in args[0]
+                assert "NonExistentFont123" in args[1]
+                assert "AnotherMissingFont456" in args[1]
+    canvas.destroy()
+
+def test_proceed_ezd_format_passes_with_valid_fonts():
+    app, canvas = get_canvas()
+    canvas._asin_list = ["ASIN1"]
+    canvas.sku_name_var.set("ValidSKU")
+    canvas.format_var = Mock()
+    canvas.format_var.get = Mock(return_value="ezd")
+    
+    with patch.object(canvas, '_serialize_scene', return_value=[
+        {"type": "text", "font": "Arial"},
+        {"type": "rect", "font": "Calibri"}
+    ]):
+        with patch('src.screens.nonsticker.canvas._get_windows_fonts', return_value={"Arial", "Calibri", "Times New Roman"}):
+            with patch.object(messagebox, 'showwarning'):
+                canvas._proceed()
+    canvas.destroy()
+
+def test_proceed_non_ezd_format_skips_font_validation():
+    app, canvas = get_canvas()
+    canvas._asin_list = ["ASIN1"]
+    canvas.sku_name_var.set("ValidSKU")
+    canvas.format_var = Mock()
+    canvas.format_var.get = Mock(return_value="pdf")
+    
+    with patch.object(canvas, '_serialize_scene', return_value=[
+        {"type": "text", "font": "NonExistentFont123"}
+    ]):
+        with patch.object(messagebox, 'showwarning'):
+            canvas._proceed()
+    canvas.destroy()
+
+def test_proceed_ezd_format_handles_non_dict_objects():
+    app, canvas = get_canvas()
+    canvas._asin_list = ["ASIN1"]
+    canvas.sku_name_var.set("ValidSKU")
+    canvas.format_var = Mock()
+    canvas.format_var.get = Mock(return_value="ezd")
+    canvas._scene_store = {
+        "front": [
+            {"type": "text", "font": "Arial"},
+            "not_a_dict",
+            {"type": "rect", "font": "Calibri"}
+        ],
+        "back": []
+    }
+    
+    with patch.object(canvas, '_serialize_scene', return_value=[]):
+        with patch('src.screens.nonsticker.canvas._get_windows_fonts', return_value={"Arial", "Calibri", "Times New Roman"}):
+            with patch.object(messagebox, 'showwarning'):
+                canvas._proceed()
+    canvas.destroy()

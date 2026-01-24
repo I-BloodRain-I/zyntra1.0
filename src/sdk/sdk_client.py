@@ -99,7 +99,14 @@ class SDKClient:
     def __getattr__(self, name: str):
         if name.startswith("_"):
             raise AttributeError(name)
-        return lambda **kwargs: self._send_request(name, **kwargs)
+        
+        def method(**kwargs):
+            result = self._send_request(name, **kwargs)
+            if name == "get_entity_size" and isinstance(result, list) and len(result) == 2:
+                return result[0], result[1]
+            return result
+        
+        return method
     
     def ping(self) -> str:
         return self._send_request("ping")

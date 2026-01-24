@@ -13,7 +13,7 @@
       "height_mm": 100.0,
       "cmyk": "75,0,75,0"
     },
-    "slot_count": 2,
+    "slot_count": 4,
     "objects_count": {
       "images": 1,
       "text": 1
@@ -27,7 +27,7 @@
         "rect": {
           "x_mm": 0.0,
           "y_mm": 0.0,
-          "width_mm": 30.0,
+          "width_mm": 100.0,
           "height_mm": 100.0
         },
         "origin": {
@@ -42,7 +42,7 @@
           "x_mm": 50.0,
           "y_mm": 50.0
         },
-        "slot_count": 2
+        "slot_count": 4
       }
     ]
   },
@@ -54,17 +54,46 @@
           "slots": [
             {
               "label": "Slot 1",
-              "x_mm": 0.0,
+              "x_mm": 60.0,
               "y_mm": 75.0,
               "w_mm": 25.0,
               "h_mm": 25.0,
-              "z": -18,
+              "z": -22,
+              "objects": [
+                {
+                  "type": "text",
+                  "label": "Text",
+                  "amazon_label": "6666",
+                  "x_mm": 62.541666666666664,
+                  "y_mm": 76.54166666666667,
+                  "w_mm": 20.0,
+                  "h_mm": 20.0,
+                  "angle": -90.0,
+                  "z": 2,
+                  "label_fill": "#17a24b",
+                  "label_font_size": 10,
+                  "label_font_family": "Calibri",
+                  "is_options": false,
+                  "is_static": false,
+                  "export_file": "File 1",
+                  "text_width_mm": 25.0,
+                  "text_height_mm": 15.0
+                }
+              ]
+            },
+            {
+              "label": "Slot 2",
+              "x_mm": 10.0,
+              "y_mm": 75.0,
+              "w_mm": 25.0,
+              "h_mm": 25.0,
+              "z": -23,
               "objects": [
                 {
                   "type": "image",
                   "path": "Removeme3/images.jpg",
-                  "x_mm": 0.325,
-                  "y_mm": 75.625,
+                  "x_mm": 12.458333333333334,
+                  "y_mm": 76.625,
                   "w_mm": 20.0,
                   "h_mm": 20.0,
                   "angle": 0.0,
@@ -76,35 +105,25 @@
                   "export_file": "File 1",
                   "custom_images": {},
                   "custom_image": ""
-                },
-                {
-                  "type": "text",
-                  "label": "Text",
-                  "amazon_label": "1111",
-                  "x_mm": 0.275,
-                  "y_mm": 75.525,
-                  "w_mm": 20.0,
-                  "h_mm": 20.0,
-                  "angle": 0.0,
-                  "z": 1,
-                  "label_fill": "#17a24b",
-                  "label_font_size": 10,
-                  "label_font_family": "Arial",
-                  "is_options": false,
-                  "is_static": false,
-                  "export_file": "File 1",
-                  "text_width_mm": 25.0,
-                  "text_height_mm": 15.0
                 }
               ]
             },
             {
-              "label": "Slot 2",
-              "x_mm": 0.0,
+              "label": "Slot 3",
+              "x_mm": 60.0,
               "y_mm": 25.0,
               "w_mm": 25.0,
               "h_mm": 25.0,
-              "z": -19,
+              "z": -24,
+              "objects": []
+            },
+            {
+              "label": "Slot 4",
+              "x_mm": 10.0,
+              "y_mm": 25.0,
+              "w_mm": 25.0,
+              "h_mm": 25.0,
+              "z": -25,
               "objects": []
             }
           ]
@@ -116,25 +135,64 @@
           "slots": [
             {
               "label": "Slot 1",
-              "x_mm": 0.0,
+              "x_mm": 60.0,
               "y_mm": 75.0,
               "w_mm": 25.0,
               "h_mm": 25.0,
-              "z": -18,
+              "z": -22,
               "objects": []
             },
             {
               "label": "Slot 2",
-              "x_mm": 0.0,
+              "x_mm": 10.0,
+              "y_mm": 75.0,
+              "w_mm": 25.0,
+              "h_mm": 25.0,
+              "z": -23,
+              "objects": []
+            },
+            {
+              "label": "Slot 3",
+              "x_mm": 60.0,
               "y_mm": 25.0,
               "w_mm": 25.0,
               "h_mm": 25.0,
-              "z": -19,
+              "z": -24,
+              "objects": []
+            },
+            {
+              "label": "Slot 4",
+              "x_mm": 10.0,
+              "y_mm": 25.0,
+              "w_mm": 25.0,
+              "h_mm": 25.0,
+              "z": -25,
               "objects": []
             }
           ]
         }
-      ]
+      ],
+      "FrontsideBarcode": {
+        "type": "barcode",
+        "amazon_label": "565656",
+        "is_options": false,
+        "is_static": false,
+        "label": "Barcode",
+        "w_mm": 20.0,
+        "h_mm": 20.0,
+        "x_mm": 62.125,
+        "y_mm": 26.291666666666668,
+        "outline": "black",
+        "angle": 0.0,
+        "z": 1,
+        "label_fill": "black",
+        "label_font_size": 10,
+        "label_font_family": "Myriad Pro",
+        "owner_major": "",
+        "export_file": "File 1",
+        "text_width_mm": 5.0,
+        "text_height_mm": 5.0
+      }
     }
   }
 }

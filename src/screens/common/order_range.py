@@ -916,7 +916,7 @@ class OrderRangeScreen(Screen):
                 ff = (f or "").strip().lower()
                 if ff == "jpeg":
                     ff = "jpg"
-                if ff in ("pdf", "png", "jpg") and ff not in seen:
+                if ff in ("pdf", "png", "jpg", "bmp") and ff not in seen:
                     seen.add(ff)
                     fmts_norm.append(ff)
             if not fmts_norm:
@@ -1010,7 +1010,7 @@ class OrderRangeScreen(Screen):
                     exporter.save_last_render_as_png(p_png)
                     logger.debug(f"Saved PNG for combiner: {p_png}")
                 # Ensure last render image exists even if PDF not requested
-                if not did_pdf and ("png" in fmts_norm or "jpg" in fmts_norm):
+                if not did_pdf and ("png" in fmts_norm or "jpg" in fmts_norm or "bmp" in fmts_norm):
                     import time as _time
                     tmp_pdf = str((OUTPUT_PATH / f"__tmp_{int(_time.time()*1000)}.pdf").resolve())
                     try:
@@ -1030,6 +1030,10 @@ class OrderRangeScreen(Screen):
                     p_jpg = str(base.with_suffix(".jpg"))
                     exporter.save_last_render_as_jpg(p_jpg)
                     # Track this file as processed
+                    self._processed_files.add(str(base))
+                if "bmp" in fmts_norm:
+                    p_bmp = str(base.with_suffix(".bmp"))
+                    exporter.save_last_render_as_bmp(p_bmp)
                     self._processed_files.add(str(base))
 
             # Render each export file separately
@@ -1945,11 +1949,11 @@ class OrderRangeScreen(Screen):
         for f in fmts:
             if f == "jpeg":
                 f = "jpg"
-            if f in ("pdf", "png", "jpg") and f not in seen:
+            if f in ("pdf", "png", "jpg", "bmp") and f not in seen:
                 seen.add(f)
                 formats_norm.append(f)
         if not formats_norm:
-            messagebox.showerror("Error", "Please enter at least one valid format: pdf, png, jpg.")
+            messagebox.showerror("Error", "Please enter at least one valid format: pdf, png, jpg, bmp.")
             return
         dpi_s = (self.dpi_var.get() if hasattr(self, "dpi_var") else "1200").strip()
         try:

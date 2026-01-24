@@ -49,7 +49,12 @@ class SDKServer:
         func = getattr(self.sdk, method)
         result = func(**params)
         
-        if hasattr(result, 'value'):
+        if isinstance(result, tuple):
+            result = list(result)
+            for i, item in enumerate(result):
+                if hasattr(item, 'value'):
+                    result[i] = item.value
+        elif hasattr(result, 'value'):
             result = result.value
         
         return {"success": True, "result": result}

@@ -5,6 +5,7 @@ from src.screens.nonsticker import *
 from src.screens.sticker import *
 from src.core.state import close_sdk_client
 
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s %(name)s] [%(levelname)s] %(message)s")
     logging.getLogger("PIL").setLevel(logging.WARNING)

@@ -2,7 +2,7 @@
   "ASINs": [
     [
       "ASIN1",
-      10,
+      1,
       false
     ]
   ],
@@ -46,10 +46,5 @@
       }
     ]
   },
-  "ASINObjects": {
-    "ASIN1": {
-      "Frontside": [],
-      "Backside": []
-    }
-  }
+  "ASINObjects": {}
 }
