@@ -27,7 +27,11 @@ from src.canvas import (
     PdfExporter, 
     FontsManager, 
     CustomImagesManager, 
-    EzdExporter
+    EzdExporter,
+    PenSettings,
+    PenSettingsDialog,
+    PenCollection,
+    PenManager
 )
 from .results_download import NStickerResultsDownloadScreen
 
@@ -169,6 +173,11 @@ class NStickerCanvasScreen(Screen):
         self._majors: dict[str, int] = {}
         self._scene_store: dict[str, list[dict]] = {"front": [], "back": []}
         self._current_side: str = "front"
+        self._pen_collection: PenCollection = PenCollection()
+        self._pen_manager: PenManager = PenManager(
+            lambda: self._pen_collection,
+            lambda c: setattr(self, "_pen_collection", c)
+        )
 
         left_bar = tk.Frame(self, bg=TOP_MENU_BG, width=250)
         left_bar.pack(side="left", fill="y", padx=0, pady=0)
@@ -1614,7 +1623,7 @@ class NStickerCanvasScreen(Screen):
         amazon_header_content = tk.Frame(amazon_header, bg=TOP_MENU_CONTAINER_BG, cursor="hand2")
         amazon_header_content.pack(side="top", fill="x", padx=8, pady=6)
         
-        amazon_header_lbl = tk.Label(amazon_header_content, text="▼ Amazon Specific", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
+        amazon_header_lbl = tk.Label(amazon_header_content, text="▼ Specific Options", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
         amazon_header_lbl.pack(side="left")
         
         fields_outer2 = tk.Frame(left_bar, bg=TOP_MENU_BG)
@@ -1647,9 +1656,28 @@ class NStickerCanvasScreen(Screen):
             textvariable=self.sel_export_file,
             state="readonly",
             values=self._export_files_list,
-            width=16
+            width=16,
+            justify="center"
         )
         self._file_selector_left.pack(side="left", fill="x", expand=True, padx=(4, 0))
+
+        pen_row = tk.Frame(row3, bg=TOP_MENU_BG)
+        pen_row.pack(side="top", fill="x", pady=2)
+        tk.Label(pen_row, text="Pen:", fg=TOP_MENU_LABEL_FG, bg=TOP_MENU_BG, width=5, anchor="w", font=("Segoe UI", 10)).pack(side="left")
+        self.sel_pen_number = tk.StringVar(value="0")
+        self._pen_entry = tk.Entry(
+            pen_row,
+            textvariable=self.sel_pen_number,
+            bg=TOP_MENU_INPUT_BG,
+            fg=TOP_MENU_TEXT_FG,
+            insertbackground="white",
+            relief="flat",
+            bd=0,
+            width=12,
+            font=("Segoe UI", 10),
+            justify="center"
+        )
+        self._pen_entry.pack(side="left", fill="x", expand=True, padx=(4, 0))
 
         static_row = tk.Frame(row3, bg=TOP_MENU_BG)
         static_row.pack(side="top", anchor="w", pady=(8, 2))
@@ -1793,11 +1821,11 @@ class NStickerCanvasScreen(Screen):
         def _toggle_amazon():
             if self._amazon_expanded:
                 self._amazon_expanded = False
-                amazon_header_lbl.config(text="▶ Amazon Specific")
+                amazon_header_lbl.config(text="▶ Specific Options")
                 _animate_section(amazon_wrapper, fields_container2, amazon_header_lbl, '_amazon_expanded', '_amazon_animation_id', 0, amazon_wrapper.winfo_height(), 8)
             else:
                 self._amazon_expanded = True
-                amazon_header_lbl.config(text="▼ Amazon Specific")
+                amazon_header_lbl.config(text="▼ Specific Options")
                 fields_container2.pack(side="top", fill="both", expand=True)
                 fields_container2.update_idletasks()
                 target_height = fields_container2.winfo_reqheight()
@@ -2244,9 +2272,10 @@ class NStickerCanvasScreen(Screen):
             lbl.bind("<Leave>", on_leave)
             return btn_frame
 
-        _create_pens_button(pens_frame, "Settings", lambda: None, is_settings=True)
-        _create_pens_button(pens_frame, "Create Pen", lambda: None)
-        _create_pens_button(pens_frame, "Delete Pen", lambda: None)
+        _create_pens_button(pens_frame, "Settings", self._open_pen_settings, is_settings=True)
+        _create_pens_button(pens_frame, "Reset", lambda: self._pen_manager.reset(self))
+        _create_pens_button(pens_frame, "Import", lambda: self._pen_manager.import_from_file(self))
+        _create_pens_button(pens_frame, "Export", lambda: self._pen_manager.export_to_file(self))
 
 
         shortcuts = tk.Frame(bar, bg="black")
@@ -2263,6 +2292,28 @@ class NStickerCanvasScreen(Screen):
                 return
             obj["export_file"] = str(self.sel_export_file.get() or "File 1").strip()
         self.sel_export_file.trace_add("write", _on_export_file_change)
+
+        def _on_pen_number_change(*_):
+            sel = getattr(self.selection, "_selected", None)
+            if not sel or sel not in self._items:
+                return
+            obj = self._items[sel]
+            if obj.get("type") in ("slot", "major"):
+                return
+            pen_val = self.sel_pen_number.get().strip()
+            if not pen_val:
+                return
+            valid = False
+            if pen_val.lstrip("-").isdigit():
+                pen_int = int(pen_val)
+                if 0 <= pen_int <= 255:
+                    obj["pen_number"] = pen_int
+                    valid = True
+            if not valid:
+                messagebox.showerror("Invalid Pen Number", "Pen number must be between 0 and 255")
+                self.sel_pen_number.set("0")
+                obj["pen_number"] = 0
+        self.sel_pen_number.trace_add("write", _on_pen_number_change)
 
         self.custom_images = CustomImagesManager(self)
 
@@ -2873,6 +2924,120 @@ class NStickerCanvasScreen(Screen):
         self._raise_all_labels()
         self.selection._reorder_by_z()
 
+    def _open_pen_settings(self):
+        dialog = PenSettingsDialog(self, self._pen_collection)
+        result = dialog.show()
+        if result is not None:
+            self._pen_collection = result
+
+    def _serialize_pens(self) -> list:
+        pens_data = []
+        for i in range(PenCollection.TOTAL_PENS):
+            pen = self._pen_collection.get_pen(i)
+            pens_data.append({
+                "enabled": pen.enabled,
+                "color": pen.color,
+                "jump_speed": pen.jump_speed,
+                "jump_position_tc": pen.jump_position_tc,
+                "jump_dist_tc": pen.jump_dist_tc,
+                "end_compensate": pen.end_compensate,
+                "acc_distance": pen.acc_distance,
+                "time_per_point": pen.time_per_point,
+                "vector_point_mode": pen.vector_point_mode,
+                "pulse_per_point": pen.pulse_per_point,
+                "yag_optimized_mode": pen.yag_optimized_mode,
+                "wobble_enabled": pen.wobble_enabled,
+                "wobble_diameter": pen.wobble_diameter,
+                "wobble_distance": pen.wobble_distance,
+                "end_add_points_enabled": pen.end_add_points_enabled,
+                "end_add_points_count": pen.end_add_points_count,
+                "end_add_points_distance": pen.end_add_points_distance,
+                "end_add_points_time_per_point": pen.end_add_points_time_per_point,
+                "end_add_points_cycles": pen.end_add_points_cycles,
+                "loop_count": pen.loop_count,
+                "speed": pen.speed,
+                "power": pen.power,
+                "frequency": pen.frequency,
+                "start_tc": pen.start_tc,
+                "laser_off_tc": pen.laser_off_tc,
+                "end_tc": pen.end_tc,
+                "polygon_tc": pen.polygon_tc,
+                "hatch_enable_contour": pen.hatch_enable_contour,
+                "hatch_contour_first": pen.hatch_contour_first,
+                "hatch1_enabled": pen.hatch1_enabled,
+                "hatch1_pen": pen.hatch1_pen,
+                "hatch1_attrib": pen.hatch1_attrib,
+                "hatch1_edge_dist": pen.hatch1_edge_dist,
+                "hatch1_line_dist": pen.hatch1_line_dist,
+                "hatch1_start_offset": pen.hatch1_start_offset,
+                "hatch1_end_offset": pen.hatch1_end_offset,
+                "hatch1_angle": pen.hatch1_angle,
+                "hatch2_enabled": pen.hatch2_enabled,
+                "hatch2_pen": pen.hatch2_pen,
+                "hatch2_attrib": pen.hatch2_attrib,
+                "hatch2_edge_dist": pen.hatch2_edge_dist,
+                "hatch2_line_dist": pen.hatch2_line_dist,
+                "hatch2_start_offset": pen.hatch2_start_offset,
+                "hatch2_end_offset": pen.hatch2_end_offset,
+                "hatch2_angle": pen.hatch2_angle,
+            })
+        return pens_data
+
+    def _deserialize_pens(self, pens_data: list):
+        new_collection = PenCollection()
+        for i, pen_data in enumerate(pens_data):
+            if not isinstance(pen_data, dict):
+                continue
+            pen = PenSettings(
+                enabled=pen_data.get("enabled", False),
+                color=pen_data.get("color", "#000000"),
+                jump_speed=pen_data.get("jump_speed", 4000.0),
+                jump_position_tc=pen_data.get("jump_position_tc", 500.0),
+                jump_dist_tc=pen_data.get("jump_dist_tc", 100.0),
+                end_compensate=pen_data.get("end_compensate", 0.0),
+                acc_distance=pen_data.get("acc_distance", 0.0),
+                time_per_point=pen_data.get("time_per_point", 0.1),
+                vector_point_mode=pen_data.get("vector_point_mode", False),
+                pulse_per_point=pen_data.get("pulse_per_point", 1),
+                yag_optimized_mode=pen_data.get("yag_optimized_mode", False),
+                wobble_enabled=pen_data.get("wobble_enabled", False),
+                wobble_diameter=pen_data.get("wobble_diameter", 1.0),
+                wobble_distance=pen_data.get("wobble_distance", 0.5),
+                end_add_points_enabled=pen_data.get("end_add_points_enabled", False),
+                end_add_points_count=pen_data.get("end_add_points_count", 1),
+                end_add_points_distance=pen_data.get("end_add_points_distance", 0.01),
+                end_add_points_time_per_point=pen_data.get("end_add_points_time_per_point", 1.0),
+                end_add_points_cycles=pen_data.get("end_add_points_cycles", 1),
+                loop_count=pen_data.get("loop_count", 1),
+                speed=pen_data.get("speed", 1600.0),
+                power=pen_data.get("power", 5.0),
+                frequency=pen_data.get("frequency", 30.0),
+                start_tc=pen_data.get("start_tc", -200.0),
+                laser_off_tc=pen_data.get("laser_off_tc", 200.0),
+                end_tc=pen_data.get("end_tc", 300.0),
+                polygon_tc=pen_data.get("polygon_tc", 100.0),
+                hatch_enable_contour=pen_data.get("hatch_enable_contour", True),
+                hatch_contour_first=pen_data.get("hatch_contour_first", True),
+                hatch1_enabled=pen_data.get("hatch1_enabled", False),
+                hatch1_pen=pen_data.get("hatch1_pen", 0),
+                hatch1_attrib=pen_data.get("hatch1_attrib", 0),
+                hatch1_edge_dist=pen_data.get("hatch1_edge_dist", 0.0),
+                hatch1_line_dist=pen_data.get("hatch1_line_dist", 0.05),
+                hatch1_start_offset=pen_data.get("hatch1_start_offset", 0.0),
+                hatch1_end_offset=pen_data.get("hatch1_end_offset", 0.0),
+                hatch1_angle=pen_data.get("hatch1_angle", 0.0),
+                hatch2_enabled=pen_data.get("hatch2_enabled", False),
+                hatch2_pen=pen_data.get("hatch2_pen", 0),
+                hatch2_attrib=pen_data.get("hatch2_attrib", 0),
+                hatch2_edge_dist=pen_data.get("hatch2_edge_dist", 0.0),
+                hatch2_line_dist=pen_data.get("hatch2_line_dist", 0.05),
+                hatch2_start_offset=pen_data.get("hatch2_start_offset", 0.0),
+                hatch2_end_offset=pen_data.get("hatch2_end_offset", 0.0),
+                hatch2_angle=pen_data.get("hatch2_angle", 90.0),
+            )
+            new_collection.set_pen(i, pen)
+        self._pen_collection = new_collection
+
     def _on_jig_change(self, *_):
         # Redraw jig and re-create slots to fill new area
         self._redraw_jig()
@@ -3396,6 +3561,7 @@ class NStickerCanvasScreen(Screen):
                                             new_meta["is_options"] = bool(om.get("is_options", False))
                                             new_meta["is_static"] = bool(om.get("is_static", False))
                                             new_meta["export_file"] = str(om.get("export_file", "File 1"))
+                                            new_meta["pen_number"] = int(om.get("pen_number", 0))
                                         except Exception as e:
                                             logger.exception("Failed to copy image flags for clone")
                                             raise
@@ -3439,6 +3605,7 @@ class NStickerCanvasScreen(Screen):
                                                 self._items[tid]["is_options"] = bool(om.get("is_options", False))
                                                 self._items[tid]["is_static"] = bool(om.get("is_static", False))
                                                 self._items[tid]["export_file"] = str(om.get("export_file", "File 1"))
+                                                self._items[tid]["pen_number"] = int(om.get("pen_number", 0))
                                             except Exception as e:
                                                 logger.exception("Failed to copy text flags for clone")
                                                 raise
@@ -4542,6 +4709,8 @@ class NStickerCanvasScreen(Screen):
                             "mask_path": _to_rel(str(Path(*mask_path_parts))) if mask_path_parts else "",
                             # Export file assignment
                             "export_file": str(it.get("export_file", "File 1")),
+                            # Pen number
+                            "pen_number": int(it.get("pen_number", 0)),
                             # Custom images dict (name -> path mapping) and selected custom image
                             "custom_images": dict(it.get("custom_images", {})),
                             "custom_image": str(it.get("custom_image", "") or ""),
@@ -4577,6 +4746,8 @@ class NStickerCanvasScreen(Screen):
                             "is_static": bool(it.get("is_static", False)),
                             # Export file assignment
                             "export_file": str(it.get("export_file", "File 1")),
+                            # Pen number
+                            "pen_number": int(it.get("pen_number", 0)),
                             # EZD text dimensions
                             "text_width_mm": float(it.get("text_width_mm", 5.0)),
                             "text_height_mm": float(it.get("text_height_mm", 5.0)),
@@ -4628,6 +4799,8 @@ class NStickerCanvasScreen(Screen):
                             "is_static": bool(it.get("is_static", False)),
                             # Export file assignment
                             "export_file": str(it.get("export_file", "File 1")),
+                            # Pen number
+                            "pen_number": int(it.get("pen_number", 0)),
                             # EZD text dimensions
                             "text_width_mm": float(it.get("text_width_mm", 5.0)),
                             "text_height_mm": float(it.get("text_height_mm", 5.0)),
@@ -4675,6 +4848,8 @@ class NStickerCanvasScreen(Screen):
                             "is_static": bool(it.get("is_static", False)),
                             # Export file assignment
                             "export_file": str(it.get("export_file", "File 1")),
+                            # Pen number
+                            "pen_number": int(it.get("pen_number", 0)),
                             # EZD text dimensions
                             "text_width_mm": float(it.get("text_width_mm", 5.0)),
                             "text_height_mm": float(it.get("text_height_mm", 5.0)),
@@ -4895,6 +5070,7 @@ class NStickerCanvasScreen(Screen):
                 "SkuName": state.sku_name or "",
                 "Scene": scene_top,
                 "ASINObjects": asin_objects_map,
+                "Pens": self._serialize_pens(),
             }
         except Exception as e:
             logger.exception(f"Failed to build combined JSON: {e}")
@@ -5336,6 +5512,7 @@ class NStickerCanvasScreen(Screen):
                         "owner_major": str(meta.get("owner_major", "")),
                         # Export file assignment
                         "export_file": str(meta.get("export_file", "File 1")),
+                        "pen_number": int(meta.get("pen_number", 0)),
                         # EZD text dimensions
                         "text_width_mm": float(meta.get("text_width_mm", 5.0)),
                         "text_height_mm": float(meta.get("text_height_mm", 5.0)),
@@ -5382,6 +5559,7 @@ class NStickerCanvasScreen(Screen):
                         "owner_major": str(meta.get("owner_major", "")),
                         # Export file assignment
                         "export_file": str(meta.get("export_file", "File 1")),
+                        "pen_number": int(meta.get("pen_number", 0)),
                         # Custom images (name -> path mapping) and selected custom image
                         "custom_images": custom_imgs_dict,
                         "custom_image": custom_img_selected,
@@ -5412,6 +5590,7 @@ class NStickerCanvasScreen(Screen):
                         "owner_major": str(meta.get("owner_major", "")),
                         # Export file assignment
                         "export_file": str(meta.get("export_file", "File 1")),
+                        "pen_number": int(meta.get("pen_number", 0)),
                         # EZD text dimensions
                         "text_width_mm": float(meta.get("text_width_mm", 5.0)),
                         "text_height_mm": float(meta.get("text_height_mm", 5.0)),
@@ -5442,6 +5621,7 @@ class NStickerCanvasScreen(Screen):
                         "owner_major": str(meta.get("owner_major", "")),
                         # Export file assignment
                         "export_file": str(meta.get("export_file", "File 1")),
+                        "pen_number": int(meta.get("pen_number", 0)),
                         # EZD text dimensions
                         "text_width_mm": float(meta.get("text_width_mm", 5.0)),
                         "text_height_mm": float(meta.get("text_height_mm", 5.0)),
@@ -5512,6 +5692,8 @@ class NStickerCanvasScreen(Screen):
                         self._items[rid]["is_static"] = self._as_bool(it.get("is_static", False))
                         # Restore export file assignment
                         self._items[rid]["export_file"] = str(it.get("export_file", "File 1"))
+                        # Restore pen number
+                        self._items[rid]["pen_number"] = int(it.get("pen_number", 0))
                         z_val = it.get("z")
                         if z_val is not None:
                             self._items[rid]["z"] = int(z_val)
@@ -5607,6 +5789,8 @@ class NStickerCanvasScreen(Screen):
                         meta["is_static"] = self._as_bool(it.get("is_static", False))
                         # Restore export file assignment
                         meta["export_file"] = str(it.get("export_file", "File 1"))
+                        # Restore pen number
+                        meta["pen_number"] = int(it.get("pen_number", 0))
                         # Restore custom images dict and selected custom image
                         custom_imgs_from_json = dict(it.get("custom_images", {}))
                         meta["custom_images"] = custom_imgs_from_json
@@ -5655,6 +5839,8 @@ class NStickerCanvasScreen(Screen):
                                 self._items[tid]["is_static"] = self._as_bool(it.get("is_static", False))
                                 # Restore export file assignment
                                 self._items[tid]["export_file"] = str(it.get("export_file", "File 1"))
+                                # Restore pen number
+                                self._items[tid]["pen_number"] = int(it.get("pen_number", 0))
                             except Exception:
                                 logger.exception("Failed to restore flags for text item")
                             # Restore ownership
@@ -5704,6 +5890,8 @@ class NStickerCanvasScreen(Screen):
                                 self._items[rid]["is_static"] = self._as_bool(it.get("is_static", False))
                                 # Restore export file assignment
                                 self._items[rid]["export_file"] = str(it.get("export_file", "File 1"))
+                                # Restore pen number
+                                self._items[rid]["pen_number"] = int(it.get("pen_number", 0))
                             except Exception:
                                 logger.exception("Failed to restore flags for text-rect item")
                             # Restore ownership
@@ -5754,6 +5942,8 @@ class NStickerCanvasScreen(Screen):
                         self._items[rid]["is_static"] = self._as_bool(it.get("is_static", False))
                         # Restore export file assignment
                         self._items[rid]["export_file"] = str(it.get("export_file", "File 1"))
+                        # Restore pen number
+                        self._items[rid]["pen_number"] = int(it.get("pen_number", 0))
                         z_val = it.get("z")
                         if z_val is not None:
                             self._items[rid]["z"] = int(z_val)
@@ -6141,6 +6331,11 @@ class NStickerCanvasScreen(Screen):
                     logger.debug(f"[RESTORE] Converted '{asin}' from grouped to flat: front={len(front_flat)}objs, back={len(back_flat)}objs")
 
         def _do_restore():
+            # Restore pen settings if present
+            pens_data = data.get("Pens")
+            if pens_data and isinstance(pens_data, list) and len(pens_data) == PenCollection.TOTAL_PENS:
+                self._deserialize_pens(pens_data)
+            
             # If majors present in new format, replace presets and render rectangles
             try:
                 if major_sizes_new:

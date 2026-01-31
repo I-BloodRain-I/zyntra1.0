@@ -90,3 +90,12 @@ def test_delegates_exist():
         assert hasattr(canvas, delegate)
         assert callable(getattr(canvas, delegate))
     canvas.destroy()
+
+def test_pen_collection_exist():
+    app, canvas = get_canvas()
+    from src.canvas.pen_settings import PenCollection
+    assert hasattr(canvas, '_pen_collection')
+    assert isinstance(canvas._pen_collection, PenCollection)
+    assert hasattr(canvas, '_open_pen_settings')
+    assert callable(canvas._open_pen_settings)
+    canvas.destroy()

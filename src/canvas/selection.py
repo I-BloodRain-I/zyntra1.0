@@ -1237,6 +1237,8 @@ class CanvasSelection:
                     self.s.sel_is_static.set(False)
                 if hasattr(self.s, "sel_export_file"):
                     self.s.sel_export_file.set("")
+                if hasattr(self.s, "sel_pen_number"):
+                    self.s.sel_pen_number.set("0")
                 # Hide custom images block when nothing selected
                 if hasattr(self.s, "sel_custom_image_line"):
                     try:
@@ -1374,6 +1376,13 @@ class CanvasSelection:
                     self.s.sel_export_file.set(str(meta.get("export_file", "File 1")))
                 else:
                     self.s.sel_export_file.set("")
+            # Update pen number selector (ignore for slots and majors)
+            if hasattr(self.s, "sel_pen_number"):
+                obj_type = meta.get("type", "")
+                if obj_type not in ("slot", "major"):
+                    self.s.sel_pen_number.set(str(meta.get("pen_number", 0)))
+                else:
+                    self.s.sel_pen_number.set("0")
             # Show/hide and populate custom image combobox for image type
             if hasattr(self.s, "sel_custom_image_line") and hasattr(self.s, "custom_images"):
                 obj_type = meta.get("type", "")

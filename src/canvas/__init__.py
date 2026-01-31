@@ -10,3 +10,4 @@ from .fonts import FontsManager
 from .custom_images import CustomImagesManager
 from .pdf_combiner import PDFCombiner, PDFInfo
 from .ezd_export import EzdExporter
+from .pen_settings import PenSettings, PenSettingsDialog, PenCollection, PenManager
