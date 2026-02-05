@@ -1,13 +1,22 @@
 from typing import Tuple, Optional, Union
+import sys
 
 import tkinter as tk
 import tkinter.font as tkfont
 from PIL import Image
+from PySide6.QtWidgets import QApplication
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtGui import QImage, QPainter
 from PySide6.QtCore import QRectF, Qt
 
 from src.core import EntryInfo, ButtonInfo, PillLabelInfo, TextInfo
+
+_qt_app = None
+
+def _ensure_qt_app():
+    global _qt_app
+    if _qt_app is None and QApplication.instance() is None:
+        _qt_app = QApplication(sys.argv)
 
 
 def _rounded_rect(
@@ -370,6 +379,7 @@ def svg_to_png(svg_path: str, width: int = None, height: int = None, device_pixe
     Returns:
         PIL Image.
     """
+    _ensure_qt_app()
     renderer = QSvgRenderer(svg_path)
     # Определим естественный размер SVG
     default_size = renderer.defaultSize()  # QSize

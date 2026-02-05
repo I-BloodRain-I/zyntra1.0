@@ -1356,10 +1356,321 @@ class PdfExporter:
         except Exception as e:
             logger.exception(f"Failed to save BMP: {e}")
             raise
-        
-        # out_rgb.save(path, "PDF", resolution=dpi)
-        
-        
+
+    def render_scene_to_svg(
+        self,
+        path: str,
+        items: list[dict],
+        jig_w_mm: float,
+        jig_h_mm: float,
+        dpi: int = 300,
+    ) -> None:
+        """Render the entire scene to an SVG file with individual objects preserved.
+
+        Each object (image, text, rect, barcode) is rendered as a separate SVG element.
+        Images are embedded as base64 data URIs.
+        Text blocks and barcodes are rasterized to match PDF export quality.
+        Slots are rendered as stroked rectangles.
+        """
+        from PIL import Image as _PIL_Image
+        from PIL import ImageDraw as _PIL_Draw
+        from PIL import ImageFont as _PIL_Font
+        import barcode
+        from barcode.writer import ImageWriter
+        import base64
+        import arabic_reshaper
+        from bidi.algorithm import get_display
+
+        w_mm = float(jig_w_mm)
+        h_mm = float(jig_h_mm)
+        px_per_mm = float(dpi) / 25.4
+
+        def f(num: float) -> str:
+            return f"{float(num):.3f}"
+
+        def _escape_xml(s: str) -> str:
+            return (
+                str(s)
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace('"', "&quot;")
+                .replace("'", "&apos;")
+            )
+
+        def _load_fonts_map() -> dict:
+            mp_path = FONTS_PATH / "fonts.json"
+            if mp_path.exists():
+                import json as _json
+                with open(mp_path, "r", encoding="utf-8") as fj:
+                    data = _json.load(fj)
+                    if isinstance(data, dict):
+                        return data
+            return {"Myriad Pro": "MyriadPro-Regular"}
+
+        _fonts_map = _load_fonts_map()
+
+        def _font_path_for_family(family: str) -> str | None:
+            file_stem = str(_fonts_map.get(family, "MyriadPro-Regular"))
+            ttf = FONTS_PATH / f"{file_stem}.ttf"
+            if ttf.exists():
+                return str(ttf)
+            otf = FONTS_PATH / f"{file_stem}.otf"
+            if otf.exists():
+                return str(otf)
+            fp = FONTS_PATH / "MyriadPro-Regular.ttf"
+            if fp.exists():
+                return str(fp)
+            return None
+
+        def _truetype_for_family(family: str, size_px: int):
+            path = _font_path_for_family(family)
+            if path:
+                return _PIL_Font.truetype(path, max(1, int(size_px)))
+            fp = FONTS_PATH / "MyriadPro-Regular.ttf"
+            if fp.exists():
+                return _PIL_Font.truetype(str(fp), max(1, int(size_px)))
+            return _PIL_Font.load_default()
+
+        def _pil_image_to_data_uri(pil_img) -> str:
+            if pil_img.mode != "RGBA":
+                pil_img = pil_img.convert("RGBA")
+            buffer = BytesIO()
+            pil_img.save(buffer, format="PNG")
+            b64 = base64.b64encode(buffer.getvalue()).decode("ascii")
+            return f"data:image/png;base64,{b64}"
+
+        def _image_to_data_uri(img_path: str, w_mm: float, h_mm: float, angle: float = 0.0) -> str | None:
+            ext = os.path.splitext(img_path)[1].lower()
+            if ext == ".svg":
+                svg_img = svg_to_png(img_path, width=int(w_mm * 10), height=int(h_mm * 10), device_pixel_ratio=2.0)
+                if svg_img is None:
+                    return None
+                return _pil_image_to_data_uri(svg_img)
+            if not os.path.isfile(img_path):
+                return None
+            img = _PIL_Image.open(img_path)
+            if img.mode != "RGBA":
+                img = img.convert("RGBA")
+            target_w = max(1, int(w_mm * 10))
+            target_h = max(1, int(h_mm * 10))
+            img = img.resize((target_w, target_h), _PIL_Image.LANCZOS)
+            return _pil_image_to_data_uri(img)
+
+        def _hex_to_rgb(hex_str: str) -> str:
+            s = str(hex_str or "#000000").strip()
+            if s.startswith("#") and len(s) == 7:
+                return s
+            return "#000000"
+
+        def _render_barcode_to_image(bc_text: str, w_mm: float, h_mm: float) -> _PIL_Image.Image:
+            w_px = max(1, int(round(w_mm * px_per_mm)))
+            h_px = max(1, int(round(h_mm * px_per_mm)))
+            
+            if not bc_text.strip():
+                bc_text = "TEST"
+            
+            code128 = barcode.get_barcode_class('code128')
+            writer = ImageWriter()
+            barcode_instance = code128(bc_text, writer=writer)
+            
+            buffer = BytesIO()
+            barcode_instance.write(buffer, options={'write_text': False})
+            buffer.seek(0)
+            
+            barcode_img = _PIL_Image.open(buffer).convert("RGBA")
+            
+            data__ = np.array(barcode_img)
+            r, g, b, a = data__[:, :, 0], data__[:, :, 1], data__[:, :, 2], data__[:, :, 3]
+            white_mask = (r > 250) & (g > 250) & (b > 250)
+            data__[:, :, 3] = np.where(white_mask, 0, 255)
+            barcode_img = _PIL_Image.fromarray(data__, mode="RGBA")
+            
+            barcode_h_px = int(h_px * 0.7)
+            barcode_text_h_px = int(h_px * 0.15)
+            reference_text_h_px = h_px - barcode_h_px - barcode_text_h_px
+            padding = max(2, int(h_px * 0.01))
+            
+            barcode_resized = barcode_img.resize((w_px, barcode_h_px), _PIL_Image.LANCZOS)
+            
+            combined_img = _PIL_Image.new("RGBA", (w_px, h_px), (0, 0, 0, 0))
+            combined_img.paste(barcode_resized, (0, 0), barcode_resized.split()[-1])
+            
+            text_draw = _PIL_Draw.Draw(combined_img, "RGBA")
+            
+            if bc_text and barcode_text_h_px > 0:
+                bc_text_font_size_px = max(8, int(barcode_text_h_px * 0.8))
+                bc_text_font = _truetype_for_family("Myriad Pro", bc_text_font_size_px)
+                
+                bbox = text_draw.textbbox((0, 0), bc_text, font=bc_text_font)
+                text_w_val = bbox[2] - bbox[0]
+                
+                text_x = (w_px - text_w_val) // 2
+                text_y = barcode_h_px + padding
+                text_draw.text((text_x, text_y), bc_text, font=bc_text_font, fill=(0, 0, 0, 255))
+            
+            return combined_img
+
+        lines: list[str] = []
+        lines.append('<?xml version="1.0" encoding="UTF-8"?>')
+        lines.append(
+            f'<svg xmlns="http://www.w3.org/2000/svg" '
+            f'xmlns:xlink="http://www.w3.org/1999/xlink" '
+            f'width="{f(w_mm)}mm" height="{f(h_mm)}mm" '
+            f'viewBox="0 0 {f(w_mm)} {f(h_mm)}">'
+        )
+
+        lines.append(f'  <rect x="0" y="0" width="{f(w_mm)}" height="{f(h_mm)}" fill="none" stroke="#000000" stroke-width="0.3"/>')
+
+        sorted_items = sorted(items, key=lambda x: x.get("z", 0))
+
+        for it in sorted_items:
+            typ = str(it.get("type", ""))
+
+            if typ == "slot":
+                x_mm = float(it.get("x_mm", 0.0))
+                y_mm = float(it.get("y_mm", 0.0))
+                sw_mm = float(it.get("w_mm", 0.0))
+                sh_mm = float(it.get("h_mm", 0.0))
+                label = _escape_xml(str(it.get("label", "")))
+                lines.append(
+                    f'  <g class="slot">'
+                    f'<rect x="{f(x_mm)}" y="{f(y_mm)}" width="{f(sw_mm)}" height="{f(sh_mm)}" '
+                    f'fill="none" stroke="#9a9a9a" stroke-width="0.2"/>'
+                )
+                if label:
+                    cx = x_mm + sw_mm / 2.0
+                    cy = y_mm + sh_mm / 2.0
+                    lines.append(
+                        f'    <text x="{f(cx)}" y="{f(cy)}" font-size="2" fill="#c8c8c8" '
+                        f'text-anchor="middle" dominant-baseline="central">{label}</text>'
+                    )
+                lines.append('  </g>')
+
+            elif typ == "image":
+                x_mm = float(it.get("x_mm", 0.0))
+                y_mm = float(it.get("y_mm", 0.0))
+                iw_mm = float(it.get("w_mm", 0.0))
+                ih_mm = float(it.get("h_mm", 0.0))
+                angle = float(it.get("angle", 0.0) or 0.0)
+                img_path = str(it.get("path", ""))
+                loaded_img = it.get("loaded_image", None)
+
+                data_uri = None
+                if loaded_img is not None:
+                    data_uri = _pil_image_to_data_uri(loaded_img)
+                elif img_path:
+                    data_uri = _image_to_data_uri(img_path, iw_mm, ih_mm, angle)
+
+                if data_uri:
+                    cx = x_mm + iw_mm / 2.0
+                    cy = y_mm + ih_mm / 2.0
+                    transform = ""
+                    if abs(angle) > 0.001:
+                        transform = f' transform="rotate({f(-angle)}, {f(cx)}, {f(cy)})"'
+                    lines.append(
+                        f'  <image x="{f(x_mm)}" y="{f(y_mm)}" width="{f(iw_mm)}" height="{f(ih_mm)}" '
+                        f'xlink:href="{data_uri}"{transform} preserveAspectRatio="none"/>'
+                    )
+
+            elif typ == "text":
+                x_mm = float(it.get("x_mm", 0.0))
+                y_mm = float(it.get("y_mm", 0.0))
+                text_content = str(it.get("text", ""))
+                fill_hex = str(it.get("fill", "#ffffff"))
+                font_size_pt = float(it.get("font_size_pt", 12))
+                font_family = str(it.get("font_family", "Myriad Pro"))
+                angle = float(it.get("angle", 0.0) or 0.0)
+
+                # For svg text bigger than I have ~ 20%
+                font_size_pt *= 0.8
+                
+                fill_color = _hex_to_rgb(fill_hex)
+                
+                reshaped_text = arabic_reshaper.reshape(text_content)
+                display_text = get_display(reshaped_text)
+                escaped_text = _escape_xml(display_text)
+                
+                transform = ""
+                if abs(angle) > 0.001:
+                    transform = f' transform="rotate({f(-angle)}, {f(x_mm)}, {f(y_mm)})"'
+                
+                lines.append(
+                    f'  <text x="{f(x_mm)}" y="{f(y_mm)}" font-family="{_escape_xml(font_family)}" '
+                    f'font-size="{f(font_size_pt)}pt" fill="{fill_color}" '
+                    f'text-anchor="middle" dominant-baseline="central"{transform}>{escaped_text}</text>'
+                )
+
+            elif typ == "rect":
+                x_mm = float(it.get("x_mm", 0.0))
+                y_mm = float(it.get("y_mm", 0.0))
+                rw_mm = float(it.get("w_mm", 0.0))
+                rh_mm = float(it.get("h_mm", 0.0))
+                label = str(it.get("label", ""))
+                label_fill_hex = str(it.get("label_fill", "#ffffff"))
+                label_font_size = float(it.get("label_font_size", 10))
+                label_font_family = str(it.get("label_font_family", "Myriad Pro"))
+                angle = float(it.get("angle", 0.0) or 0.0)
+
+                # For svg text bigger than I have ~ 20%
+                label_font_size *= 0.8
+
+                if label:
+                    label_fill = _hex_to_rgb(label_fill_hex)
+                    
+                    reshaped_text = arabic_reshaper.reshape(label)
+                    display_text = get_display(reshaped_text)
+                    escaped_text = _escape_xml(display_text)
+                    
+                    cx = x_mm + rw_mm / 2.0
+                    cy = y_mm + rh_mm / 2.0
+                    
+                    transform = ""
+                    if abs(angle) > 0.001:
+                        transform = f' transform="rotate({f(-angle)}, {f(cx)}, {f(cy)})"'
+                    
+                    lines.append(
+                        f'  <text x="{f(cx)}" y="{f(cy)}" font-family="{_escape_xml(label_font_family)}" '
+                        f'font-size="{f(label_font_size)}pt" fill="{label_fill}" '
+                        f'text-anchor="middle" dominant-baseline="central"{transform}>{escaped_text}</text>'
+                    )
+
+            elif typ == "barcode":
+                x_mm = float(it.get("x_mm", 0.0))
+                y_mm = float(it.get("y_mm", 0.0))
+                bw_mm = float(it.get("w_mm", 0.0))
+                bh_mm = float(it.get("h_mm", 0.0))
+                label = str(it.get("label", "Barcode"))
+                angle = float(it.get("angle", 0.0) or 0.0)
+
+                barcode_img = _render_barcode_to_image(label, bw_mm, bh_mm)
+                
+                if abs(angle) > 0.001:
+                    barcode_img = barcode_img.rotate(float(angle), expand=True, resample=_PIL_Image.BICUBIC, fillcolor=(0, 0, 0, 0))
+                
+                data_uri = _pil_image_to_data_uri(barcode_img)
+                
+                img_w_mm = barcode_img.width / px_per_mm
+                img_h_mm = barcode_img.height / px_per_mm
+                
+                cx = x_mm + bw_mm / 2.0
+                cy = y_mm + bh_mm / 2.0
+                offset_x = cx - img_w_mm / 2.0
+                offset_y = cy - img_h_mm / 2.0
+                
+                lines.append(
+                    f'  <image x="{f(offset_x)}" y="{f(offset_y)}" '
+                    f'width="{f(img_w_mm)}" height="{f(img_h_mm)}" '
+                    f'xlink:href="{data_uri}" preserveAspectRatio="none"/>'
+                )
+
+        lines.append('</svg>')
+
+        with open(path, "w", encoding="utf-8") as fp:
+            fp.write("\n".join(lines))
+
+        logger.info(f"SVG scene exported to: {path}")
+
     def render_jig_to_svg(
         self,
         path: str,

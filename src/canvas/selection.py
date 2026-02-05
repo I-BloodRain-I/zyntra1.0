@@ -1256,6 +1256,8 @@ class CanvasSelection:
             # Also refresh screen controls so text menu hides on deselect
             if hasattr(self.s, "_refresh_text_controls"):
                 self.s._refresh_text_controls()
+            if hasattr(self.s, "_update_hatch_button_state"):
+                self.s._update_hatch_button_state()
             return
         meta = self.s._items.get(cid, {})
         logger.debug("select: selecting item=%s type=%s", cid, meta.get("type"))
@@ -1430,6 +1432,8 @@ class CanvasSelection:
         logger.debug("select: applied z-order after selection of cid=%s", cid)
         if hasattr(self.s, "_refresh_text_controls"):
             self.s._refresh_text_controls()
+        if hasattr(self.s, "_update_hatch_button_state"):
+            self.s._update_hatch_button_state()
 
     def apply_size_to_selection(self):
         """Apply the size values from the UI controls to the selected object.

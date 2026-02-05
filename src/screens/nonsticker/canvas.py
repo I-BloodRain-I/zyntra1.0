@@ -165,6 +165,7 @@ class NStickerCanvasScreen(Screen):
         self._place_slots_for_major = self.majors.place_slots_for_major
         self._render_scene_to_pdf = self.exporter.render_scene_to_pdf
         self._render_jig_to_svg = self.exporter.render_jig_to_svg
+        self._render_scene_to_svg = self.exporter.render_scene_to_svg
         self._render_single_pattern_svg = self.exporter.render_single_pattern_svg
         self._export_scene_to_ezd = self.ezd_exporter.export_scene
 
@@ -1118,7 +1119,7 @@ class NStickerCanvasScreen(Screen):
                 else:
                     btn.configure(bg=TOP_MENU_BUTTON_INACTIVE, fg=TOP_MENU_LABEL_FG, relief="flat")
         
-        for fmt in ["PDF", "JPG", "PNG", "BMP", "EZD"]:
+        for fmt in ["PDF", "JPG", "PNG", "BMP", "SVG", "EZD"]:
             btn = tk.Button(fmt_btns_row, text=fmt, width=4, relief="flat", bd=0,
                            bg=TOP_MENU_BUTTON_INACTIVE, fg=TOP_MENU_LABEL_FG, font=("Segoe UI", 9, "bold"),
                            activebackground="#5a5a5a", activeforeground="white", cursor="hand2",
@@ -2175,7 +2176,7 @@ class NStickerCanvasScreen(Screen):
         pens_header_content = tk.Frame(pens_header, bg=TOP_MENU_CONTAINER_BG, cursor="hand2")
         pens_header_content.pack(side="top", fill="x", padx=8, pady=6)
         
-        pens_header_lbl = tk.Label(pens_header_content, text="▶ Pens", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
+        pens_header_lbl = tk.Label(pens_header_content, text="▶ EzCAD", fg=TOP_MENU_TEXT_FG, bg=TOP_MENU_CONTAINER_BG, font=("Segoe UI", 11, "bold"), cursor="hand2")
         pens_header_lbl.pack(side="left")
         
         pens_outer = tk.Frame(left_bar, bg=TOP_MENU_BG)
@@ -2215,11 +2216,11 @@ class NStickerCanvasScreen(Screen):
         def _toggle_pens():
             if self._pens_expanded:
                 self._pens_expanded = False
-                pens_header_lbl.config(text="▶ Pens")
+                pens_header_lbl.config(text="▶ EzCAD")
                 _animate_pens(0, pens_wrapper.winfo_height(), 8)
             else:
                 self._pens_expanded = True
-                pens_header_lbl.config(text="▼ Pens")
+                pens_header_lbl.config(text="▼ EzCAD")
                 pens_container.pack(side="top", fill="both", expand=True)
                 pens_container.update_idletasks()
                 target_height = pens_container.winfo_reqheight()
@@ -2242,40 +2243,64 @@ class NStickerCanvasScreen(Screen):
         pens_header_lbl.bind("<Leave>", _on_header_leave)
 
 
-        def _create_pens_button(parent, text, command, is_settings=False):
+        def _create_pens_button(parent, text, command, is_settings=False, disabled=False):
             if is_settings:
                 btn_frame = tk.Frame(parent, bg="white", cursor="hand2")
                 fg_color = "black"
                 bg_color = "white"
                 hover_bg = "#e0e0e0"
+                disabled_bg = "#d0d0d0"
+                disabled_fg = "#888888"
             else:
                 btn_frame = tk.Frame(parent, bg=BUTTON_COLOR, cursor="hand2")
                 fg_color = "white"
                 bg_color = BUTTON_COLOR
                 hover_bg = BUTTON_HOVER_COLOR
+                disabled_bg = "#888888"
+                disabled_fg = "#cccccc"
             btn_frame.pack(side="top", fill="x", pady=1)
             lbl = tk.Label(btn_frame, text=text, fg=fg_color, bg=bg_color, font=("Segoe UI", 10, "bold"), pady=4)
             lbl.pack(fill="x")
+            
+            btn_state = {"enabled": not disabled, "fg": fg_color, "bg": bg_color, "hover": hover_bg, "disabled_bg": disabled_bg, "disabled_fg": disabled_fg}
+            
+            def set_enabled(enabled):
+                btn_state["enabled"] = enabled
+                if enabled:
+                    btn_frame.configure(bg=btn_state["bg"], cursor="hand2")
+                    lbl.configure(fg=btn_state["fg"], bg=btn_state["bg"])
+                else:
+                    btn_frame.configure(bg=btn_state["disabled_bg"], cursor="arrow")
+                    lbl.configure(fg=btn_state["disabled_fg"], bg=btn_state["disabled_bg"])
+            
             def on_click(e=None):
-                command()
+                if btn_state["enabled"]:
+                    command()
             def on_enter(e=None):
-                btn_frame.configure(bg=hover_bg)
-                lbl.configure(bg=hover_bg)
+                if btn_state["enabled"]:
+                    btn_frame.configure(bg=btn_state["hover"])
+                    lbl.configure(bg=btn_state["hover"])
             def on_leave(e=None):
-                btn_frame.configure(bg=bg_color)
-                lbl.configure(bg=bg_color)
+                if btn_state["enabled"]:
+                    btn_frame.configure(bg=btn_state["bg"])
+                    lbl.configure(bg=btn_state["bg"])
             btn_frame.bind("<Button-1>", on_click)
             lbl.bind("<Button-1>", on_click)
             btn_frame.bind("<Enter>", on_enter)
             btn_frame.bind("<Leave>", on_leave)
             lbl.bind("<Enter>", on_enter)
             lbl.bind("<Leave>", on_leave)
-            return btn_frame
+            
+            if disabled:
+                set_enabled(False)
+            
+            return {"frame": btn_frame, "label": lbl, "set_enabled": set_enabled}
 
-        _create_pens_button(pens_frame, "Settings", self._open_pen_settings, is_settings=True)
-        _create_pens_button(pens_frame, "Reset", lambda: self._pen_manager.reset(self))
-        _create_pens_button(pens_frame, "Import", lambda: self._pen_manager.import_from_file(self))
-        _create_pens_button(pens_frame, "Export", lambda: self._pen_manager.export_to_file(self))
+        _create_pens_button(pens_frame, "Pen Settings", self._open_pen_settings, is_settings=True)
+        self._hatch_button = _create_pens_button(pens_frame, "Hatch", self._open_hatch_settings, is_settings=True, disabled=True)
+        _create_pens_button(pens_frame, "Reset Pens", lambda: self._pen_manager.reset(self))
+        _create_pens_button(pens_frame, "Import Pens", lambda: self._pen_manager.import_from_file(self))
+        _create_pens_button(pens_frame, "Export Pens", lambda: self._pen_manager.export_to_file(self))
 
 
         shortcuts = tk.Frame(bar, bg="black")
@@ -2930,13 +2955,42 @@ class NStickerCanvasScreen(Screen):
         if result is not None:
             self._pen_collection = result
 
+    def _open_hatch_settings(self):
+        sel = getattr(self.selection, "_selected", None)
+        if not sel or sel not in self._items:
+            return
+        obj = self._items[sel]
+        if obj.get("type") in ("slot", "major"):
+            return
+        from src.canvas.hatch_settings import HatchSettings, HatchSettingsDialog
+        current_hatch = obj.get("hatch_settings")
+        hatch_obj = HatchSettings.from_dict(current_hatch) if current_hatch else HatchSettings()
+        dialog = HatchSettingsDialog(self, hatch_obj)
+        result = dialog.show()
+        if result is not None:
+            obj["hatch_settings"] = result.to_dict()
+
+    def _update_hatch_button_state(self):
+        if not hasattr(self, "_hatch_button") or self._hatch_button is None:
+            return
+        sel = getattr(self.selection, "_selected", None)
+        enabled = False
+        if sel and sel in self._items:
+            obj = self._items[sel]
+            obj_type = obj.get("type")
+            if obj_type not in ("slot", "major"):
+                if obj_type == "image":
+                    svg_source = obj.get("svg_source_path")
+                    enabled = bool(svg_source)
+                else:
+                    enabled = True
+        self._hatch_button["set_enabled"](enabled)
+
     def _serialize_pens(self) -> list:
         pens_data = []
         for i in range(PenCollection.TOTAL_PENS):
             pen = self._pen_collection.get_pen(i)
             pens_data.append({
-                "enabled": pen.enabled,
-                "color": pen.color,
                 "jump_speed": pen.jump_speed,
                 "jump_position_tc": pen.jump_position_tc,
                 "jump_dist_tc": pen.jump_dist_tc,
@@ -2945,15 +2999,9 @@ class NStickerCanvasScreen(Screen):
                 "time_per_point": pen.time_per_point,
                 "vector_point_mode": pen.vector_point_mode,
                 "pulse_per_point": pen.pulse_per_point,
-                "yag_optimized_mode": pen.yag_optimized_mode,
                 "wobble_enabled": pen.wobble_enabled,
                 "wobble_diameter": pen.wobble_diameter,
                 "wobble_distance": pen.wobble_distance,
-                "end_add_points_enabled": pen.end_add_points_enabled,
-                "end_add_points_count": pen.end_add_points_count,
-                "end_add_points_distance": pen.end_add_points_distance,
-                "end_add_points_time_per_point": pen.end_add_points_time_per_point,
-                "end_add_points_cycles": pen.end_add_points_cycles,
                 "loop_count": pen.loop_count,
                 "speed": pen.speed,
                 "power": pen.power,
@@ -2962,24 +3010,6 @@ class NStickerCanvasScreen(Screen):
                 "laser_off_tc": pen.laser_off_tc,
                 "end_tc": pen.end_tc,
                 "polygon_tc": pen.polygon_tc,
-                "hatch_enable_contour": pen.hatch_enable_contour,
-                "hatch_contour_first": pen.hatch_contour_first,
-                "hatch1_enabled": pen.hatch1_enabled,
-                "hatch1_pen": pen.hatch1_pen,
-                "hatch1_attrib": pen.hatch1_attrib,
-                "hatch1_edge_dist": pen.hatch1_edge_dist,
-                "hatch1_line_dist": pen.hatch1_line_dist,
-                "hatch1_start_offset": pen.hatch1_start_offset,
-                "hatch1_end_offset": pen.hatch1_end_offset,
-                "hatch1_angle": pen.hatch1_angle,
-                "hatch2_enabled": pen.hatch2_enabled,
-                "hatch2_pen": pen.hatch2_pen,
-                "hatch2_attrib": pen.hatch2_attrib,
-                "hatch2_edge_dist": pen.hatch2_edge_dist,
-                "hatch2_line_dist": pen.hatch2_line_dist,
-                "hatch2_start_offset": pen.hatch2_start_offset,
-                "hatch2_end_offset": pen.hatch2_end_offset,
-                "hatch2_angle": pen.hatch2_angle,
             })
         return pens_data
 
@@ -2989,8 +3019,6 @@ class NStickerCanvasScreen(Screen):
             if not isinstance(pen_data, dict):
                 continue
             pen = PenSettings(
-                enabled=pen_data.get("enabled", False),
-                color=pen_data.get("color", "#000000"),
                 jump_speed=pen_data.get("jump_speed", 4000.0),
                 jump_position_tc=pen_data.get("jump_position_tc", 500.0),
                 jump_dist_tc=pen_data.get("jump_dist_tc", 100.0),
@@ -2999,15 +3027,9 @@ class NStickerCanvasScreen(Screen):
                 time_per_point=pen_data.get("time_per_point", 0.1),
                 vector_point_mode=pen_data.get("vector_point_mode", False),
                 pulse_per_point=pen_data.get("pulse_per_point", 1),
-                yag_optimized_mode=pen_data.get("yag_optimized_mode", False),
                 wobble_enabled=pen_data.get("wobble_enabled", False),
                 wobble_diameter=pen_data.get("wobble_diameter", 1.0),
                 wobble_distance=pen_data.get("wobble_distance", 0.5),
-                end_add_points_enabled=pen_data.get("end_add_points_enabled", False),
-                end_add_points_count=pen_data.get("end_add_points_count", 1),
-                end_add_points_distance=pen_data.get("end_add_points_distance", 0.01),
-                end_add_points_time_per_point=pen_data.get("end_add_points_time_per_point", 1.0),
-                end_add_points_cycles=pen_data.get("end_add_points_cycles", 1),
                 loop_count=pen_data.get("loop_count", 1),
                 speed=pen_data.get("speed", 1600.0),
                 power=pen_data.get("power", 5.0),
@@ -3016,24 +3038,6 @@ class NStickerCanvasScreen(Screen):
                 laser_off_tc=pen_data.get("laser_off_tc", 200.0),
                 end_tc=pen_data.get("end_tc", 300.0),
                 polygon_tc=pen_data.get("polygon_tc", 100.0),
-                hatch_enable_contour=pen_data.get("hatch_enable_contour", True),
-                hatch_contour_first=pen_data.get("hatch_contour_first", True),
-                hatch1_enabled=pen_data.get("hatch1_enabled", False),
-                hatch1_pen=pen_data.get("hatch1_pen", 0),
-                hatch1_attrib=pen_data.get("hatch1_attrib", 0),
-                hatch1_edge_dist=pen_data.get("hatch1_edge_dist", 0.0),
-                hatch1_line_dist=pen_data.get("hatch1_line_dist", 0.05),
-                hatch1_start_offset=pen_data.get("hatch1_start_offset", 0.0),
-                hatch1_end_offset=pen_data.get("hatch1_end_offset", 0.0),
-                hatch1_angle=pen_data.get("hatch1_angle", 0.0),
-                hatch2_enabled=pen_data.get("hatch2_enabled", False),
-                hatch2_pen=pen_data.get("hatch2_pen", 0),
-                hatch2_attrib=pen_data.get("hatch2_attrib", 0),
-                hatch2_edge_dist=pen_data.get("hatch2_edge_dist", 0.0),
-                hatch2_line_dist=pen_data.get("hatch2_line_dist", 0.05),
-                hatch2_start_offset=pen_data.get("hatch2_start_offset", 0.0),
-                hatch2_end_offset=pen_data.get("hatch2_end_offset", 0.0),
-                hatch2_angle=pen_data.get("hatch2_angle", 90.0),
             )
             new_collection.set_pen(i, pen)
         self._pen_collection = new_collection
@@ -3562,6 +3566,9 @@ class NStickerCanvasScreen(Screen):
                                             new_meta["is_static"] = bool(om.get("is_static", False))
                                             new_meta["export_file"] = str(om.get("export_file", "File 1"))
                                             new_meta["pen_number"] = int(om.get("pen_number", 0))
+                                            hatch_data = om.get("hatch_settings")
+                                            if hatch_data:
+                                                new_meta["hatch_settings"] = hatch_data
                                         except Exception as e:
                                             logger.exception("Failed to copy image flags for clone")
                                             raise
@@ -3606,6 +3613,9 @@ class NStickerCanvasScreen(Screen):
                                                 self._items[tid]["is_static"] = bool(om.get("is_static", False))
                                                 self._items[tid]["export_file"] = str(om.get("export_file", "File 1"))
                                                 self._items[tid]["pen_number"] = int(om.get("pen_number", 0))
+                                                hatch_data = om.get("hatch_settings")
+                                                if hatch_data:
+                                                    self._items[tid]["hatch_settings"] = hatch_data
                                             except Exception as e:
                                                 logger.exception("Failed to copy text flags for clone")
                                                 raise
@@ -4707,6 +4717,8 @@ class NStickerCanvasScreen(Screen):
                             "is_static": bool(it.get("is_static", False)),
                             # Optional mask path for image
                             "mask_path": _to_rel(str(Path(*mask_path_parts))) if mask_path_parts else "",
+                            # SVG source path if present
+                            "svg_source_path": str(it.get("svg_source_path", "") or ""),
                             # Export file assignment
                             "export_file": str(it.get("export_file", "File 1")),
                             # Pen number
@@ -4714,6 +4726,8 @@ class NStickerCanvasScreen(Screen):
                             # Custom images dict (name -> path mapping) and selected custom image
                             "custom_images": dict(it.get("custom_images", {})),
                             "custom_image": str(it.get("custom_image", "") or ""),
+                            # Hatch settings per object
+                            "hatch_settings": it.get("hatch_settings"),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process image for slot: {e}")
@@ -4751,6 +4765,8 @@ class NStickerCanvasScreen(Screen):
                             # EZD text dimensions
                             "text_width_mm": float(it.get("text_width_mm", 5.0)),
                             "text_height_mm": float(it.get("text_height_mm", 5.0)),
+                            # Hatch settings per object
+                            "hatch_settings": it.get("hatch_settings"),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process text for slot: {e}")
@@ -4804,6 +4820,8 @@ class NStickerCanvasScreen(Screen):
                             # EZD text dimensions
                             "text_width_mm": float(it.get("text_width_mm", 5.0)),
                             "text_height_mm": float(it.get("text_height_mm", 5.0)),
+                            # Hatch settings per object
+                            "hatch_settings": it.get("hatch_settings"),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process sized text for slot: {e}")
@@ -4853,6 +4871,8 @@ class NStickerCanvasScreen(Screen):
                             # EZD text dimensions
                             "text_width_mm": float(it.get("text_width_mm", 5.0)),
                             "text_height_mm": float(it.get("text_height_mm", 5.0)),
+                            # Hatch settings per object
+                            "hatch_settings": it.get("hatch_settings"),
                         }
                     except Exception as e:
                         logger.exception(f"Failed to process rect for slot: {e}")
@@ -5089,7 +5109,7 @@ class NStickerCanvasScreen(Screen):
         for f in fmts:
             if f == "jpeg":
                 f = "jpg"
-            if f in ("pdf", "png", "jpg", "bmp", "ezd") and f not in seen:
+            if f in ("pdf", "png", "jpg", "bmp", "svg", "ezd") and f not in seen:
                 seen.add(f)
                 export_formats.append(f)
         if not export_formats:
@@ -5161,7 +5181,7 @@ class NStickerCanvasScreen(Screen):
                             if state.is_cancelled:
                                 return
                             ezd_front_path = os.path.join(OUTPUT_PATH, f"{state.sku_name}_frontside_{file_suffix}.ezd")
-                            self.ezd_exporter.export_scene(front_items_for_file, ezd_front_path, jx, jy, clear_before=True)
+                            self.ezd_exporter.export_scene(front_items_for_file, ezd_front_path, jx, jy, clear_before=True, pen_collection=self._pen_collection)
                         
                         if back_objects:
                             logger.debug(f"Exporting EZD backside for {export_file_name}...")
@@ -5169,7 +5189,7 @@ class NStickerCanvasScreen(Screen):
                             if state.is_cancelled:
                                 return
                             ezd_back_path = os.path.join(OUTPUT_PATH, f"{state.sku_name}_backside_{file_suffix}.ezd")
-                            self.ezd_exporter.export_scene(back_items_for_file, ezd_back_path, jx, jy, clear_before=True)
+                            self.ezd_exporter.export_scene(back_items_for_file, ezd_back_path, jx, jy, clear_before=True, pen_collection=self._pen_collection)
                         continue
                     
                     # Render frontside for this export file
@@ -5184,6 +5204,7 @@ class NStickerCanvasScreen(Screen):
                         p_front_png_file = os.path.join(OUTPUT_PATH, f"Test_file_frontside_{file_suffix}.png")
                         p_front_jpg_file = os.path.join(OUTPUT_PATH, f"Test_file_frontside_{file_suffix}.jpg")
                         p_front_bmp_file = os.path.join(OUTPUT_PATH, f"Test_file_frontside_{file_suffix}.bmp")
+                        p_front_svg_file = os.path.join(OUTPUT_PATH, f"Test_file_frontside_{file_suffix}.svg")
                         
                         did_pdf = False
                         if "pdf" in fmts:
@@ -5214,6 +5235,11 @@ class NStickerCanvasScreen(Screen):
                                 self.exporter.save_last_render_as_bmp(p_front_bmp_file)
                             except Exception:
                                 logger.exception(f"Failed to save front BMP for {export_file_name}; continuing")
+                        if "svg" in fmts:
+                            try:
+                                self._render_scene_to_svg(p_front_svg_file, front_items_for_file, jx, jy, dpi=dpi_v)
+                            except Exception:
+                                logger.exception(f"Failed to save front SVG for {export_file_name}; continuing")
                     
                     # Render backside for this export file
                     if back_objects:
@@ -5227,6 +5253,7 @@ class NStickerCanvasScreen(Screen):
                         p_back_png_file = os.path.join(OUTPUT_PATH, f"Test_file_backside_{file_suffix}.png")
                         p_back_jpg_file = os.path.join(OUTPUT_PATH, f"Test_file_backside_{file_suffix}.jpg")
                         p_back_bmp_file = os.path.join(OUTPUT_PATH, f"Test_file_backside_{file_suffix}.bmp")
+                        p_back_svg_file = os.path.join(OUTPUT_PATH, f"Test_file_backside_{file_suffix}.svg")
                         
                         did_pdf = False
                         if "pdf" in fmts:
@@ -5257,6 +5284,11 @@ class NStickerCanvasScreen(Screen):
                                 self.exporter.save_last_render_as_bmp(p_back_bmp_file)
                             except Exception:
                                 logger.exception(f"Failed to save back BMP for {export_file_name}; continuing")
+                        if "svg" in fmts:
+                            try:
+                                self._render_scene_to_svg(p_back_svg_file, back_items_for_file, jx, jy, dpi=dpi_v)
+                            except Exception:
+                                logger.exception(f"Failed to save back SVG for {export_file_name}; continuing")
                 # Write JSON
                 try:
                     logger.debug(f"Writing JSON file...")
@@ -5491,6 +5523,7 @@ class NStickerCanvasScreen(Screen):
             if t == "rect":
                 try:
                     label_text = str(meta.get("label", ""))
+                    hatch_data = meta.get("hatch_settings")
                     items.append({
                         "type": "rect",
                         "amazon_label": meta.amazon_label,
@@ -5516,6 +5549,8 @@ class NStickerCanvasScreen(Screen):
                         # EZD text dimensions
                         "text_width_mm": float(meta.get("text_width_mm", 5.0)),
                         "text_height_mm": float(meta.get("text_height_mm", 5.0)),
+                        # Hatch settings per object
+                        "hatch_settings": hatch_data if hatch_data else None,
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize rect item {cid}: {e}")
@@ -5542,6 +5577,8 @@ class NStickerCanvasScreen(Screen):
                 try:
                     custom_imgs_dict = dict(meta.get("custom_images", {}))
                     custom_img_selected = str(meta.get("custom_image", ""))
+                    hatch_data = meta.get("hatch_settings")
+                    svg_source = meta.get("svg_source_path", "") or ""
                     logger.info(f"Serializing image cid={cid}: custom_images={custom_imgs_dict}, custom_image={custom_img_selected}")
                     items.append({
                         "type": "image",
@@ -5550,6 +5587,7 @@ class NStickerCanvasScreen(Screen):
                         "is_static": bool(meta.get("is_static", False)),
                         "path": str(meta.get("path", "")),
                         "mask_path": str(meta.get("mask_path", "") if meta.get("mask_path", "") is not None else ""),
+                        "svg_source_path": str(svg_source) if svg_source else "",
                         "w_mm": float(meta.get("w_mm", 0.0)),
                         "h_mm": float(meta.get("h_mm", 0.0)),
                         "x_mm": float(meta.get("x_mm", 0.0)),
@@ -5563,6 +5601,8 @@ class NStickerCanvasScreen(Screen):
                         # Custom images (name -> path mapping) and selected custom image
                         "custom_images": custom_imgs_dict,
                         "custom_image": custom_img_selected,
+                        # Hatch settings per object
+                        "hatch_settings": hatch_data if hatch_data else None,
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize image item {cid}: {e}")
@@ -5573,6 +5613,7 @@ class NStickerCanvasScreen(Screen):
                     fill = meta.get("default_fill", self.canvas.itemcget(cid, "fill") or "white")
                     x_mm = float(meta.get("x_mm", 0.0))
                     y_mm = float(meta.get("y_mm", 0.0))
+                    hatch_data = meta.get("hatch_settings")
                     items.append({
                         "type": "text",
                         "amazon_label": meta.amazon_label,
@@ -5594,6 +5635,8 @@ class NStickerCanvasScreen(Screen):
                         # EZD text dimensions
                         "text_width_mm": float(meta.get("text_width_mm", 5.0)),
                         "text_height_mm": float(meta.get("text_height_mm", 5.0)),
+                        # Hatch settings per object
+                        "hatch_settings": hatch_data if hatch_data else None,
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize text item {cid}: {e}")
@@ -5601,6 +5644,7 @@ class NStickerCanvasScreen(Screen):
             elif t == "barcode":
                 try:
                     label_text = str(meta.get("label", "Barcode"))
+                    hatch_data = meta.get("hatch_settings")
                     items.append({
                         "type": "barcode",
                         "amazon_label": meta.amazon_label,
@@ -5625,6 +5669,8 @@ class NStickerCanvasScreen(Screen):
                         # EZD text dimensions
                         "text_width_mm": float(meta.get("text_width_mm", 5.0)),
                         "text_height_mm": float(meta.get("text_height_mm", 5.0)),
+                        # Hatch settings per object
+                        "hatch_settings": hatch_data if hatch_data else None,
                     })
                 except Exception as e:
                     logger.exception(f"Failed to serialize barcode item {cid}: {e}")
@@ -5694,6 +5740,10 @@ class NStickerCanvasScreen(Screen):
                         self._items[rid]["export_file"] = str(it.get("export_file", "File 1"))
                         # Restore pen number
                         self._items[rid]["pen_number"] = int(it.get("pen_number", 0))
+                        # Restore hatch settings
+                        hatch_data = it.get("hatch_settings")
+                        if hatch_data:
+                            self._items[rid]["hatch_settings"] = hatch_data
                         z_val = it.get("z")
                         if z_val is not None:
                             self._items[rid]["z"] = int(z_val)
@@ -5759,6 +5809,10 @@ class NStickerCanvasScreen(Screen):
                     h_px = int(round(h_mm * MM_TO_PX * self._zoom))
                     left = jx0 + ox + x_mm * MM_TO_PX * self._zoom
                     top = jy0 + oy + y_mm * MM_TO_PX * self._zoom
+                    
+                    svg_source_val = str(it.get("svg_source_path", "") or "")
+                    svg_source_path = svg_source_val if svg_source_val else None
+                    
                     meta = CanvasObject(
                         type="image",
                         path=path,
@@ -5767,6 +5821,7 @@ class NStickerCanvasScreen(Screen):
                         x_mm=float(self._snap_mm(x_mm)),
                         y_mm=float(self._snap_mm(y_mm)),
                         angle=float(angle),
+                        svg_source_path=svg_source_path,
                     )
                     # Restore optional mask path if provided (resolve if relative)
                     try:
@@ -5791,11 +5846,15 @@ class NStickerCanvasScreen(Screen):
                         meta["export_file"] = str(it.get("export_file", "File 1"))
                         # Restore pen number
                         meta["pen_number"] = int(it.get("pen_number", 0))
+                        # Restore hatch settings
+                        hatch_data = it.get("hatch_settings")
+                        if hatch_data:
+                            meta["hatch_settings"] = hatch_data
                         # Restore custom images dict and selected custom image
                         custom_imgs_from_json = dict(it.get("custom_images", {}))
                         meta["custom_images"] = custom_imgs_from_json
                         meta["custom_image"] = str(it.get("custom_image", "") or "")
-                        logger.info(f"Restored image: custom_images={custom_imgs_from_json}, custom_image={meta['custom_image']}")
+                        logger.info(f"Restored image: custom_images={custom_imgs_from_json}, custom_image={meta['custom_image']}, svg_source_path={svg_source_path}")
                     except Exception:
                         logger.exception("Failed to restore flags for image item")
                     photo = self._render_photo(meta, max(1, int(w_px)), max(1, int(h_px)))
@@ -5841,6 +5900,10 @@ class NStickerCanvasScreen(Screen):
                                 self._items[tid]["export_file"] = str(it.get("export_file", "File 1"))
                                 # Restore pen number
                                 self._items[tid]["pen_number"] = int(it.get("pen_number", 0))
+                                # Restore hatch settings
+                                hatch_data = it.get("hatch_settings")
+                                if hatch_data:
+                                    self._items[tid]["hatch_settings"] = hatch_data
                             except Exception:
                                 logger.exception("Failed to restore flags for text item")
                             # Restore ownership
@@ -5892,6 +5955,10 @@ class NStickerCanvasScreen(Screen):
                                 self._items[rid]["export_file"] = str(it.get("export_file", "File 1"))
                                 # Restore pen number
                                 self._items[rid]["pen_number"] = int(it.get("pen_number", 0))
+                                # Restore hatch settings
+                                hatch_data = it.get("hatch_settings")
+                                if hatch_data:
+                                    self._items[rid]["hatch_settings"] = hatch_data
                             except Exception:
                                 logger.exception("Failed to restore flags for text-rect item")
                             # Restore ownership
@@ -5944,6 +6011,10 @@ class NStickerCanvasScreen(Screen):
                         self._items[rid]["export_file"] = str(it.get("export_file", "File 1"))
                         # Restore pen number
                         self._items[rid]["pen_number"] = int(it.get("pen_number", 0))
+                        # Restore hatch settings
+                        hatch_data = it.get("hatch_settings")
+                        if hatch_data:
+                            self._items[rid]["hatch_settings"] = hatch_data
                         z_val = it.get("z")
                         if z_val is not None:
                             self._items[rid]["z"] = int(z_val)

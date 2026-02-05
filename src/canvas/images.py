@@ -212,7 +212,10 @@ class ImageManager:
         sy_mm = self.s._snap_mm(float(y_mm))
         new_left = (jx0 + ox) + float(sx_mm) * MM_TO_PX * self.s._zoom
         new_top = (jy0 + oy) + float(sy_mm) * MM_TO_PX * self.s._zoom
-        # Build meta and render
+        
+        ext = os.path.splitext(str(path))[1].lower()
+        svg_source_path = path if ext == ".svg" else None
+        
         meta = CanvasObject(
             type="image",
             path=path,
@@ -220,6 +223,7 @@ class ImageManager:
             h_mm=float(qh_mm),
             x_mm=float(sx_mm),
             y_mm=float(sy_mm),
+            svg_source_path=svg_source_path,
         )
         # Initialize empty custom image assignment and empty custom images dict
         meta["custom_image"] = ""

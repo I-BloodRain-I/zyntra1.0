@@ -21,6 +21,7 @@ class LMC1Error(IntEnum):
     SAVEFILE = 17
     NOFINDENT = 18
     ENTEXTCOOROVER = 20
+    FUNCTION_NOT_SUPPORTED = 99
 
     def __str__(self):
         """Convert error code to human-readable message.
@@ -40,7 +41,8 @@ class LMC1Error(IntEnum):
             16: "Parameter error",
             17: "File save error",
             18: "Entity not found",
-            20: "Entity text coordinate overflow"
+            20: "Entity text coordinate overflow",
+            99: "Function not supported by DLL"
         }
         return msgs.get(self.value, f"Error {self.value}")
 
@@ -250,6 +252,181 @@ class DLLFunctionLoader:
         dll.lmc1_MarkPoint.restype = ctypes.c_int
         
         dll.lmc1_RedLightMark.restype = ctypes.c_int
+        
+        dll.lmc1_SetPenParam.argtypes = [
+            ctypes.c_int,      # nPenNo
+            ctypes.c_int,      # nMarkLoop
+            ctypes.c_double,   # dMarkSpeed
+            ctypes.c_double,   # dPowerRatio
+            ctypes.c_double,   # dCurrent
+            ctypes.c_int,      # nFreq
+            ctypes.c_double,   # dQPulseWidth
+            ctypes.c_int,      # nStartTC
+            ctypes.c_int,      # nLaserOffTC
+            ctypes.c_int,      # nEndTC
+            ctypes.c_int,      # nPolyTC
+            ctypes.c_double,   # dJumpSpeed
+            ctypes.c_int,      # nJumpPosTC
+            ctypes.c_int,      # nJumpDistTC
+            ctypes.c_double,   # dEndComp
+            ctypes.c_double,   # dAccDist
+            ctypes.c_double,   # dPointTime
+            ctypes.c_int,      # bPulsePointMode (BOOL)
+            ctypes.c_int,      # nPulseNum
+            ctypes.c_double,   # dFlySpeed
+        ]
+        dll.lmc1_SetPenParam.restype = ctypes.c_int
+        
+        dll.lmc1_GetPenParam.argtypes = [
+            ctypes.c_int,                      # nPenNo
+            ctypes.POINTER(ctypes.c_int),      # nMarkLoop
+            ctypes.POINTER(ctypes.c_double),   # dMarkSpeed
+            ctypes.POINTER(ctypes.c_double),   # dPowerRatio
+            ctypes.POINTER(ctypes.c_double),   # dCurrent
+            ctypes.POINTER(ctypes.c_int),      # nFreq
+            ctypes.POINTER(ctypes.c_double),   # dQPulseWidth
+            ctypes.POINTER(ctypes.c_int),      # nStartTC
+            ctypes.POINTER(ctypes.c_int),      # nLaserOffTC
+            ctypes.POINTER(ctypes.c_int),      # nEndTC
+            ctypes.POINTER(ctypes.c_int),      # nPolyTC
+            ctypes.POINTER(ctypes.c_double),   # dJumpSpeed
+            ctypes.POINTER(ctypes.c_int),      # nJumpPosTC
+            ctypes.POINTER(ctypes.c_int),      # nJumpDistTC
+            ctypes.POINTER(ctypes.c_double),   # dEndComp
+            ctypes.POINTER(ctypes.c_double),   # dAccDist
+            ctypes.POINTER(ctypes.c_double),   # dPointTime
+            ctypes.POINTER(ctypes.c_int),      # bPulsePointMode (BOOL)
+            ctypes.POINTER(ctypes.c_int),      # nPulseNum
+            ctypes.POINTER(ctypes.c_double),   # dFlySpeed
+        ]
+        dll.lmc1_GetPenParam.restype = ctypes.c_int
+        
+        dll.lmc1_SetPenParam2.argtypes = [
+            ctypes.c_int,      # nPenNo
+            ctypes.c_int,      # nMarkLoop
+            ctypes.c_double,   # dMarkSpeed
+            ctypes.c_double,   # dPowerRatio
+            ctypes.c_double,   # dCurrent
+            ctypes.c_int,      # nFreq
+            ctypes.c_double,   # dQPulseWidth
+            ctypes.c_int,      # nStartTC
+            ctypes.c_int,      # nLaserOffTC
+            ctypes.c_int,      # nEndTC
+            ctypes.c_int,      # nPolyTC
+            ctypes.c_double,   # dJumpSpeed
+            ctypes.c_int,      # nJumpPosTC
+            ctypes.c_int,      # nJumpDistTC
+            ctypes.c_int,      # nSpiWave
+            ctypes.c_int,      # bWobbleMode (BOOL)
+            ctypes.c_double,   # bWobbleDiameter
+            ctypes.c_double,   # bWobbleDist
+        ]
+        dll.lmc1_SetPenParam2.restype = ctypes.c_int
+        
+        dll.lmc1_GetPenParam2.argtypes = [
+            ctypes.c_int,                      # nPenNo
+            ctypes.POINTER(ctypes.c_int),      # nMarkLoop
+            ctypes.POINTER(ctypes.c_double),   # dMarkSpeed
+            ctypes.POINTER(ctypes.c_double),   # dPowerRatio
+            ctypes.POINTER(ctypes.c_double),   # dCurrent
+            ctypes.POINTER(ctypes.c_int),      # nFreq
+            ctypes.POINTER(ctypes.c_double),   # dQPulseWidth
+            ctypes.POINTER(ctypes.c_int),      # nStartTC
+            ctypes.POINTER(ctypes.c_int),      # nLaserOffTC
+            ctypes.POINTER(ctypes.c_int),      # nEndTC
+            ctypes.POINTER(ctypes.c_int),      # nPolyTC
+            ctypes.POINTER(ctypes.c_double),   # dJumpSpeed
+            ctypes.POINTER(ctypes.c_int),      # nJumpPosTC
+            ctypes.POINTER(ctypes.c_int),      # nJumpDistTC
+            ctypes.POINTER(ctypes.c_double),   # dPointTime
+            ctypes.POINTER(ctypes.c_int),      # nSpiWave
+            ctypes.POINTER(ctypes.c_int),      # bWobbleMode (BOOL)
+            ctypes.POINTER(ctypes.c_double),   # bWobbleDiameter
+            ctypes.POINTER(ctypes.c_double),   # bWobbleDist
+        ]
+        dll.lmc1_GetPenParam2.restype = ctypes.c_int
+        
+        if hasattr(dll, 'lmc1_SetPenParam4'):
+            dll.lmc1_SetPenParam4.argtypes = [
+                ctypes.c_int,
+                ctypes.c_wchar_p,
+                ctypes.c_int,
+                ctypes.c_bool,
+                ctypes.c_bool,
+                ctypes.c_int,
+                ctypes.c_double,
+                ctypes.c_double,
+                ctypes.c_double,
+                ctypes.c_int,
+                ctypes.c_double,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_double,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_double,
+                ctypes.c_double,
+                ctypes.c_bool,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_bool,
+                ctypes.c_int,
+                ctypes.c_bool,
+                ctypes.c_double,
+                ctypes.c_double,
+                ctypes.c_double,
+                ctypes.c_bool,
+                ctypes.c_double,
+                ctypes.c_double,
+            ]
+            dll.lmc1_SetPenParam4.restype = ctypes.c_int
+        
+        if hasattr(dll, 'lmc1_GetPenParam4'):
+            dll.lmc1_GetPenParam4.argtypes = [
+                ctypes.c_int,
+                ctypes.c_wchar_p,
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_bool),
+                ctypes.POINTER(ctypes.c_bool),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_bool),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_bool),
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_bool),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_bool),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+            ]
+            dll.lmc1_GetPenParam4.restype = ctypes.c_int
+        
+        if hasattr(dll, 'lmc1_GetPenNumberFromEnt'):
+            dll.lmc1_GetPenNumberFromEnt.argtypes = [ctypes.c_wchar_p]
+            dll.lmc1_GetPenNumberFromEnt.restype = ctypes.c_int
+        
+        if hasattr(dll, 'lmc1_SetEntAllChildPen'):
+            dll.lmc1_SetEntAllChildPen.argtypes = [ctypes.c_wchar_p, ctypes.c_int]
+            dll.lmc1_SetEntAllChildPen.restype = ctypes.c_int
 
 
 class EzcadSDK:
@@ -966,6 +1143,279 @@ class EzcadSDK:
             Error code indicating success or failure.
         """
         return LMC1Error(self.dll.lmc1_RedLightMark())
+    
+    def set_pen_param(
+        self,
+        pen_no: int,
+        loop_count: int = 1,
+        speed: float = 1000.0,
+        power: float = 50.0,
+        current: float = 0.0,
+        frequency: int = 20000,
+        pulse_width: float = 10.0,
+        start_tc: int = 100,
+        laser_off_tc: int = 100,
+        end_tc: int = 100,
+        polygon_tc: int = 100,
+        jump_speed: float = 2000.0,
+        jump_pos_tc: int = 100,
+        jump_dist_tc: int = 1000,
+        end_comp: float = 0.0,
+        acc_dist: float = 0.0,
+        point_time: float = 0.5,
+        pulse_point_mode: bool = False,
+        pulse_num: int = 1,
+        fly_speed: float = 0.0,
+    ) -> LMC1Error:
+        return LMC1Error(
+            self.dll.lmc1_SetPenParam(
+                pen_no,
+                loop_count,
+                speed,
+                power,
+                current,
+                frequency,
+                pulse_width,
+                start_tc,
+                laser_off_tc,
+                end_tc,
+                polygon_tc,
+                jump_speed,
+                jump_pos_tc,
+                jump_dist_tc,
+                end_comp,
+                acc_dist,
+                point_time,
+                1 if pulse_point_mode else 0,
+                pulse_num,
+                fly_speed,
+            )
+        )
+    
+    def get_pen_param(self, pen_no: int) -> tuple[LMC1Error, dict]:
+        loop_count = ctypes.c_int()
+        speed = ctypes.c_double()
+        power = ctypes.c_double()
+        current = ctypes.c_double()
+        frequency = ctypes.c_int()
+        pulse_width = ctypes.c_double()
+        start_tc = ctypes.c_int()
+        laser_off_tc = ctypes.c_int()
+        end_tc = ctypes.c_int()
+        polygon_tc = ctypes.c_int()
+        jump_speed = ctypes.c_double()
+        jump_pos_tc = ctypes.c_int()
+        jump_dist_tc = ctypes.c_int()
+        end_comp = ctypes.c_double()
+        acc_dist = ctypes.c_double()
+        point_time = ctypes.c_double()
+        pulse_point_mode = ctypes.c_int()
+        pulse_num = ctypes.c_int()
+        fly_speed = ctypes.c_double()
+        
+        result = self.dll.lmc1_GetPenParam(
+            pen_no,
+            ctypes.byref(loop_count),
+            ctypes.byref(speed),
+            ctypes.byref(power),
+            ctypes.byref(current),
+            ctypes.byref(frequency),
+            ctypes.byref(pulse_width),
+            ctypes.byref(start_tc),
+            ctypes.byref(laser_off_tc),
+            ctypes.byref(end_tc),
+            ctypes.byref(polygon_tc),
+            ctypes.byref(jump_speed),
+            ctypes.byref(jump_pos_tc),
+            ctypes.byref(jump_dist_tc),
+            ctypes.byref(end_comp),
+            ctypes.byref(acc_dist),
+            ctypes.byref(point_time),
+            ctypes.byref(pulse_point_mode),
+            ctypes.byref(pulse_num),
+            ctypes.byref(fly_speed),
+        )
+        
+        return LMC1Error(result), {
+            "loop_count": loop_count.value,
+            "speed": speed.value,
+            "power": power.value,
+            "current": current.value,
+            "frequency": frequency.value,
+            "pulse_width": pulse_width.value,
+            "start_tc": start_tc.value,
+            "laser_off_tc": laser_off_tc.value,
+            "end_tc": end_tc.value,
+            "polygon_tc": polygon_tc.value,
+            "jump_speed": jump_speed.value,
+            "jump_pos_tc": jump_pos_tc.value,
+            "jump_dist_tc": jump_dist_tc.value,
+            "end_comp": end_comp.value,
+            "acc_dist": acc_dist.value,
+            "point_time": point_time.value,
+            "pulse_point_mode": bool(pulse_point_mode.value),
+            "pulse_num": pulse_num.value,
+            "fly_speed": fly_speed.value,
+        }
+
+    def set_pen_param_wobble(
+        self,
+        pen_no: int,
+        loop_count: int = 1,
+        speed: float = 1000.0,
+        power: float = 50.0,
+        current: float = 0.0,
+        frequency: int = 20000,
+        pulse_width: float = 10.0,
+        start_tc: int = 100,
+        laser_off_tc: int = 100,
+        end_tc: int = 100,
+        polygon_tc: int = 100,
+        jump_speed: float = 2000.0,
+        jump_pos_tc: int = 100,
+        jump_dist_tc: int = 1000,
+        spi_wave: int = 0,
+        wobble_mode: bool = False,
+        wobble_diameter: float = 0.0,
+        wobble_distance: float = 0.0,
+    ) -> LMC1Error:
+        return LMC1Error(
+            self.dll.lmc1_SetPenParam2(
+                pen_no,
+                loop_count,
+                speed,
+                power,
+                current,
+                frequency,
+                pulse_width,
+                start_tc,
+                laser_off_tc,
+                end_tc,
+                polygon_tc,
+                jump_speed,
+                jump_pos_tc,
+                jump_dist_tc,
+                spi_wave,
+                1 if wobble_mode else 0,
+                wobble_diameter,
+                wobble_distance,
+            )
+        )
+    
+    def get_pen_param_wobble(self, pen_no: int) -> tuple[LMC1Error, dict]:
+        loop_count = ctypes.c_int()
+        speed = ctypes.c_double()
+        power = ctypes.c_double()
+        current = ctypes.c_double()
+        frequency = ctypes.c_int()
+        pulse_width = ctypes.c_double()
+        start_tc = ctypes.c_int()
+        laser_off_tc = ctypes.c_int()
+        end_tc = ctypes.c_int()
+        polygon_tc = ctypes.c_int()
+        jump_speed = ctypes.c_double()
+        jump_pos_tc = ctypes.c_int()
+        jump_dist_tc = ctypes.c_int()
+        point_time = ctypes.c_double()
+        spi_wave = ctypes.c_int()
+        wobble_mode = ctypes.c_int()
+        wobble_diameter = ctypes.c_double()
+        wobble_distance = ctypes.c_double()
+        
+        result = self.dll.lmc1_GetPenParam2(
+            pen_no,
+            ctypes.byref(loop_count),
+            ctypes.byref(speed),
+            ctypes.byref(power),
+            ctypes.byref(current),
+            ctypes.byref(frequency),
+            ctypes.byref(pulse_width),
+            ctypes.byref(start_tc),
+            ctypes.byref(laser_off_tc),
+            ctypes.byref(end_tc),
+            ctypes.byref(polygon_tc),
+            ctypes.byref(jump_speed),
+            ctypes.byref(jump_pos_tc),
+            ctypes.byref(jump_dist_tc),
+            ctypes.byref(point_time),
+            ctypes.byref(spi_wave),
+            ctypes.byref(wobble_mode),
+            ctypes.byref(wobble_diameter),
+            ctypes.byref(wobble_distance),
+        )
+        
+        return LMC1Error(result), {
+            "loop_count": loop_count.value,
+            "speed": speed.value,
+            "power": power.value,
+            "current": current.value,
+            "frequency": frequency.value,
+            "pulse_width": pulse_width.value,
+            "start_tc": start_tc.value,
+            "laser_off_tc": laser_off_tc.value,
+            "end_tc": end_tc.value,
+            "polygon_tc": polygon_tc.value,
+            "jump_speed": jump_speed.value,
+            "jump_pos_tc": jump_pos_tc.value,
+            "jump_dist_tc": jump_dist_tc.value,
+            "point_time": point_time.value,
+            "spi_wave": spi_wave.value,
+            "wobble_mode": bool(wobble_mode.value),
+            "wobble_diameter": wobble_diameter.value,
+            "wobble_distance": wobble_distance.value,
+        }
+
+    def get_pen_number_from_ent(self, entity_name: str) -> int:
+        if not hasattr(self.dll, 'lmc1_GetPenNumberFromEnt'):
+            return -1
+        return self.dll.lmc1_GetPenNumberFromEnt(entity_name)
+    
+    def set_entity_pen(self, entity_name: str, pen_no: int) -> LMC1Error:
+        if not hasattr(self.dll, 'lmc1_SetEntAllChildPen'):
+            return LMC1Error.FUNCTION_NOT_SUPPORTED
+        return LMC1Error(self.dll.lmc1_SetEntAllChildPen(entity_name, pen_no))
+    
+    def set_hatch_param(
+        self,
+        enable_contour: bool = True,
+        enable_hatch1: bool = False,
+        pen_no1: int = 0,
+        hatch_attrib1: int = 0,
+        edge_dist1: float = 0.0,
+        line_dist1: float = 0.1,
+        start_offset1: float = 0.0,
+        end_offset1: float = 0.0,
+        angle1: float = 0.0,
+        enable_hatch2: bool = False,
+        pen_no2: int = 0,
+        hatch_attrib2: int = 0,
+        edge_dist2: float = 0.0,
+        line_dist2: float = 0.1,
+        start_offset2: float = 0.0,
+        end_offset2: float = 0.0,
+        angle2: float = 0.0,
+    ) -> LMC1Error:
+        return LMC1Error(
+            self.dll.lmc1_SetHatchParam(
+                enable_contour,
+                1 if enable_hatch1 else 0,
+                pen_no1,
+                hatch_attrib1,
+                edge_dist1,
+                line_dist1,
+                start_offset1,
+                end_offset1,
+                angle1,
+                1 if enable_hatch2 else 0,
+                pen_no2,
+                hatch_attrib2,
+                edge_dist2,
+                line_dist2,
+                start_offset2,
+                end_offset2,
+                angle2,
+            )
+        )
     
     def __enter__(self):
         return self

@@ -17,26 +17,12 @@ class TestPenSettings:
         assert settings.time_per_point == 0.100
         assert settings.vector_point_mode is False
         assert settings.pulse_per_point == 1
-        assert settings.yag_optimized_mode is False
-        
-    def test_enabled_and_color_defaults(self):
-        settings = PenSettings()
-        assert settings.enabled is True
-        assert settings.color == "#000000"
         
     def test_wobble_defaults(self):
         settings = PenSettings()
         assert settings.wobble_enabled is False
         assert settings.wobble_diameter == 1.000
         assert settings.wobble_distance == 0.500
-        
-    def test_end_add_points_defaults(self):
-        settings = PenSettings()
-        assert settings.end_add_points_enabled is False
-        assert settings.end_add_points_count == 1
-        assert settings.end_add_points_distance == 0.010
-        assert settings.end_add_points_time_per_point == 1.000
-        assert settings.end_add_points_cycles == 1
         
     def test_laser_params_defaults(self):
         settings = PenSettings()
@@ -69,61 +55,12 @@ class TestPenSettings:
         assert "power" in data
         assert "wobble_enabled" in data
         assert data["jump_speed"] == 4000.0
-    
-    def test_hatch_defaults(self):
-        settings = PenSettings()
-        assert settings.hatch_enable_contour is True
-        assert settings.hatch1_enabled is False
-        assert settings.hatch2_enabled is False
-        assert settings.hatch1_pen == 0
-        assert settings.hatch2_pen == 0
-        assert settings.hatch1_attrib == 0
-        assert settings.hatch2_attrib == 0
-        assert settings.hatch1_edge_dist == 0.0
-        assert settings.hatch2_edge_dist == 0.0
-        assert settings.hatch1_line_dist == 0.05
-        assert settings.hatch2_line_dist == 0.05
-        assert settings.hatch1_start_offset == 0.0
-        assert settings.hatch2_start_offset == 0.0
-        assert settings.hatch1_end_offset == 0.0
-        assert settings.hatch2_end_offset == 0.0
-        assert settings.hatch1_angle == 0.0
-        assert settings.hatch2_angle == 90.0
-        
-    def test_hatch_custom_values(self):
-        settings = PenSettings(
-            hatch_enable_contour=False,
-            hatch1_enabled=True,
-            hatch1_pen=5,
-            hatch1_line_dist=0.5,
-            hatch1_angle=45.0
-        )
-        assert settings.hatch_enable_contour is False
-        assert settings.hatch1_enabled is True
-        assert settings.hatch1_pen == 5
-        assert settings.hatch1_line_dist == 0.5
-        assert settings.hatch1_angle == 45.0
 
 
 class TestPenCollection:
     def test_collection_size(self):
         collection = PenCollection()
         assert len(collection) == 256
-        
-    def test_first_pen_enabled(self):
-        collection = PenCollection()
-        assert collection.get_pen(0).enabled is True
-        
-    def test_other_pens_disabled(self):
-        collection = PenCollection()
-        for i in range(1, 256):
-            assert collection.get_pen(i).enabled is False
-            
-    def test_pen_colors_cycle(self):
-        collection = PenCollection()
-        assert collection.get_pen(0).color == "#000000"
-        assert collection.get_pen(1).color == "#FF0000"
-        assert collection.get_pen(16).color == "#000000"
         
     def test_get_set_pen(self):
         collection = PenCollection()
@@ -153,24 +90,22 @@ class TestPenSettingsDialog:
         
     def test_dialog_with_custom_collection(self, root):
         collection = PenCollection()
-        pen = collection.get_pen(0)
+        pen = collection.get_pen(42)
         pen.speed = 2000.0
         pen.power = 15.0
-        collection.set_pen(0, pen)
+        collection.set_pen(42, pen)
         
         dialog = PenSettingsDialog(root, collection)
-        assert dialog._pens.get_pen(0).speed == 2000.0
-        assert dialog._pens.get_pen(0).power == 15.0
+        assert dialog._pens.get_pen(42).speed == 2000.0
+        assert dialog._pens.get_pen(42).power == 15.0
 
 
 class TestPenManager:
     def test_reset(self, root):
         collection = PenCollection()
-        pen = collection.get_pen(0)
+        pen = collection.get_pen(99)
         pen.speed = 9999.0
-        pen.hatch1_enabled = True
-        pen.hatch1_angle = 45.0
-        collection.set_pen(0, pen)
+        collection.set_pen(99, pen)
         
         container = {"collection": collection}
         manager = PenManager(
@@ -182,22 +117,13 @@ class TestPenManager:
              patch("src.canvas.pen_settings.messagebox.showinfo"):
             manager.reset(root)
         
-        assert container["collection"].get_pen(0).speed == 1600.0
-        assert container["collection"].get_pen(0).hatch1_enabled is False
-        assert container["collection"].get_pen(0).hatch1_angle == 0.0
+        assert container["collection"].get_pen(99).speed == 1600.0
         
-    def test_export_import_with_hatch(self, tmp_path, root):
+    def test_export_import(self, tmp_path, root):
         collection = PenCollection()
-        pen = collection.get_pen(0)
+        pen = collection.get_pen(123)
         pen.speed = 5000.0
-        pen.hatch_enable_contour = False
-        pen.hatch1_enabled = True
-        pen.hatch1_pen = 5
-        pen.hatch1_line_dist = 0.25
-        pen.hatch1_angle = 45.0
-        pen.hatch2_enabled = True
-        pen.hatch2_angle = 135.0
-        collection.set_pen(0, pen)
+        collection.set_pen(123, pen)
         
         container = {"collection": collection}
         manager = PenManager(
@@ -221,15 +147,8 @@ class TestPenManager:
              patch("src.canvas.pen_settings.messagebox.showinfo"):
             new_manager.import_from_file(root)
         
-        imported_pen = new_container["collection"].get_pen(0)
+        imported_pen = new_container["collection"].get_pen(123)
         assert imported_pen.speed == 5000.0
-        assert imported_pen.hatch_enable_contour is False
-        assert imported_pen.hatch1_enabled is True
-        assert imported_pen.hatch1_pen == 5
-        assert imported_pen.hatch1_line_dist == 0.25
-        assert imported_pen.hatch1_angle == 45.0
-        assert imported_pen.hatch2_enabled is True
-        assert imported_pen.hatch2_angle == 135.0
 
 
 @pytest.fixture

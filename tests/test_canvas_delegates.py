@@ -177,6 +177,12 @@ def test_render_jig_to_svg_delegate():
     assert callable(canvas._render_jig_to_svg)
     canvas.destroy()
 
+def test_render_scene_to_svg_delegate():
+    app, canvas = get_canvas()
+    assert hasattr(canvas, "_render_scene_to_svg")
+    assert callable(canvas._render_scene_to_svg)
+    canvas.destroy()
+
 def test_render_single_pattern_svg_delegate():
     app, canvas = get_canvas()
     assert hasattr(canvas, "_render_single_pattern_svg")

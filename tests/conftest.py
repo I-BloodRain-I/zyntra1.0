@@ -112,6 +112,7 @@ def mock_canvas_dependencies(monkeypatch):
     
     mock_exporter.render_scene_to_pdf = Mock()
     mock_exporter.render_jig_to_svg = Mock()
+    mock_exporter.render_scene_to_svg = Mock()
     mock_exporter.render_single_pattern_svg = Mock()
     
     return {

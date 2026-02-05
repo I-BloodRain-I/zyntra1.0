@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, Any
+from typing import Optional, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.canvas.hatch_settings import HatchSettings
 
 
 @dataclass
@@ -59,6 +62,12 @@ class CanvasObject:
     # Custom images for image objects (name -> path dict and selected name)
     custom_images: dict = field(default_factory=dict)
     custom_image: str = ""
+    
+    # Original SVG source path for image objects imported from SVG files
+    svg_source_path: Optional[str] = None
+    
+    # Hatch settings per object (stored as dict, converted to HatchSettings when needed)
+    hatch_settings: Optional[dict] = None
 
     def is_text_rect(self) -> bool:
         # Text rects have green outline; barcode has black outline but should not be treated as text rect
